@@ -53,7 +53,7 @@ local function Kind(name,isTarget)
     end
     -- Rares are not in AZS_UNITS: remembered by name once seen as a target.
     if rareNames[name] then return "rare" end
-    for _,u in ipairs(AZS_SCHEDULE or {}) do
+    for _,u in ipairs(K.Schedule()) do
         if u.name==name and u.state~="dead" and u.state~="due" then return "boss" end
     end
     return "normal"

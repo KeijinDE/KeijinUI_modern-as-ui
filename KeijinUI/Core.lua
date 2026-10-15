@@ -1,4 +1,4 @@
-KeijinUI = { version = "0.6.0", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "0.6.1", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -70,10 +70,13 @@ function K.Text(frame, text, size, point, x, y, width)
     fs:SetText(text or "")
     return fs
 end
-function K.Skin(frame)
+-- Unit frames keep edge 10; panels and buttons use the thinner edge 7.
+function K.Skin(frame, edge)
+    edge = edge or 10
+    local inset = edge >= 10 and 3 or 2
     frame:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true,
-        tileSize = 16, edgeSize = 14, insets = {left=4,right=4,top=4,bottom=4} })
+        tileSize = 16, edgeSize = edge, insets = {left=inset,right=inset,top=inset,bottom=inset} })
     frame:SetBackdropColor(0.055, 0.055, 0.065, 0.91)
     frame:SetBackdropBorderColor(0.62, 0.57, 0.43, 1)
 end
@@ -81,7 +84,7 @@ function K.Panel(name, title, width, height)
     local f = CreateFrame("Frame", name, UIParent)
     f:SetWidth(width); f:SetHeight(height); f:SetFrameStrata("LOW")
     f:SetClampedToScreen(true)
-    K.Skin(f)
+    K.Skin(f, 7)
     local strip = f:CreateTexture(nil, "BORDER")
     strip:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar")
     strip:SetVertexColor(0.6, 0.53, 0.36, 0.55)
@@ -119,10 +122,10 @@ function K.Row(parent, index, height)
     row:SetWidth(parent:GetWidth()-20); row:SetHeight(height)
     local bg = row:CreateTexture(nil, "BACKGROUND")
     bg:SetTexture(K.flat); bg:SetVertexColor(0.04,0.04,0.05,0.6)
-    -- Inset so the square fill stays inside the rounded corners of the metal border.
-    bg:SetPoint("TOPLEFT",row,"TOPLEFT",3,-2); bg:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-3,2)
+    -- The metal border has only slightly rounded corners, so the fill reaches under its edge.
+    bg:SetPoint("TOPLEFT",row,"TOPLEFT",1,-1); bg:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-1,1)
     row.bar = CreateFrame("StatusBar", nil, row)
-    row.bar:SetPoint("TOPLEFT",row,"TOPLEFT",3,-2); row.bar:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-3,2); row.bar:SetMinMaxValues(0,1); row.bar:SetValue(0)
+    row.bar:SetPoint("TOPLEFT",row,"TOPLEFT",1,-1); row.bar:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-1,1); row.bar:SetMinMaxValues(0,1); row.bar:SetValue(0)
     row.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     K.MetalBar(row,row.bar)
     local textLayer = CreateFrame("Frame", nil, row)

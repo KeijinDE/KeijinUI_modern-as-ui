@@ -51,6 +51,8 @@ function K.SetLang(value)
     return true
 end
 K.lang=K.EffectiveLang()
+-- The client loads the saved variables after the addon files, so the stored language is only known now.
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.UpdateLang() end end)
 
 -- English texts for the German sources.
 local EN=K.EN

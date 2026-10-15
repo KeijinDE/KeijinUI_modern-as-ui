@@ -125,7 +125,7 @@ end
 local function EngagedList(diag)
     local now=GetTime()
     local up={}
-    for _,s in ipairs(AZS_SCHEDULE or {}) do if s.state=="up" and s.name then up[s.name]=true end end
+    for _,s in ipairs(K.Schedule()) do if s.state=="up" and s.name then up[s.name]=true end end
     local listed={}
     for _,u in ipairs(AZS_UNITS or {}) do
         local kind=u.kind
@@ -191,10 +191,10 @@ function K.BossDebug()
     else pc="fehlt" end
     local t=type(AZS_TARGET)=="table" and AZS_TARGET or {}
     K.Say(string.format("Begegnungen: AZS_UNITS %d, AZS_SCHEDULE %d, angezeigt %d, Phase %s, UnitAffectingCombat Spieler %s Ziel %s (nur Info)",
-        table.getn(AZS_UNITS or {}),table.getn(AZS_SCHEDULE or {}),table.getn(list),tostring(AZS_GetPhase and AZS_GetPhase()),tostring(pc),tostring(tc)))
+        table.getn(AZS_UNITS or {}),table.getn(K.Schedule()),table.getn(list),tostring(AZS_GetPhase and AZS_GetPhase()),tostring(pc),tostring(tc)))
     K.Say(string.format("AZS_TARGET: Art %s, Name %s, id %s, hp %s/%s, Status %s, Elite %s",tostring(t.kind),tostring(t.name),tostring(t.id),
         tostring(t.hp),tostring(t.hpm),tostring(t.state),tostring(t.elite)))
-    for _,s in ipairs(AZS_SCHEDULE or {}) do K.Say("Zeitplan: "..tostring(s.name).." "..tostring(s.state)) end
+    for _,s in ipairs(K.Schedule()) do K.Say("Zeitplan: "..tostring(s.name).." "..tostring(s.state)) end
     for _,line in ipairs(diag) do K.Say(line) end
 end
 local function DrawBosses(phase)
@@ -234,7 +234,7 @@ local function Update()
         zone:SetText((AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
         time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
         progress:SetValue(math.min(1,seconds/duration))
-        local schedule=AZS_SCHEDULE or {}
+        local schedule=K.Schedule()
         local count=math.min(8,table.getn(schedule))
         for i=1,count do
             local v=schedule[i]; local row=ScheduleRow(i)

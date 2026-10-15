@@ -104,7 +104,7 @@ popup:RegisterForDrag("LeftButton")
 popup:SetBackdrop({
     bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
     edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
-    tile = true, tileSize = 32, edgeSize = 24,
+    tile = true, tileSize = 32, edgeSize = 16,
     insets = { left = 7, right = 7, top = 7, bottom = 7 },
 })
 popup:SetBackdropColor(0.19, 0.14, 0.07, 0.98)
@@ -154,7 +154,7 @@ local iconFrame = CreateFrame("Frame", nil, popup)
 iconFrame:SetWidth(60)
 iconFrame:SetHeight(60)
 iconFrame:SetPoint("LEFT", popup, "LEFT", 16, 0)
-iconFrame:SetBackdrop({ edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border", edgeSize = 12 })
+iconFrame:SetBackdrop({ edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border", edgeSize = 8 })
 local icon = iconFrame:CreateTexture(nil, "ARTWORK")
 icon:SetTexture(DEFAULT_ICON)
 icon:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 6, -6)

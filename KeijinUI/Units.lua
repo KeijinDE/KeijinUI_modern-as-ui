@@ -55,7 +55,7 @@ function K.UpdateDebuffRow(row,unit)
 end
 -- Unit frames in the language of the panels: flat dark fill with tooltip border (K.Skin), the name
 -- in a heading strip like the panel titles, the health bar in the metal frame of K.MetalBar (fill
--- inset 3/2 px like K.Row), the portrait in a square box with the same border. The client cuts
+-- inset 1 px like K.Row), the portrait in a square box with the same border. The client cuts
 -- portraits to a circle itself, so the portrait is round inside its square box.
 local BORDER={0.62,0.57,0.43}
 local FRAME_W,FRAME_H=206,58
@@ -81,9 +81,9 @@ local function Create(unit,mirror)
     holder:SetPoint("TOPLEFT",f,"TOPLEFT",contentLeft,-28)
     local back=holder:CreateTexture(nil,"BACKGROUND")
     back:SetTexture(K.flat); back:SetVertexColor(0.04,0.04,0.05,0.6)
-    back:SetPoint("TOPLEFT",holder,"TOPLEFT",3,-2); back:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-3,2)
+    back:SetPoint("TOPLEFT",holder,"TOPLEFT",1,-1); back:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-1,1)
     local bar=CreateFrame("StatusBar",name.."Health",holder)
-    bar:SetPoint("TOPLEFT",holder,"TOPLEFT",3,-2); bar:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-3,2)
+    bar:SetPoint("TOPLEFT",holder,"TOPLEFT",1,-1); bar:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-1,1)
     bar:SetMinMaxValues(0,1); bar:SetValue(0)
     bar:SetStatusBarColor(unit=="player" and 0.12 or 0.85,unit=="player" and 0.88 or 0.08,0.08)
     K.MetalBar(holder,bar)

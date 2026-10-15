@@ -3,7 +3,7 @@ local panel=K.Panel("KeijinUIOptions","KeijinUI",440,424)
 panel:SetFrameStrata("DIALOG")
 -- Opaque background: the dialog texture itself is translucent, so the panel uses the flat fill.
 panel:SetBackdrop({ bgFile = K.flat, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true,
-    tileSize = 16, edgeSize = 14, insets = {left=4,right=4,top=4,bottom=4} })
+    tileSize = 16, edgeSize = 7, insets = {left=2,right=2,top=2,bottom=2} })
 panel:SetBackdropColor(0.055,0.055,0.065,1); panel:SetBackdropBorderColor(0.62,0.57,0.43,1)
 -- The panel moves with the left mouse button; its position is kept in KeijinUIDB.options.
 local saved=K.DB().options
@@ -48,7 +48,7 @@ end
 local function Button(parent,text,x,y,width,fn)
     local b=CreateFrame("Button",nil,parent)
     b:SetWidth(width); b:SetHeight(26); b:SetPoint("TOPLEFT",parent,"TOPLEFT",x,y)
-    K.Skin(b); b.text=K.Text(b,text,10,"CENTER",0,0)
+    K.Skin(b, 7); b.text=K.Text(b,text,10,"CENTER",0,0)
     b:SetScript("OnClick",fn)
     if text~="" then K.Live(b.text,function() return K.T(text) end) end
     return b
@@ -168,7 +168,7 @@ local announced=false
 local function Announce()
     if not announced then
         announced=true
-        DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r |cffffff88KeijinUI|r v0.6.0 – Use /kui")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r |cffffff88KeijinUI|r v0.6.1 – Use /kui")
     end
 end
 K.On("PLAYER_ENTERING_WORLD",Announce)

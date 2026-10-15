@@ -42,7 +42,7 @@ end
 local bottom=CreateFrame("Button",nil,panel)
 bottom:SetWidth(18); bottom:SetHeight(18); bottom:SetPoint("BOTTOMRIGHT",panel,"BOTTOMRIGHT",-4,4)
 bottom:SetFrameLevel(panel:GetFrameLevel()+5)
-K.Skin(bottom); bottom.text=K.Text(bottom,"v",10,"CENTER",0,0)
+K.Skin(bottom, 7); bottom.text=K.Text(bottom,"v",10,"CENTER",0,0)
 bottom:SetScript("OnClick",function() chat:ScrollToBottom() end)
 bottom:Hide()
 panel:EnableMouse(true); panel:EnableMouseWheel(true)

@@ -1,0 +1,207 @@
+local K=KeijinUI
+local panel=K.Panel("KeijinUIOptions","KeijinUI",440,424)
+panel:SetFrameStrata("DIALOG")
+-- Opaque background: the dialog texture itself is translucent, so the panel uses the flat fill.
+panel:SetBackdrop({ bgFile = K.flat, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true,
+    tileSize = 16, edgeSize = 14, insets = {left=4,right=4,top=4,bottom=4} })
+panel:SetBackdropColor(0.055,0.055,0.065,1); panel:SetBackdropBorderColor(0.62,0.57,0.43,1)
+-- The panel moves with the left mouse button; its position is kept in KeijinUIDB.options.
+local saved=K.DB().options
+if type(saved)=="table" and saved.point then panel:SetPoint(saved.point,UIParent,saved.relative,saved.x,saved.y)
+else panel:SetPoint("CENTER",UIParent,"CENTER",0,0) end
+panel:SetMovable(true); panel:EnableMouse(true); panel:RegisterForDrag("LeftButton")
+panel:SetScript("OnDragStart",function() this:StartMoving() end)
+panel:SetScript("OnDragStop",function()
+    this:StopMovingOrSizing()
+    local point,_,relative,x,y=this:GetPoint()
+    K.DB().options={point=point,relative=relative,x=x,y=y}
+end)
+
+-- Everything whose caption depends on a setting is refreshed through this list (language change, click).
+local captions={}
+local function RefreshAll() for _,fn in ipairs(captions) do fn() end end
+K.OnLang(RefreshAll)
+local GOLD={1,0.82,0.28}
+local function Mark(button,active)
+    button:SetBackdropBorderColor(active and 1 or 0.4,active and 0.82 or 0.38,0.28,1)
+end
+
+-- Tabs: one row of buttons under the title, one content frame per tab, only one visible.
+local PAGE_WIDTH=408
+local tabs={ {"display","Anzeige"},{"units","Einheiten"},{"layout","Layout"},{"general","Allgemein"} }
+local pages,tabButtons={},{}
+for _,entry in ipairs(tabs) do
+    local page=CreateFrame("Frame",nil,panel)
+    page:SetWidth(PAGE_WIDTH); page:SetHeight(308); page:SetPoint("TOPLEFT",panel,"TOPLEFT",16,-68)
+    page:Hide()
+    pages[entry[1]]=page
+end
+local function ShowTab(key)
+    if not pages[key] then key="display" end
+    for name,page in pairs(pages) do
+        if name==key then page:Show() else page:Hide() end
+        Mark(tabButtons[name],name==key)
+    end
+    K.DB().optionsTab=key
+end
+
+local function Button(parent,text,x,y,width,fn)
+    local b=CreateFrame("Button",nil,parent)
+    b:SetWidth(width); b:SetHeight(26); b:SetPoint("TOPLEFT",parent,"TOPLEFT",x,y)
+    K.Skin(b); b.text=K.Text(b,text,10,"CENTER",0,0)
+    b:SetScript("OnClick",fn)
+    if text~="" then K.Live(b.text,function() return K.T(text) end) end
+    return b
+end
+for i,entry in ipairs(tabs) do
+    local key=entry[1]
+    tabButtons[key]=Button(panel,entry[2],16+(i-1)*102,-34,98,function() ShowTab(key) end)
+end
+
+local function Heading(page,text,y)
+    local fs=K.LText(page,text,11,"TOPLEFT",0,y,PAGE_WIDTH)
+    fs:SetTextColor(GOLD[1],GOLD[2],GOLD[3])
+    return fs
+end
+-- A text line that is rebuilt on language change and on every refresh.
+local function Line(page,fn,size,x,y,width)
+    local fs=K.Text(page,"",size,"TOPLEFT",x,y,width)
+    K.Live(fs,fn)
+    table.insert(captions,function() fs:SetText(fn()) end)
+    return fs
+end
+-- A whole row is the button: name on the left, state on the right.
+-- state() returns the text and the color of the state.
+local function Row(page,label,y,state,fn)
+    local row=CreateFrame("Button",nil,page)
+    row:SetWidth(PAGE_WIDTH); row:SetHeight(23); row:SetPoint("TOPLEFT",page,"TOPLEFT",0,y)
+    row:SetBackdrop({ bgFile = K.flat })
+    row:SetBackdropColor(0.1,0.1,0.115,0.9)
+    row:SetScript("OnEnter",function() this:SetBackdropColor(0.18,0.17,0.13,0.95) end)
+    row:SetScript("OnLeave",function() this:SetBackdropColor(0.1,0.1,0.115,0.9) end)
+    row.name=K.Text(row,"",11,"LEFT",8,0)
+    K.Live(row.name,function() return K.T(label) end)
+    row.value=K.Text(row,"",11,"RIGHT",-8,0)
+    local function Refresh()
+        local text,color=state()
+        row.value:SetText(text); row.value:SetTextColor(color[1],color[2],color[3])
+    end
+    row:SetScript("OnClick",function() fn(); RefreshAll() end)
+    Refresh(); table.insert(captions,Refresh)
+    return row
+end
+local ON,OFF={0.4,0.9,0.4},{0.6,0.6,0.62}
+local function OnOff(on) if on then return K.T("An"),ON end return K.T("Aus"),OFF end
+-- Switch for a run module hidden through K.DB().hidden[key].
+local function HiddenSwitch(page,key,label,y)
+    return Row(page,label,y,function() return OnOff(not K.DB().hidden[key]) end,
+        function() K.DB().hidden[key]=not K.DB().hidden[key] end)
+end
+
+-- Tab Anzeige
+local page=pages.display
+Heading(page,"Übersichten",0)
+HiddenSwitch(page,"tracker","Runübersicht",-18)
+HiddenSwitch(page,"bosses","Begegnungen",-43)
+HiddenSwitch(page,"statistics","Runstatistiken",-68)
+HiddenSwitch(page,"tally","Kills und Gold",-93)
+HiddenSwitch(page,"xp","Erfahrung",-118)
+Heading(page,"Kampf",-150)
+HiddenSwitch(page,"meter","Schadensanzeige",-168)
+HiddenSwitch(page,"crits","Kritische Treffer",-193)
+Row(page,"Schadenszahlen",-218,function() return OnOff(not K.DB().hideCombatText) end,
+    function() SlashCmdList.KEIJINUI("text") end)
+Row(page,"Buildtipps",-243,function() return OnOff(not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false)) end,
+    function() SlashCmdList.KEIJINBUILDBAR("tipps") end)
+Row(page,"Minimap im KeijinUI Stil",-268,function() return OnOff(K.DB().minimapStyle~=false) end,
+    function() K.SetMinimapStyle(K.DB().minimapStyle==false) end)
+
+-- Tab Einheiten
+page=pages.units
+Heading(page,"Einheitenrahmen",0)
+Row(page,"Lebensbalken",-18,function()
+    return K.DB().classHealth~=false and K.T("Klassenfarbe") or K.T("Grün / Rot"),GOLD
+end,function() K.DB().classHealth=(K.DB().classHealth==false) end)
+Row(page,"Buffs",-43,function()
+    return K.DB().buffsLeft and K.T("linksbündig") or K.T("rechtsbündig"),GOLD
+end,function() K.SetBuffsLeft(not K.DB().buffsLeft) end)
+Heading(page,"Namensplaketten",-78)
+local plateButtons={}
+for i,entry in ipairs({{"all","Alle Gegner"},{"bosses","Boss, Elite, Rare"},{"off","Aus"}}) do
+    plateButtons[entry[1]]=Button(page,entry[2],(i-1)*139,-98,130,function() K.SetNameplates(entry[1]) end)
+end
+function K.UpdateNameplateLabels()
+    for mode,button in pairs(plateButtons) do Mark(button,K.DB().nameplates==mode) end
+end
+K.UpdateNameplateLabels()
+
+-- Tab Layout
+page=pages.layout
+local hint=K.LText(page,"Alt halten: Rahmen anzeigen und verschieben.\nAlt + Mausrad: Größe ändern.\nShift beim Loslassen: ohne Einrasten.\nÄnderungen werden gespeichert.",10,"TOPLEFT",0,0,PAGE_WIDTH)
+hint:SetHeight(56)
+Heading(page,"Bearbeiten",-66)
+Button(page,"Layout bearbeiten",0,-84,200,function() K.layout.Toggle(); panel:Hide() end)
+Row(page,"Raster und Einrasten",-116,function() return OnOff(K.DB().snap~=false) end,function() K.layout.ToggleGrid() end)
+Heading(page,"Zurücksetzen",-152)
+Button(page,"Layout zurücksetzen",0,-170,200,function() K.layout.Reset() end)
+Button(page,"Tooltip zurücksetzen",208,-170,200,function() K.ResetTooltip() end)
+
+-- Tab Allgemein
+page=pages.general
+Heading(page,"Sprache",0)
+local langButtons={}
+for i,entry in ipairs({{"en","English"},{"de","Deutsch"}}) do
+    langButtons[entry[1]]=Button(page,entry[2],(i-1)*139,-18,130,function() K.SetLang(entry[1]); RefreshAll() end)
+end
+table.insert(captions,function() for value,button in pairs(langButtons) do Mark(button,K.DB().lang==value) end end)
+Heading(page,"Oberfläche",-80)
+Button(page,"Oberfläche neu laden",0,-98,200,function() SlashCmdList.KEIJINUI("reload") end)
+Button(page,"Erfolgsvorschau",208,-98,200,function() SlashCmdList.KEIJINACHIEVEMENTS("test") end)
+Heading(page,"Befehle",-140)
+local commands=K.LText(page,"/kui: Einstellungen, Layout und Sprache\n/kbb: Zauber, Schmuck und Buildtipps\n/kachi: Erfolgsmeldung",10,"TOPLEFT",0,-158,PAGE_WIDTH)
+commands:SetHeight(44)
+
+Button(panel,"Schließen",170,-388,100,function() panel:Hide() end)
+RefreshAll()
+ShowTab(K.DB().optionsTab)
+local announced=false
+local function Announce()
+    if not announced then
+        announced=true
+        DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r |cffffff88KeijinUI|r v0.6.0 – Use /kui")
+    end
+end
+K.On("PLAYER_ENTERING_WORLD",Announce)
+if UnitExists("player") then Announce() end
+SLASH_KEIJINUI1="/kui"
+SlashCmdList.KEIJINUI=function(message)
+    local command=string.lower(string.gsub(message or "","^%s*(.-)%s*$","%1"))
+    if command=="" then if panel:IsShown() then panel:Hide() else panel:Show() end
+    elseif command=="edit" then K.layout.Toggle()
+    elseif command=="reset" then K.layout.Reset()
+    elseif command=="grid" then K.layout.ToggleGrid()
+    elseif command=="meter reset" then K.ResetMeter()
+    elseif command=="crits reset" then K.ResetCrits()
+    elseif command=="tooltip reset" then K.ResetTooltip()
+    elseif command=="plates all" then K.SetNameplates("all")
+    elseif command=="plates bosses" then K.SetNameplates("bosses")
+    elseif command=="plates off" then K.SetNameplates("off")
+    elseif command=="plates debug" then K.PlateDebug()
+    elseif command=="bosses debug" then K.BossDebug()
+    elseif command=="heal debug" then K.HealDebug()
+    elseif command=="build" then SlashCmdList.KEIJINBUILDBAR("toggle")
+    elseif command=="text" then
+        K.DB().hideCombatText=not K.DB().hideCombatText
+        K.Say(K.T("Schadenszahlen")..": "..(K.DB().hideCombatText and K.T("Aus") or K.T("An")))
+    elseif command=="reload" then ReloadUI()
+    elseif command=="lang" or string.find(command,"^lang%s") then
+        local _,_,value=string.find(command,"^lang%s+(%S+)$")
+        if value=="de" or value=="en" then
+            K.SetLang(value)
+            K.Say(K.T("Sprache")..": "..(value=="de" and "Deutsch" or "English"))
+            RefreshAll()
+        else
+            K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
+        end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+end

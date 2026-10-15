@@ -1,0 +1,90 @@
+# Modern AS UI (KeijinUI)
+
+Many thanks to [SurvivorsDragonUi](https://github.com/migwynkriid13/SurvivorsDragonUi) and [Survivor UI](https://github.com/morderous/survivor-ui), the two projects that inspired this interface.
+
+A complete, consistent interface for **Azeroth Survivors** (WoW 1.12 client, Interface 11200).
+English first, [Deutsch below](#deutsch).
+
+![KeijinUI overview](screenshots/overview.jpg)
+
+## English
+
+### What it is
+
+KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single visual style:
+
+* Run overview with zone, run clock, progress and boss schedule (boss time and run time)
+* Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned
+* Damage meter and list of the biggest critical hits
+* Player and target frames, square minimap, action bar with ranks and cooldowns
+* Build overview with spells, jewelry and a build tip
+* Encounter bars for bosses, elites and rares, modern nameplates, damage numbers in the world
+* Loot notice, achievement popup and one chat window in the same frame style
+* Settings window with tabs, layout mode with grid and snapping, a ready made default layout
+* English and German interface
+
+![Layout mode with grid](screenshots/layout-mode.jpg)
+
+### Installation
+
+1. Download the repository (Code, Download ZIP) and unpack it.
+2. Copy the folder `KeijinUI` (not the whole repository folder) into the AddOns folder of the game.
+3. Disable SurvivorsDragonUi, SurvivorUI, KeijinBuildBar, KeijinRunCounters and KeijinAchievements, because KeijinUI contains their functions.
+4. Restart the game completely.
+
+### First steps
+
+* `/kui` opens the settings window.
+* Hold **Alt** to see all frames, drag them with the left mouse button, Alt and mouse wheel changes the size.
+* `/kui lang de` switches to German, `/kui lang en` back to English (default).
+* `/kui reset` restores the default layout.
+
+All commands, details and the changelog are in [KeijinUI/README.md](KeijinUI/README.md).
+
+### Credits
+
+* KeijinUI is my own work: code and bundled graphics were written or generated for this project. No code or textures of other addons are included.
+* SurvivorsDragonUi and Survivor UI served as inspiration and functional models for what an Azeroth Survivors interface can show.
+* Icons, portraits and some status bars are referenced from the game client by path and are not shipped. They belong to Blizzard Entertainment.
+
+## Deutsch
+
+Vielen Dank an [SurvivorsDragonUi](https://github.com/migwynkriid13/SurvivorsDragonUi) und [Survivor UI](https://github.com/morderous/survivor-ui), die beiden Projekte, die als Inspiration für diese Oberfläche dienten.
+
+Eine vollständige, einheitliche Oberfläche für **Azeroth Survivors** (WoW 1.12 Client, Interface 11200).
+
+### Was es ist
+
+KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläche in einem Stil:
+
+* Runübersicht mit Zone, Runuhr, Fortschritt und Bossplan (Bosszeit und Runzeit)
+* Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, effektive Heilung, Gold verdient
+* Schadensanzeige und Liste der größten kritischen Treffer
+* Spieler und Zielframe, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten
+* Buildübersicht mit Zaubern, Schmuck und Buildtipp
+* Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, Schadenszahlen in der Spielwelt
+* Beutemeldung, Erfolgsmeldung und ein Chatfenster im gleichen Rahmenstil
+* Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
+* Oberfläche auf Englisch und Deutsch
+
+### Installation
+
+1. Repository herunterladen (Code, Download ZIP) und entpacken.
+2. Den Ordner `KeijinUI` (nicht den ganzen Repositoryordner) in den AddOns Ordner des Spiels kopieren.
+3. SurvivorsDragonUi, SurvivorUI, KeijinBuildBar, KeijinRunCounters und KeijinAchievements deaktivieren, weil KeijinUI deren Funktionen enthält.
+4. Das Spiel vollständig neu starten.
+
+### Erste Schritte
+
+* `/kui` öffnet das Optionsfenster.
+* **Alt** halten zeigt alle Rahmen, mit der linken Maustaste verschieben, Alt und Mausrad ändern die Größe.
+* `/kui lang de` stellt auf Deutsch um, `/kui lang en` zurück auf Englisch (Standard).
+* `/kui reset` stellt das Standardlayout wieder her.
+
+Alle Befehle, Details und Änderungen stehen in [KeijinUI/README.md](KeijinUI/README.md).
+
+### Danksagung
+
+* KeijinUI ist eigene Arbeit: Code und mitgelieferte Grafiken wurden für dieses Projekt geschrieben oder erzeugt. Code oder Texturen anderer Addons sind nicht enthalten.
+* SurvivorsDragonUi und Survivor UI dienten als Inspiration und funktionale Vorbilder dafür, was eine Oberfläche für Azeroth Survivors anzeigen kann.
+* Symbole, Porträts und einige Statusleisten werden aus dem Spielclient über ihren Pfad referenziert und nicht mitgeliefert. Sie gehören Blizzard Entertainment.

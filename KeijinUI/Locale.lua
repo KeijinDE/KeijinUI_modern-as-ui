@@ -1,0 +1,234 @@
+-- Two languages, chosen by hand: English (default) or German.
+-- Source texts in the code are German; K.EN holds the English text for each of them.
+local K=KeijinUI
+K.EN={}
+K.lang="en"
+local live,hooks={},{}
+
+-- Translates a German source text. Missing entries come back unchanged. Extra arguments go through string.format.
+function K.T(text,a1,a2,a3,a4,a5,a6)
+    local out=text
+    if K.lang~="de" then out=K.EN[text] or text end
+    if a1~=nil then return string.format(out,a1,a2,a3,a4,a5,a6) end
+    return out
+end
+-- A text that is set now and again whenever the language changes.
+function K.Live(fs,fn)
+    table.insert(live,{fs,fn})
+    fs:SetText(fn())
+    return fs
+end
+function K.LText(frame,text,size,point,x,y,width)
+    local fs=K.Text(frame,"",size,point,x,y,width)
+    return K.Live(fs,function() return K.T(text) end)
+end
+function K.OnLang(fn) table.insert(hooks,fn) end
+function K.RefreshLang()
+    for _,item in ipairs(live) do item[1]:SetText(item[2]()) end
+    for _,fn in ipairs(hooks) do fn() end
+end
+
+-- The language is chosen by hand: "en" (default) or "de". GetLocale() is fixed to "enUS" in this client and
+-- the game data may still be English after a language change, so there is no detection.
+function K.EffectiveLang()
+    return K.DB().lang=="de" and "de" or "en"
+end
+-- Applies the setting to the texts that can change at once.
+function K.UpdateLang()
+    local new=K.EffectiveLang()
+    if new==K.lang then return false end
+    K.lang=new
+    K.RefreshLang()
+    return true
+end
+-- Stores the language and reloads the interface when it changed, so that every text is set again.
+function K.SetLang(value)
+    if value~="de" and value~="en" then return false end
+    if K.DB().lang==value and K.lang==value then return false end
+    K.DB().lang=value
+    K.UpdateLang()
+    ReloadUI()
+    return true
+end
+K.lang=K.EffectiveLang()
+
+-- English texts for the German sources.
+local EN=K.EN
+-- Panels, layout names, labels
+EN["Runübersicht"]="Run overview"
+EN["Begegnungen"]="Encounters"
+EN["Kills, Gold, Cache"]="Kills, gold, cache"
+EN["Erfahrung"]="Experience"
+EN["Zauber, Schmuck und Buildtipps"]="Spells, jewelry and build tips"
+EN["Erfolgsmeldung"]="Achievement popup"
+EN["Aktionsleiste"]="Action bar"
+EN["Beutemeldung"]="Loot notice"
+EN["Runstatistiken"]="Run statistics"
+EN["Schadensanzeige"]="Damage meter"
+EN["Kritische Treffer"]="Critical hits"
+EN["Spieler"]="Player"
+EN["Ziel"]="Target"
+EN["Kein Ziel"]="No target"
+EN["Leben"]="Health"
+EN["Mausrad: Größe"]="Mouse wheel: size"
+EN["Bosszeit"]="Boss time"
+EN["Runzeit"]="Run time"
+EN["Bezahlbar"]="Affordable"
+EN["Geöffnet"]="Opened"
+EN["Dieser Run"]="This run"
+EN["Schaden"]="Damage"
+EN["Größte kritische Treffer"]="Biggest critical hits"
+EN["Seit Laden der Oberfläche"]="Since the interface loaded"
+EN["Beute"]="Loot"
+-- Tracker and counters
+EN["Runzeit beim Sieg: %s\nBosszeit: %s\nErschienen bei: %s\nAktive Runzeit ohne Pausen. Erfasst beim Zustandswechsel des Spiels."]="Run time at the kill: %s\nBoss time: %s\nAppeared at: %s\nActive run time without pauses. Recorded when the game changes the boss state."
+EN["Bereits besiegt. Der Todeszeitpunkt wurde nicht erfasst.\nDie Spielschnittstelle liefert keine vergangenen Todeszeitpunkte."]="Already defeated. The time of death was not recorded.\nThe game interface does not provide past times of death."
+EN["Seit Erscheinen: %s\nErschienen bei: %s\nPausen und Kartenwahl zählen nicht mit."]="Since appearing: %s\nAppeared at: %s\nPauses and card choices are not counted."
+EN["Erscheint bei: %s Runzeit."]="Appears at %s run time."
+EN["Level %s   %s / %s EP"]="Level %s   %s / %s XP"
+EN["Warte auf Spieldaten"]="Waiting for game data"
+EN["Bereit"]="Ready"
+EN["geöffnet %s"]="opened %s"
+EN["geöffnet ?"]="opened ?"
+EN["Besiegte Gegner in diesem Run"]="Enemies defeated in this run"
+EN["Aktueller Goldbestand"]="Current gold"
+EN["Preis des nächsten Caches"]="Price of the next cache"
+EN["Geöffnete Caches in diesem Run"]="Caches opened in this run"
+EN["Geschätzte Zeit, bis der nächste Cache bezahlbar ist. Grundlage: Goldverdienst geteilt durch aktive Runzeit. Kein Timer für das Erscheinen einer Kiste."]="Estimated time until the next cache is affordable. Based on gold earned divided by active run time. Not a timer for a chest appearing."
+-- Statistics
+EN["Eliten besiegt"]="Elites defeated"
+EN["Wächter besiegt"]="Guardians defeated"
+EN["Bosse besiegt"]="Bosses defeated"
+EN["Schaden erlitten"]="Damage taken"
+EN["Heilung (effektiv)"]="Healing (effective)"
+EN["Gold verdient"]="Gold earned"
+EN["Noch keine Spieldaten"]="No game data yet"
+EN["Nahkampf"]="Melee"
+EN["Unbekannt"]="Unknown"
+EN["%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"]="%.0f damage\n%s / second\n%.1f%% share%s"
+EN["\nZusätzlicher Effekt"]="\nAdditional effect"
+EN["%s gesamt   ·   %s / s"]="%s total   ·   %s / s"
+EN["Noch kein Schaden"]="No damage yet"
+EN["Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"]="Biggest: %.0f\nLast: %.0f\nAverage: %.0f\nSmallest: %.0f\nCritical hits: %d"
+EN["Minimap im KeijinUI Stil"]="Minimap in KeijinUI style"
+EN["\n\nGeschätzt, brutto inkl. Überheilung (nicht die effektive Heilung):"]="\n\nEstimated, gross including overhealing (not the effective healing):"
+EN["\nLebensraub: %s (%.1f%% des Schadens)"]="\nLeech: %s (%.1f%% of damage)"
+EN["\nKill-Heilung: %s (%s pro Kill)"]="\nHeal per kill: %s (%s per kill)"
+EN["\nRegeneration: %s (%.1f pro Sekunde)"]="\nRegeneration: %s (%.1f per second)"
+EN["\nSumme: %s"]="\nTotal: %s"
+-- Loot
+EN["Beute erhalten"]="Loot received"
+-- Options
+EN["Alt halten: Rahmen anzeigen und verschieben.\nAlt + Mausrad: Größe ändern.\nShift beim Loslassen: ohne Einrasten.\nÄnderungen werden gespeichert."]="Hold Alt: show and move frames.\nAlt + mouse wheel: change size.\nShift when releasing: no snapping.\nChanges are saved."
+EN["Anzeige"]="Display"
+EN["Einheiten"]="Units"
+EN["Layout"]="Layout"
+EN["Allgemein"]="General"
+EN["Übersichten"]="Overviews"
+EN["Kampf"]="Combat"
+EN["Einheitenrahmen"]="Unit frames"
+EN["Bearbeiten"]="Editing"
+EN["Zurücksetzen"]="Reset"
+EN["Oberfläche"]="Interface"
+EN["Oberfläche neu laden"]="Reload interface"
+EN["Befehle"]="Commands"
+EN["/kui: Einstellungen, Layout und Sprache\n/kbb: Zauber, Schmuck und Buildtipps\n/kachi: Erfolgsmeldung"]="/kui: settings, layout and language\n/kbb: spells, jewelry and build tips\n/kachi: achievement popup"
+EN["Kills und Gold"]="Kills and gold"
+EN["Aus"]="Off"
+EN["An"]="On"
+EN["Buildtipps"]="Build tips"
+EN["Schadenszahlen an / aus"]="Damage numbers on / off"
+EN["Erfolgsvorschau"]="Achievement preview"
+EN["Namensplaketten"]="Nameplates"
+EN["Alle Gegner"]="All enemies"
+EN["Boss, Elite, Rare"]="Boss, elite, rare"
+EN["Tooltip zurücksetzen"]="Reset tooltip"
+EN["Layout bearbeiten"]="Edit layout"
+EN["Layout zurücksetzen"]="Reset layout"
+EN["Lebensbalken"]="Health bar"
+EN["Klassenfarbe"]="Class color"
+EN["Grün / Rot"]="Green / red"
+EN["linksbündig"]="left aligned"
+EN["rechtsbündig"]="right aligned"
+EN["Raster und Einrasten"]="Grid and snapping"
+EN["An (Shift beim Loslassen: ohne Einrasten)"]="On (Shift when releasing: no snapping)"
+EN["Schließen"]="Close"
+EN["Schadenszahlen"]="Damage numbers"
+EN["Sprache"]="Language"
+EN["/kui lang de|en. Aktuell: %s."]="/kui lang de|en. Current: %s."
+EN["/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."]="/kui, /kui edit, /kui reset, /kui grid (grid and snapping), /kui text, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (language), /kui reload (reload the interface). /kbb for build tips, /kachi for achievements."
+-- Advisor
+EN["Tipp"]="Tip"
+EN["Sammle Daten"]="Collecting data"
+EN["Noch keine Messung"]="No measurement yet"
+EN["Schutz"]="Protection"
+EN["Defensive stärken"]="Strengthen defense"
+EN["Regelhinweis"]="Rule based hint"
+EN["Wenig Leben: Schutz und Heilung haben Vorrang."]="Low health: protection and healing come first."
+EN["Fokus Überleben: Schutz und Heilung bevorzugen."]="Survival focus: prefer protection and healing."
+EN["Diese Fähigkeit kann den Schutz deines Builds unterstützen."]="This ability can support the protection of your build."
+EN["Dein Build hat zusätzlichen Schaden, solange ein Schild aktiv ist."]="Your build deals extra damage while a shield is active."
+EN["Mindestens 8 aktive Kampfsekunden mit Schaden nötig. Das Fenster wächst bis etwa 30 Sekunden."]="At least 8 active combat seconds with damage are needed. The window grows to about 30 seconds."
+EN["Keine Zuordnung"]="No match"
+EN["Daten reichen nicht"]="Not enough data"
+EN["Für erlernte Spells wurde noch kein passender Schadenseintrag gemessen."]="No matching damage entry has been measured for learned spells yet."
+EN["Schaden ausbauen"]="Build up damage"
+EN["Schaden prüfen"]="Check damage"
+EN["Modellschätzung"]="Model estimate"
+EN["Vorläufig nach Anteil"]="Provisional by share"
+EN["%.0f%% des Gesamtschadens in den letzten %.0f Kampfsekunden."]="%.0f%% of the total damage in the last %.0f combat seconds."
+EN["Vergleichsmodell: +10 Prozentpunkte lokaler Schadensbonus ≈ +%.1f%% Gesamtschaden."]="Comparison model: +10 percentage points of local damage bonus = about +%.1f%% total damage."
+EN["Das ist ein hypothetischer Vergleich, keine erkannte Karte."]="This is a hypothetical comparison, not a recognized card."
+EN["Modellhinweis"]="Model note"
+EN["Teilmodell"]="Partial model"
+EN["Für einzelne Spells fehlen Bonusdaten; sie wurden im Modell nicht mitverglichen."]="Bonus data is missing for some spells; they were not compared in the model."
+EN["Lokaler Aufwertungsbonus nicht lesbar. Priorität nur nach jüngstem Schadensanteil."]="Local upgrade bonus not readable. Priority only by recent damage share."
+EN["Lebensraub: zusätzlicher Schaden kann gleichzeitig heilen, solange Leben fehlt."]="Life steal: extra damage can heal at the same time while health is missing."
+EN["Schildsynergie: aktiven Schild erhalten, damit dein Schadensbonus wirkt."]="Shield synergy: keep a shield active so your damage bonus applies."
+EN["Bossfokus bevorzugt bekannte Einzelzielzauber. Die Messung enthält auch Schaden an anderen Gegnern."]="Boss focus prefers known single target spells. The measurement also includes damage to other enemies."
+EN["Der nächste Boss kommt bald: Einzelzielschaden und Schutz mitprüfen."]="The next boss is coming soon: also check single target damage and protection."
+EN["Wenig Leben: bei der nächsten Wahl auch Schutz oder Heilung prüfen."]="Low health: also consider protection or healing at the next choice."
+EN["Abklingzeit, Ziele, Dauer und Grenzen können eine konkrete Wahl anders gewichten."]="Cooldown, targets, duration and limits can weigh a specific choice differently."
+EN["Frisch gelernte Spells können im Kampffenster noch unterrepräsentiert sein."]="Freshly learned spells can still be underrepresented in the combat window."
+EN["Keine Schadensdaten"]="No damage data"
+EN["Daten fehlen"]="Data missing"
+EN["Der Client liefert noch keine Schadensliste."]="The client does not provide a damage list yet."
+-- Build bar
+EN["Keine Items"]="No items"
+EN["Buildempfehlung"]="Build recommendation"
+EN["Grundlage: jüngstes Kampffenster, nicht der gesamte Run."]="Basis: most recent combat window, not the whole run."
+EN["Einordnung"]="Classification"
+EN["Angebotene Karten werden nicht ausgelesen."]="Offered cards are not read."
+EN["/kbb fokus schaden, boss, ueberleben oder ausgewogen"]="/kbb focus damage, boss, survival or balanced"
+EN["Zauber"]="Spell"
+EN["Warte auf die Zauberdaten des Spiels."]="Waiting for the spell data from the game."
+EN["Rang im Run: %.0f"]="Rank in run: %.0f"
+EN["Abklingzeit im Run: %.1fs"]="Cooldown in run: %.1fs"
+EN["Buildtipp"]="Build tip"
+EN["Alt gedrückt halten und ziehen zum Verschieben."]="Hold Alt and drag to move."
+EN["Fokus"]="Focus"
+EN["Ausgewogen"]="Balanced"
+EN["Überleben"]="Survival"
+EN["an."]="on."
+EN["aus."]="off."
+EN["Leiste eingeschaltet."]="Bar enabled."
+EN["Leiste ausgeschaltet."]="Bar disabled."
+EN["Position zurückgesetzt. Alt halten und ziehen zum Verschieben."]="Position reset. Hold Alt and drag to move."
+EN["/kbb, /kbb reset, /kbb tipps; /kbb fokus schaden|boss|ueberleben|ausgewogen (englisch: tips, focus damage|boss|survival|balanced). Alt halten und ziehen zum Verschieben."]="/kbb, /kbb reset, /kbb tips; /kbb focus damage|boss|survival|balanced (German: tipps, fokus schaden|boss|ueberleben|ausgewogen). Hold Alt and drag to move."
+-- Achievements
+EN["VORSCHAU"]="PREVIEW"
+EN["ERFOLG ERRUNGEN"]="ACHIEVEMENT EARNED"
+EN["Ziehen. /kachi lock zum Fixieren."]="Drag. /kachi lock to fix."
+EN["Position zurückgesetzt."]="Position reset."
+EN["Erfolgsfenster ausgeschaltet."]="Achievement window disabled."
+EN["Erfolgsfenster eingeschaltet."]="Achievement window enabled."
+EN["Erfolgston eingeschaltet."]="Achievement sound enabled."
+EN["Erfolgston ausgeschaltet."]="Achievement sound disabled."
+EN["Mitschnitt"]="Recording"
+EN["erkannt"]="recognized"
+EN["nicht erkannt"]="not recognized"
+EN["Mitschnitt der Systemmeldungen läuft, auch nach Neustart. /kachi log zeigt ihn, /kachi debug beendet ihn."]="Recording system messages, also after a restart. /kachi log shows it, /kachi debug stops it."
+EN["Mitschnitt der Systemmeldungen beendet."]="Recording of system messages stopped."
+EN["Mitschnitt ist leer."]="Recording is empty."
+EN["Mitschnitt geleert."]="Recording cleared."
+EN["Ein denkwürdiger Augenblick"]="A Memorable Moment"

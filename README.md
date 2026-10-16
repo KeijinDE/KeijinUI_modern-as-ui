@@ -27,8 +27,8 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 
 ### Installation
 
-1. Download the repository (Code, Download ZIP) and unpack it.
-2. Copy the folder `KeijinUI` (not the whole repository folder) into the AddOns folder of the game.
+1. Download `KeijinUI-x.y.z.zip` from the latest [release](https://github.com/KeijinDE/KeijinUI_modern-as-ui/releases/latest) (not "Source code").
+2. Unpack it into the AddOns folder of the game, so that `AddOns/KeijinUI/KeijinUI.toc` exists.
 3. Disable SurvivorsDragonUi, SurvivorUI, KeijinBuildBar, KeijinRunCounters and KeijinAchievements, because KeijinUI contains their functions.
 4. Restart the game completely.
 
@@ -71,8 +71,8 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 
 ### Installation
 
-1. Repository herunterladen (Code, Download ZIP) und entpacken.
-2. Den Ordner `KeijinUI` (nicht den ganzen Repositoryordner) in den AddOns Ordner des Spiels kopieren.
+1. `KeijinUI-x.y.z.zip` aus dem neuesten [Release](https://github.com/KeijinDE/KeijinUI_modern-as-ui/releases/latest) herunterladen (nicht „Source code“).
+2. In den AddOns Ordner des Spiels entpacken, sodass `AddOns/KeijinUI/KeijinUI.toc` existiert.
 3. SurvivorsDragonUi, SurvivorUI, KeijinBuildBar, KeijinRunCounters und KeijinAchievements deaktivieren, weil KeijinUI deren Funktionen enthält.
 4. Das Spiel vollständig neu starten.
 

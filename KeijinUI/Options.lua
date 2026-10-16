@@ -1,5 +1,5 @@
 local K=KeijinUI
-local panel=K.Panel("KeijinUIOptions","KeijinUI",440,424)
+local panel=K.Panel("KeijinUIOptions","KeijinUI",440,448)
 panel:SetFrameStrata("DIALOG")
 -- Opaque background: the dialog texture itself is translucent, so the panel uses the flat fill.
 K.Skin(panel,7)
@@ -184,7 +184,7 @@ Row(page,"Run Meldung",-272,function() return OnOff(K.runs.MessageOn()) end,
 Row(page,"Minimapknopf",-297,function() return OnOff(K.MinimapButtonOn()) end,
     function() K.SetMinimapButton(not K.MinimapButtonOn()) end)
 
-Button(panel,"Schließen",170,-388,100,function() panel:Hide() end)
+Button(panel,"Schließen",170,-412,100,function() panel:Hide() end)
 RefreshAll()
 ShowTab(K.DB().optionsTab)
 local announced=false

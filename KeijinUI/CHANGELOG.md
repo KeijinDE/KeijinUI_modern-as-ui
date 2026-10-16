@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 0.9.1 (2026-10-17, release v0.9.1)
+
+Settings window: the window is a little taller, so the Close button no longer touches the Minimap button row on the General tab. The README on GitHub shows the minimap button and the General tab.
+
 ### 0.9.0 (2026-10-17, release v0.9.0)
 
 Run overview. A new window (`/kui runs`, or Settings, General, Run overview) lists, per zone and character, the number of runs, wins, the last time, the fastest win and the longest survival. One page per zone, switched with the arrows; zones follow the order of the game, characters appear in their class color, missing values show a dash. The data is stored account wide, so all characters appear together. The game reports only the run in progress, so the overview counts from this version on; earlier runs cannot be added.
@@ -140,6 +144,10 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 0.9.1 (2026-10-17, Release v0.9.1)
+
+Optionsfenster: Das Fenster ist etwas höher, damit der Knopf Schließen im Reiter Allgemein nicht mehr an die Zeile Minimapknopf stößt. Die README auf GitHub zeigt den Minimapknopf und den Reiter Allgemein.
 
 ### 0.9.0 (2026-10-17, Release v0.9.0)
 

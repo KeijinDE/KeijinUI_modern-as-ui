@@ -7,8 +7,12 @@ local PATH="Interface\\AddOns\\KeijinUI\\media\\resources\\"
 local TYPES={
     ROGUE={key="seal_fate",power=3,label="Combopunkte",art="Point"},
     WARLOCK={key="soul_fire",power=0,label="Seelensplitter",art="Shard"},
-    WARRIOR={key="bloodrage",power=1,label="Wut"}
+    WARRIOR={key="bloodrage",power=1,label="Wut"},
+    -- Countdown from AZS_SPELLS (cd / cdmax); the mana encoding is unproven and not interpreted.
+    PRIEST={key="lightwell",label="Lichtbrunnen",countdown=true,color={0.93,0.82,0.45}}
 }
+local RAGE_COLOR={0.69,0.38,0.27}
+local snap
 local PHASES={playing=true,choosing=true,paused=true}
 local frame=CreateFrame("Frame","KeijinUIResources",UIParent)
 frame:SetWidth(146); frame:SetHeight(20); frame:SetFrameStrata("LOW"); frame:Hide()
@@ -55,7 +59,7 @@ end
 local function Clear(reason)
     if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(frame) then GameTooltip:Hide() end
     frame:Hide(); R.kind=nil; R.value=nil; R.raw=nil; R.maximum=nil; R.reason=reason
-    R.full=false; glowUntil=0; flash:SetAlpha(0)
+    R.full=false; R.text=nil; glowUntil=0; flash:SetAlpha(0); snap=nil
     for _,icon in ipairs(icons) do icon:Hide() end
     rage:Hide(); text:SetText("")
 end
@@ -65,6 +69,36 @@ local function Learned(key)
         if type(spell)=="table" and spell.key==key and K.Number(spell.rank) and spell.rank>0 then return true end
     end
     return false
+end
+local function Spell(key)
+    if type(AZS_SPELLS)~="table" then return nil end
+    for _,spell in ipairs(AZS_SPELLS) do
+        if type(spell)=="table" and spell.key==key then return spell end
+    end
+end
+local function RunTime()
+    local t=AZS_GetRunTime and AZS_GetRunTime()
+    if K.Number(t) then return t end
+end
+-- AZS_SPELLS only arrives on change, so the countdown runs from a snapshot taken when cd/cdmax
+-- change (or an AZSSPELLS message arrives). The run clock stands still while choosing or paused.
+local function Countdown(spell,phase)
+    local cd,cdmax=spell.cd,spell.cdmax
+    if cd==nil then cd=0 end
+    if not K.Number(cd) then return nil,"invalid countdown" end
+    if cd>0 and (not K.Number(cdmax) or cdmax<=0) then return nil,"invalid countdown" end
+    local now,run=GetTime(),RunTime()
+    if not snap or snap.stale or snap.cd~=cd or snap.cdmax~=cdmax then
+        snap={cd=cd,cdmax=cdmax,now=now,run=run,left=cd}
+    elseif run and snap.run then snap.left=math.max(0,snap.cd-(run-snap.run))
+    else
+        if phase=="playing" then snap.left=math.max(0,snap.left-math.max(0,now-snap.now)) end
+        snap.now=now
+    end
+    local left=snap.left
+    if left<=0 then return 100,K.T("Bereit"),cd,cdmax end
+    local text=left<10 and string.format("%.1f s",left) or string.format("%.0f s",left)
+    return math.max(0,math.min(99.9,(1-left/cdmax)*100)),text,cd,cdmax
 end
 -- This mapping follows the reported Survivors mechanic: five absolute 20-unit steps.
 -- Refuse ordinary mana pools / changed contracts rather than displaying fabricated points.
@@ -80,6 +114,11 @@ local function Read()
     local kind=TYPES[class]
     if not kind then return nil,"class has no resource" end
     if not Learned(kind.key) then return nil,"ability not learned" end
+    if kind.countdown then
+        local value,text,cd,cdmax=Countdown(Spell(kind.key),phase)
+        if not value then return nil,text end
+        return kind,value,cd,cdmax,text
+    end
     if UnitPowerType("player")~=kind.power then return nil,"power type mismatch" end
     local raw,max=UnitMana("player"),UnitManaMax("player")
     if not K.Number(raw) or not K.Number(max) or max<=0 or raw>max then return nil,"invalid native power" end
@@ -91,8 +130,9 @@ local function Read()
     return kind,math.min(100,raw/max*100),raw,max
 end
 function R.Update()
-    local kind,value,raw,max=Read()
+    local kind,value,raw,max,label=Read()
     if not kind then Clear(value); return end
+    R.text=label
     local changed=R.kind~=kind or R.value~=value
     local full=value>=(kind.art and 5 or 100)
     -- Only flash an observed transition, never merely a full value during initialization.
@@ -112,9 +152,11 @@ function R.Update()
         end
     else
         for _,icon in ipairs(icons) do icon:Hide() end
+        local c=kind.color or RAGE_COLOR
+        rage:SetStatusBarColor(c[1],c[2],c[3])
         rage:SetValue(value); rage:Show()
         if frame:GetEffectiveScale()/UIParent:GetEffectiveScale()>=0.8 then
-            text:SetText(string.format("%.0f / 100",math.floor(value))); text:Show()
+            text:SetText(label or string.format("%.0f / 100",math.floor(value))); text:Show()
         else text:Hide() end
     end
     flash:SetAlpha(GetTime()<glowUntil and 0.8 or 0)
@@ -134,13 +176,19 @@ function K.ResourceDebug()
         tostring(class),tostring(phase),tostring(UnitPowerType and UnitPowerType("player")),
         tostring(UnitMana and UnitMana("player")),tostring(UnitManaMax and UnitManaMax("player")),
         tostring(R.value),tostring(R.reason or "valid")))
+    if class=="PRIEST" then
+        local spell=Spell("lightwell") or {}
+        K.Say(string.format("Resources lightwell: cd %s, cdmax %s, mana %s / %s, type %s",
+            tostring(spell.cd),tostring(spell.cdmax),tostring(UnitMana and UnitMana("player")),
+            tostring(UnitManaMax and UnitManaMax("player")),tostring(UnitPowerType and UnitPowerType("player"))))
+    end
 end
 frame:SetScript("OnEnter",function()
     if not R.kind then return end
     GameTooltip:SetOwner(this,"ANCHOR_TOP")
     GameTooltip:SetText(K.T(R.kind.label),1,0.82,0.28)
-    GameTooltip:AddLine(string.format("%.0f / %d",R.value,R.kind.art and 5 or 100),0.94,0.91,0.82)
-    GameTooltip:AddLine(K.T(R.kind.key=="seal_fate" and "Bei fünf Punkten wird automatisch Ausweiden ausgelöst." or
+    GameTooltip:AddLine(R.text or string.format("%.0f / %d",R.value,R.kind.art and 5 or 100),0.94,0.91,0.82)
+    GameTooltip:AddLine(K.T(R.kind.key=="lightwell" and "Der Lichtbrunnen feuert heilige Blitze von der Position des Helden." or R.kind.key=="seal_fate" and "Bei fünf Punkten wird automatisch Ausweiden ausgelöst." or
         (R.kind.key=="soul_fire" and "Bei fünf Splittern wird automatisch Seelenfeuer ausgelöst." or "Volle Wut löst automatisch Flächenschaden aus.")),0.94,0.91,0.82,true)
     GameTooltip:Show()
 end)
@@ -148,7 +196,10 @@ frame:SetScript("OnLeave",function() GameTooltip:Hide() end)
 for _,ev in ipairs({"UNIT_MANA","UNIT_ENERGY","UNIT_RAGE","UNIT_MAXMANA","UNIT_MAXENERGY","UNIT_MAXRAGE","UNIT_DISPLAYPOWER","PLAYER_TARGET_CHANGED"}) do
     K.On(ev,function(_,unit) if not unit or unit=="player" then R.Update() end end)
 end
-K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSRUN" or prefix=="AZSSPELLS" or prefix=="AZSZONE" then R.Update() end end)
+K.On("CHAT_MSG_ADDON",function(_,prefix)
+    if prefix=="AZSSPELLS" and snap then snap.stale=true end
+    if prefix=="AZSRUN" or prefix=="AZSSPELLS" or prefix=="AZSZONE" then R.Update() end
+end)
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("resources"); R.Update() end end)
 K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; R.Update() end)
 K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; Clear("outside world") end)

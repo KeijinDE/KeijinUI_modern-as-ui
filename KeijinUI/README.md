@@ -1,4 +1,4 @@
-# KeijinUI 0.7.2
+# KeijinUI 0.7.3
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -20,7 +20,7 @@ From 0.4.0 the whole interface is bilingual. English is the default; German is c
 
 ## Features
 
-* Class resources below the player health bar: five red rogue combo points, five smaller purple warlock soul shards, and a copper rage bar for warriors. Requires the learned proc ability and supported native power values. Defaults to attached to the player; Alt dragging or scaling detaches it. Units settings switch the display off or restore attachment.
+* Class resources below the player health bar: five red rogue combo points, five smaller purple warlock soul shards, a copper rage bar for warriors, and a golden Lightwell countdown bar for priests. Requires the learned proc ability and supported native power values. Defaults to attached to the player; Alt dragging or scaling detaches it. Units settings switch the display off or restore attachment.
 * One original chamfered contour for rectangular panels, bars and icon frames. Player and target free ends use the same short diagonal; portraits and combo points stay round.
 
 * Run overview with zone, run clock, progress bar and bosses with two time columns: boss time (active time since the boss appeared) and run time. Example: `3:23 | 0:23` means the boss died at 3:23 run time after 23 seconds. Stopped times turn green. Bosses that died before the interface loaded show question marks, because the game provides no past times of death.
@@ -97,7 +97,7 @@ Ab 0.4.0 ist die ganze Oberfläche zweisprachig. Englisch ist der Standard, Deut
 
 ## Funktionen
 
-* Klassenressourcen unter dem Spielerbalken: fünf rote Combopunkte beim Schurken, fünf kleinere violette Seelensplitter beim Hexenmeister und eine kupferrote Wutleiste beim Krieger. Nur mit gelernter Fähigkeit und unterstützten nativen Werten. Folgt zunächst dem Spieler; Alt und Ziehen oder Skalieren löst die Bindung. Im Tab Einheiten abschaltbar und wieder anheftbar.
+* Klassenressourcen unter dem Spielerbalken: fünf rote Combopunkte beim Schurken, fünf kleinere violette Seelensplitter beim Hexenmeister eine kupferrote Wutleiste beim Krieger und ein goldener Lichtbrunnen Countdown beim Priester. Nur mit gelernter Fähigkeit und unterstützten nativen Werten. Folgt zunächst dem Spieler; Alt und Ziehen oder Skalieren löst die Bindung. Im Tab Einheiten abschaltbar und wieder anheftbar.
 * Eigene gemeinsame Kontur mit kurzen Schrägen für rechteckige Panels, Leisten und Symbolrahmen. Auch die freien Enden der Spieler und Zielframes sind abgeschrägt. Porträts und Combopunkte bleiben rund.
 
 * Runübersicht mit Zone, Runuhr, Fortschrittsbalken und Bossen mit zwei Zeitspalten: Bosszeit (aktive Zeit seit dem Erscheinen) und Runzeit. Beispiel: `3:23 | 0:23` bedeutet, dass der Boss bei 3:23 Runzeit nach 23 Sekunden besiegt wurde. Gestoppte Zeiten werden grün. Bosse, die vor dem Laden der Oberfläche besiegt wurden, zeigen Fragezeichen, weil die Spielschnittstelle keine vergangenen Todeszeitpunkte liefert.
@@ -144,7 +144,7 @@ Fähigkeitsnamen (Titel der Empfehlung, Tooltips, Meter) folgen der Sprache: deu
 
 ## Daten
 
-Klassenressourcen lesen die aktive native Ressource statt Kampfeignisse zu zählen. Die berichtete Survivors Zuordnung verwendet 20 absolute Einheiten pro Punkt oder Splitter bei einem nativen Maximum von 100. Andere Bereiche werden ausgeblendet. Wut unterstützt ein natives Maximum von 100 oder 1000 und zeigt den Fortschritt bis voll. Die Adapter sind mit Testdaten geprüft; die Wertübergänge im ausgelieferten Spiel müssen noch bestätigt werden. `/kui resources debug` gibt aktuelle native Eingaben aus, ohne sie zu speichern.
+Klassenressourcen lesen die aktive native Ressource statt Kampfeignisse zu zählen. Die berichtete Survivors Zuordnung verwendet 20 absolute Einheiten pro Punkt oder Splitter bei einem nativen Maximum von 100. Andere Bereiche werden ausgeblendet. Wut unterstützt ein natives Maximum von 100 oder 1000 und zeigt den Fortschritt bis voll. Die Adapter sind mit Testdaten geprüft; die Wertübergänge im ausgelieferten Spiel müssen noch bestätigt werden. Der Lichtbrunnen Countdown stammt aus `AZS_SPELLS` (`cd`, `cdmax`) und läuft zwischen den Updates anhand der Laufzeit weiter. `/kui resources debug` gibt aktuelle native Eingaben aus (beim Priester zusätzlich cd, cdmax und Mana), ohne sie zu speichern.
 
 Runzeit, Level, Kills, Eliten, Wächter, Bosse, Goldverdienst, Cacheanzahl und Schadenssummen kommen direkt aus der Spielschnittstelle. Pause und Kartenwahl verwenden die angehaltene Spielzeit. Fehlende Werte erscheinen als Fragezeichen. Die Schadensanzeige übernimmt alle Quellen des nativen Meters, einschließlich Talenten und Gegenständen. Der native Reset beeinflusst diese Schnittstelle nicht. Selbst verschobene Rahmen können wieder Überlappungen erzeugen.
 

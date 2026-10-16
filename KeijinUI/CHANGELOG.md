@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 0.7.3 (2026-10-16, release v0.7.3)
+
+Priests see the Lightwell countdown under the player frame, taken from the game's spell cooldown data.
+
 ### 0.7.2 (2026-10-16, release v0.7.2)
 
 Removes a remaining piece of the old name shoulder at the portrait join, shared by player and mirrored target frames. Warms the normal unit-frame metal tint to bronze after the continuous bright outline made it look paler. Keeps the corrected uniform rail widths, complete bar ends and symmetric shard outlines. Elite gold and rare silver markers retain their colours.
@@ -116,6 +120,10 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 0.7.3 (2026-10-16, Release v0.7.3)
+
+Priester sehen den Lichtbrunnen Countdown unter dem Spielerrahmen, aus den Abklingzeitdaten des Spiels.
 
 ### 0.7.2 (2026-10-16, Release v0.7.2)
 

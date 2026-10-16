@@ -231,8 +231,8 @@ local function Cell(pool, index)
 	cell:RegisterForDrag("LeftButton")
 	cell:SetScript("OnDragStart", DragStart)
 	cell:SetScript("OnDragStop", DragStop)
-	cell.border = Fill(cell, "BACKGROUND", 0.25, 0.25, 0.28, 1)
-	cell.border:SetAllPoints(cell)
+	KeijinUI.Chamfer(cell,2,{0.02,0.02,0.025,0.95})
+	cell.border = cell
 	cell.icon = cell:CreateTexture(nil, "ARTWORK")
 	cell.icon:SetWidth(ICON - 4)
 	cell.icon:SetHeight(ICON - 4)
@@ -241,24 +241,20 @@ local function Cell(pool, index)
 	cell.rankBackground = Fill(cell, "OVERLAY", 0, 0, 0, 0.9)
 	cell.rankBackground:SetWidth(14)
 	cell.rankBackground:SetHeight(13)
-	cell.rankBackground:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -1, 1)
-	cell.bevel = cell:CreateTexture(nil,"OVERLAY")
-    cell.bevel:SetTexture("Interface\\Buttons\\UI-Quickslot2")
-    cell.bevel:SetPoint("TOPLEFT",cell,"TOPLEFT",-5,5)
-    cell.bevel:SetPoint("BOTTOMRIGHT",cell,"BOTTOMRIGHT",5,-5)
+	cell.rankBackground:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 2)
     cell.rank = cell:CreateFontString(nil, "OVERLAY")
 	cell.rank:SetFont(FONT, 10, "OUTLINE")
 	cell.rank:SetTextColor(1, 0.82, 0)
 	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -3, 2)
 	cell:SetScript("OnEnter", function()
 		hovered = this
-		this.border:SetTexture(1, 0.82, 0, 1)
+		this.border:SetBackdropBorderColor(1, 0.82, 0, 1)
 		Tooltip(this)
 	end)
 	cell:SetScript("OnLeave", function()
 		if hovered == this then hovered = nil; GameTooltip:Hide() end
 		local color = this.color or QUALITY[1]
-		this.border:SetTexture(color[1], color[2], color[3], 0.8)
+		this.border:SetBackdropBorderColor(color[1], color[2], color[3], 0.8)
 	end)
 	pool[index] = cell
 	return cell
@@ -284,7 +280,7 @@ local function Paint(pool, rows, top)
 			cell.rank:Hide(); cell.rankBackground:Hide()
 		end
 		if hovered ~= cell then
-			cell.border:SetTexture(cell.color[1], cell.color[2], cell.color[3], 0.8)
+			cell.border:SetBackdropBorderColor(cell.color[1], cell.color[2], cell.color[3], 0.8)
 		elseif changed then Tooltip(cell) end
 		cell:Show()
 	end
@@ -301,8 +297,7 @@ local function ActionCell(index)
 	local cell = CreateFrame("Frame", nil, skills)
 	cell:SetWidth(ACTION_ICON); cell:SetHeight(ACTION_ICON)
 	cell:EnableMouse(false)
-	cell.back = Fill(cell, "BACKGROUND", 0.02, 0.02, 0.025, 0.85)
-	cell.back:SetAllPoints(cell)
+	KeijinUI.Chamfer(cell,2,{0.02,0.02,0.025,0.85})
 	cell.icon = cell:CreateTexture(nil, "ARTWORK")
 	cell.icon:SetWidth(ACTION_ICON - 4); cell.icon:SetHeight(ACTION_ICON - 4)
 	cell.icon:SetPoint("CENTER", cell, "CENTER", 0, 0)
@@ -311,9 +306,7 @@ local function ActionCell(index)
 	cell.sweep:SetPoint("BOTTOMLEFT", cell.icon, "BOTTOMLEFT", 0, 0)
 	cell.sweep:SetPoint("BOTTOMRIGHT", cell.icon, "BOTTOMRIGHT", 0, 0)
 	cell.sweep:SetHeight(1); cell.sweep:Hide()
-	cell.frame = cell:CreateTexture(nil, "OVERLAY")
-	cell.frame:SetPoint("TOPLEFT", cell, "TOPLEFT", -6, 6)
-	cell.frame:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", 6, -6)
+	cell.frame = cell
 	cell.cooldown = cell:CreateFontString(nil, "OVERLAY")
 	cell.cooldown:SetFont(FONT, 14, "OUTLINE")
 	cell.cooldown:SetPoint("CENTER", cell, "CENTER", 0, 0)
@@ -333,9 +326,9 @@ local function PaintActions(rows)
 		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		cell.row = row
 		if row then
-			cell.icon:SetTexture(row.icon or "Interface\Icons\INV_Misc_QuestionMark")
+			cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
 			cell.icon:Show()
-			cell.frame:SetTexture("Interface\Buttons\UI-Quickslot2")
+			cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
 			local left = Number(row.cd) and row.cd > 0 and row.cd or nil
 			cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
 			if left then
@@ -344,7 +337,7 @@ local function PaintActions(rows)
 			else cell.sweep:Hide() end
 		else
 			cell.icon:Hide(); cell.sweep:Hide(); cell.cooldown:SetText("")
-			cell.frame:SetTexture("Interface\Buttons\UI-Quickslot")
+			cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
 		end
 		cell:Show()
 	end
@@ -384,7 +377,8 @@ local function Update()
 		end
 		table.insert(spells, {kind="spell", key=value.key, identity=value.key..":"..value.spell,
 			name=entry and entry.name or name, rank=value.rank, cd=value.cd, cdmax=value.cdmax,
-			book=entry and entry.slot, icon=entry and entry.icon})
+			book=entry and entry.slot,
+			icon=(entry and entry.icon) or (KeijinBuildBarIcons or {})[value.key]})
 	end
 	for index = 1, table.getn(JEWELRY) do
 		local slot = JEWELRY[index]

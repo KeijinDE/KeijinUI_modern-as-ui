@@ -1,4 +1,4 @@
-KeijinUI = { version = "0.6.7", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "0.7.2", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -103,15 +103,10 @@ function K.Text(frame, text, size, point, x, y, width)
     fs:SetText(text or "")
     return fs
 end
--- Unit frames keep edge 10; panels and buttons use the thinner edge 7.
+-- One original contour for panels and buttons; circles use their own artwork.
 function K.Skin(frame, edge)
-    edge = edge or 10
-    local inset = edge >= 10 and 3 or 2
-    frame:SetBackdrop({ bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true,
-        tileSize = 16, edgeSize = edge, insets = {left=inset,right=inset,top=inset,bottom=inset} })
-    frame:SetBackdropColor(0.055, 0.055, 0.065, 0.91)
-    frame:SetBackdropBorderColor(0.62, 0.57, 0.43, 1)
+    local cut=(edge or 10)>=10 and 6 or 4
+    K.Chamfer(frame,cut,{0.055,0.055,0.065,0.91},{0.62,0.57,0.43,1})
 end
 function K.Panel(name, title, width, height)
     local f = CreateFrame("Frame", name, UIParent)
@@ -130,26 +125,31 @@ function K.Panel(name, title, width, height)
     f:Hide()
     return f
 end
--- Bar border: a plain line of 1 unit in the panel border colour. The corners stay open,
--- which reads as slightly rounded. Stretched border textures looked thick and soft in the game.
+-- Native value/range semantics with a clipped original fill and closed chamfered rim.
 function K.MetalBar(frame,bar)
-    bar:SetStatusBarTexture("Interface\\AddOns\\KeijinUI\\media\\FillWhite.tga")
-    local overlay=CreateFrame("Frame",nil,frame)
-    overlay:SetAllPoints(frame); overlay:SetFrameLevel(bar:GetFrameLevel()+1)
-    local function Line(a,ax,ay,b,bx,by,vertical)
-        local tex=overlay:CreateTexture(nil,"OVERLAY")
-        tex:SetTexture(K.flat); tex:SetVertexColor(0.62,0.57,0.43,0.9)
-        tex:SetPoint(a,frame,a,ax,ay); tex:SetPoint(b,frame,b,bx,by)
-        if vertical then tex:SetWidth(1) else tex:SetHeight(1) end
-        return tex
+    local nativeValue=bar.SetValue
+    local r,g,b,a=bar:GetStatusBarColor()
+    local color={r or 1,g or 1,b or 1,a or 1}
+    bar:SetStatusBarColor(0,0,0,0)
+    local fill=K.CutFill(frame)
+    fill:Color(unpack(color))
+    local function Paint()
+        local width,height=frame:GetWidth(),frame:GetHeight()
+        if width<=2 or height<=2 then return end
+        local cut=math.min(4,height*0.2)
+        if not frame.chamfer or math.abs(frame.chamfer.cut-cut)>0.01 then
+            K.Chamfer(frame,cut,{0.025,0.025,0.03,0.92})
+        end
+        local low,high=bar:GetMinMaxValues()
+        local value=tonumber(bar:GetValue()) or low
+        local share=high>low and (value-low)/(high-low) or 0
+        fill:Paint(width-2,height-2,share,1,-1)
     end
-    overlay.lines={
-        Line("TOPLEFT",1,0,"TOPRIGHT",-1,0),
-        Line("BOTTOMLEFT",1,0,"BOTTOMRIGHT",-1,0),
-        Line("TOPLEFT",0,-1,"BOTTOMLEFT",0,1,true),
-        Line("TOPRIGHT",0,-1,"BOTTOMRIGHT",0,1,true),
-    }
-    return overlay
+    bar.SetValue=function(self,value) nativeValue(self,value); Paint() end
+    bar.SetStatusBarColor=function(self,r,g,b,a) color={r,g,b,a or 1}; fill:Color(r,g,b,a) end
+    bar.GetStatusBarColor=function() return unpack(color) end
+    Paint()
+    return fill
 end
 -- Shared part of all list rows: position in the panel, label, value and tooltip. The text
 -- sits on its own layer above whatever the row draws.
@@ -174,9 +174,6 @@ end
 -- Bar row with the straight line border (boss rows of the encounter group).
 function K.Row(parent, index, height)
     local row = RowBase(parent, index, height)
-    local bg = row:CreateTexture(nil, "BACKGROUND")
-    bg:SetTexture(K.flat); bg:SetVertexColor(0.04,0.04,0.05,0.6)
-    bg:SetPoint("TOPLEFT",row,"TOPLEFT",1,-1); bg:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-1,1)
     row.bar = CreateFrame("StatusBar", nil, row)
     row.bar:SetPoint("TOPLEFT",row,"TOPLEFT",1,-1); row.bar:SetPoint("BOTTOMRIGHT",row,"BOTTOMRIGHT",-1,1); row.bar:SetMinMaxValues(0,1); row.bar:SetValue(0)
     row.bar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
@@ -192,7 +189,7 @@ function K.ValueRow(parent, index, height)
     row.line:SetHeight(1)
     return row
 end
--- Data bar with rounded corners (damage meter, critical hits). Inner area, fill and the
+-- Data bar with short chamfered corners (damage meter, critical hits). Inner area, fill and the
 -- 1 unit outline are each built from a left end, a stretched middle and a mirrored right
 -- end (media/list, made by development/keijinui/prepare_list_art.py). The ends keep their
 -- width, so the corners never stretch. A partial fill crops texture and width together,

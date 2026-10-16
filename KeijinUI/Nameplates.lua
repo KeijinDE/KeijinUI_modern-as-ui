@@ -223,7 +223,10 @@ function K.PlateDebug()
             ..", Kind "..tostring(p.health:GetObjectType()))
     end
 end
-table.insert(K.updates,Update)
+-- Every frame, not on the shared 0.1 s tick: new or rebound plates are styled on their first
+-- update, so the stock plate does not flash and reused plates do not show the old unit.
+local driver=CreateFrame("Frame","KeijinUIPlates")
+driver:SetScript("OnUpdate",Update)
 K.On("PLAYER_ENTERING_WORLD",function() K.SetNameplates(Mode()); Update() end)
 K.On("PLAYER_LEAVING_WORLD",function() K.ReleaseNameplates() end)
 K.On("PLAYER_LOGOUT",function() K.ReleaseNameplates() end)

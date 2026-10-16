@@ -118,6 +118,18 @@ EN["\nLebensraub: %s (%.1f%% des Schadens)"]="\nLeech: %s (%.1f%% of damage)"
 EN["\nKill-Heilung: %s (%s pro Kill)"]="\nHeal per kill: %s (%s per kill)"
 EN["\nRegeneration: %s (%.1f pro Sekunde)"]="\nRegeneration: %s (%.1f per second)"
 EN["\nSumme: %s"]="\nTotal: %s"
+-- Class resources
+EN["Klassenressourcen"]="Class resources"
+EN["Ressourcenposition"]="Resource position"
+EN["Automatisch"]="Automatic"
+EN["Frei"]="Free"
+EN["Am Spieler"]="Attached to player"
+EN["Combopunkte"]="Combo points"
+EN["Seelensplitter"]="Soul shards"
+EN["Wut"]="Rage"
+EN["Bei fünf Punkten wird automatisch Ausweiden ausgelöst."]="At five points, Eviscerate triggers automatically."
+EN["Bei fünf Splittern wird automatisch Seelenfeuer ausgelöst."]="At five shards, Soul Fire triggers automatically."
+EN["Volle Wut löst automatisch Flächenschaden aus."]="Full rage automatically triggers area damage."
 -- Loot
 EN["Beute erhalten"]="Loot received"
 -- Options

@@ -50,6 +50,21 @@ panel:SetScript("OnMouseWheel",function()
     for _=1,3 do if arg1>0 then chat:ScrollUp() else chat:ScrollDown() end end
 end)
 local busy=false
+local inputParts={}
+local function StyleInput()
+    if not ChatFrameEditBox then return end
+    if not ChatFrameEditBox.chamfer then
+        for _,region in ipairs({ChatFrameEditBox:GetRegions()}) do
+            if region.GetObjectType and region:GetObjectType()=="Texture" then
+                local path=region:GetTexture()
+                if type(path)=="string" and string.find(string.lower(path),"ui%-chatinputborder") then
+                    table.insert(inputParts,{region,region:GetAlpha() or 1}); region:SetAlpha(0)
+                end
+            end
+        end
+        K.Skin(ChatFrameEditBox,7)
+    end
+end
 local function Enforce()
     if busy then return end
     busy=true
@@ -69,6 +84,7 @@ local function Enforce()
         if panel:GetHeight()~=height+2*PAD then panel:SetHeight(height+2*PAD) end
     end
     Style(true)
+    StyleInput()
     -- The edit box is a separate UIParent frame under the chat: it follows the panel's scale.
     if ChatFrameEditBox and ChatFrameEditBox:GetScale()~=panel:GetScale() then ChatFrameEditBox:SetScale(panel:GetScale()) end
     if chat.AtBottom then
@@ -80,6 +96,11 @@ end
 K.chat.Enforce=Enforce
 function K.chat.Release()
     if not saved then return end
+    for _,part in ipairs(inputParts) do part[1]:SetAlpha(part[2]) end
+    if ChatFrameEditBox and ChatFrameEditBox.chamfer then
+        for _,part in ipairs(ChatFrameEditBox.chamfer.back) do part:Hide() end
+        for _,part in ipairs(ChatFrameEditBox.chamfer.rim) do part:Hide() end
+    end
     Style(false)
     chat:SetParent(saved.parent); chat:SetScale(1)
     chat:ClearAllPoints(); chat:SetPoint(saved.point,saved.relative,saved.relativePoint,saved.x,saved.y)

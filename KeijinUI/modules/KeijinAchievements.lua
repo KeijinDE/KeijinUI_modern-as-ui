@@ -101,12 +101,7 @@ popup:SetMovable(true)
 popup:SetClampedToScreen(true)
 popup:EnableMouse(false)
 popup:RegisterForDrag("LeftButton")
-popup:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border",
-    tile = true, tileSize = 32, edgeSize = 16,
-    insets = { left = 7, right = 7, top = 7, bottom = 7 },
-})
+KeijinUI.Skin(popup)
 popup:SetBackdropColor(0.19, 0.14, 0.07, 0.98)
 popup:SetBackdropBorderColor(1, 0.88, 0.55, 1)
 popup:Hide()
@@ -154,7 +149,7 @@ local iconFrame = CreateFrame("Frame", nil, popup)
 iconFrame:SetWidth(60)
 iconFrame:SetHeight(60)
 iconFrame:SetPoint("LEFT", popup, "LEFT", 16, 0)
-iconFrame:SetBackdrop({ edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Gold-Border", edgeSize = 8 })
+KeijinUI.Chamfer(iconFrame,3,nil,{1,0.88,0.55,1})
 local icon = iconFrame:CreateTexture(nil, "ARTWORK")
 icon:SetTexture(DEFAULT_ICON)
 icon:SetPoint("TOPLEFT", iconFrame, "TOPLEFT", 6, -6)

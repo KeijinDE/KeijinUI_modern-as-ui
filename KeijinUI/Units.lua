@@ -16,10 +16,9 @@ function K.DebuffRow(parent,size,centered)
     for i=1,DEBUFF_MAX do
         local icon=CreateFrame("Frame",nil,row)
         icon:SetWidth(size); icon:SetHeight(size); icon:EnableMouse(false)
-        icon.back=icon:CreateTexture(nil,"BACKGROUND")
-        icon.back:SetTexture(K.flat); icon.back:SetVertexColor(0.02,0.02,0.025,0.95); icon.back:SetAllPoints(icon)
+        K.Chamfer(icon,2,{0.02,0.02,0.025,0.95})
         icon.tex=icon:CreateTexture(nil,"ARTWORK")
-        icon.tex:SetPoint("TOPLEFT",icon,"TOPLEFT",1,-1); icon.tex:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",-1,1)
+        icon.tex:SetPoint("TOPLEFT",icon,"TOPLEFT",2,-2); icon.tex:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",-2,2)
         icon.tex:SetTexCoord(0.08,0.92,0.08,0.92)
         icon.count=K.Text(icon,"",8,"BOTTOMRIGHT",0,1)
         icon.count:ClearAllPoints(); icon.count:SetPoint("BOTTOMRIGHT",icon,"BOTTOMRIGHT",1,0)
@@ -55,7 +54,7 @@ function K.UpdateDebuffRow(row,unit)
 end
 -- One sculpted housing: portrait bezel, dark name shoulder, tapered health rail.
 -- All artwork is original and uses ordinary 1.12 textures, including the mirror.
-local BORDER={0.88,0.82,0.67}
+local BORDER={0.78,0.69,0.50}
 local FRAME_W,FRAME_H=206,58
 local BOX=54
 local HOLDER_W,HOLDER_H=158,30
@@ -102,7 +101,7 @@ local function Create(unit,mirror)
     f.percent:SetHeight(14); f.percent:SetJustifyH(mirror and "LEFT" or "RIGHT")
     f.label=K.Text(layer,unit=="player" and K.T("Spieler") or K.T("Kein Ziel"),11,"TOPLEFT",TextLeft(58,90),-13,90)
     f.label:SetHeight(14); f.label:SetJustifyH(mirror and "RIGHT" or "LEFT"); f.label:SetTextColor(1,0.82,0.28)
-    -- End at x=184 instead of 192: more air below the curved outer rim.
+    -- End at x=184: keep the text safely inside the chamfered outer end.
     f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(153,31),-14,31)
     f.level:SetHeight(12); f.level:SetJustifyH(mirror and "LEFT" or "RIGHT"); f.level:SetTextColor(1,0.82,0.28)
     f.unit,f.portrait,f.bar,f.box,f.ring,f.rim=unit,portrait,bar,box,ring,rim
@@ -129,11 +128,13 @@ local function Create(unit,mirror)
 end
 Create("player",false); Create("target",true)
 -- Health colour: class colour by default (RAID_CLASS_COLORS from FrameXML Fonts.xml, token
--- from the second UnitClass return); /kui switches back to green and red.
+-- from the second UnitClass return); /kui switches back to green and red. The 1.12 table gives
+-- shamans the paladin pink, so they get the later dark blue instead.
+local CLASS_OVERRIDE={SHAMAN={r=0.00,g=0.44,b=0.87}}
 local function HealthColor(unit)
     if K.DB().classHealth~=false and (unit=="player" or UnitIsPlayer(unit)) then
         local _,token=UnitClass(unit)
-        local c=token and RAID_CLASS_COLORS and RAID_CLASS_COLORS[token]
+        local c=token and (CLASS_OVERRIDE[token] or RAID_CLASS_COLORS and RAID_CLASS_COLORS[token])
         if c then return c.r,c.g,c.b end
     end
     if unit=="player" then return 0.12,0.88,0.08 end

@@ -36,8 +36,7 @@ local function Build()
     local inner=CreateFrame("Frame",nil,MinimapCluster)
     inner:SetFrameLevel(Minimap:GetFrameLevel()+1)
     inner:SetPoint("TOPLEFT",Minimap,"TOPLEFT",-3,3); inner:SetPoint("BOTTOMRIGHT",Minimap,"BOTTOMRIGHT",3,-3)
-    inner:SetBackdrop({edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=8})
-    inner:SetBackdropBorderColor(0.62,0.57,0.43,0.8)
+    K.Chamfer(inner,3,nil,{0.62,0.57,0.43,0.8})
     inner:EnableMouse(false)
     panel.inner=inner
 end

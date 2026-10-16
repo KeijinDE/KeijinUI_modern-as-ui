@@ -21,6 +21,8 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * Encounter bars for bosses, elites and rares, modern nameplates, scrolling combat text with spell icons
 * Loot notice, achievement popup and one chat window in the same frame style
 * Settings window with tabs, layout mode with grid and snapping, a ready made default layout
+* Class resources: rogue combo points, warlock soul shards and warrior rage; attached to the player or movable with Alt
+* Original chamfered frames with warm bronze unit borders
 * English and German interface
 
 ![Layout mode with grid](screenshots/layout-mode.jpg)
@@ -41,7 +43,7 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 
 ![Settings window](screenshots/settings.png)
 
-All commands, details and the changelog are in [KeijinUI/README.md](KeijinUI/README.md).
+All commands and details are in [KeijinUI/README.md](KeijinUI/README.md). The full version history is in [CHANGELOG.md](KeijinUI/CHANGELOG.md).
 
 ### Credits
 
@@ -67,6 +69,8 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, scrollender Kampftext mit Zaubersymbolen
 * Beutemeldung, Erfolgsmeldung und ein Chatfenster im gleichen Rahmenstil
 * Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
+* Klassenressourcen: Combopunkte, Seelensplitter und Wut; am Spieler befestigt oder mit Alt frei beweglich
+* Eigene abgeschrägte Rahmen mit warmen bronzefarbenen Unitkanten
 * Oberfläche auf Englisch und Deutsch
 
 ### Installation
@@ -83,7 +87,7 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * `/kui lang de` stellt auf Deutsch um, `/kui lang en` zurück auf Englisch (Standard).
 * `/kui reset` stellt das Standardlayout wieder her.
 
-Alle Befehle, Details und Änderungen stehen in [KeijinUI/README.md](KeijinUI/README.md).
+Alle Befehle und Details stehen in [KeijinUI/README.md](KeijinUI/README.md). Der vollständige Versionsverlauf steht in [CHANGELOG.md](KeijinUI/CHANGELOG.md).
 
 ### Danksagung
 

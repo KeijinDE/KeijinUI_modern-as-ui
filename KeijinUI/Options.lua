@@ -2,9 +2,8 @@ local K=KeijinUI
 local panel=K.Panel("KeijinUIOptions","KeijinUI",440,424)
 panel:SetFrameStrata("DIALOG")
 -- Opaque background: the dialog texture itself is translucent, so the panel uses the flat fill.
-panel:SetBackdrop({ bgFile = K.flat, edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", tile = true,
-    tileSize = 16, edgeSize = 7, insets = {left=2,right=2,top=2,bottom=2} })
-panel:SetBackdropColor(0.055,0.055,0.065,1); panel:SetBackdropBorderColor(0.62,0.57,0.43,1)
+K.Skin(panel,7)
+panel:SetBackdropColor(0.055,0.055,0.065,1)
 -- The panel moves with the left mouse button; its position is kept in KeijinUIDB.options.
 local saved=K.DB().options
 if type(saved)=="table" and saved.point then panel:SetPoint(saved.point,UIParent,saved.relative,saved.x,saved.y)
@@ -131,10 +130,16 @@ end,function() K.DB().classHealth=(K.DB().classHealth==false) end)
 Row(page,"Buffs",-43,function()
     return K.DB().buffsLeft and K.T("linksbündig") or K.T("rechtsbündig"),GOLD
 end,function() K.SetBuffsLeft(not K.DB().buffsLeft) end)
-Heading(page,"Namensplaketten",-78)
+Row(page,"Klassenressourcen",-68,function()
+    return K.DB().classResources~=false and K.T("Automatisch") or K.T("Aus"),GOLD
+end,function() K.SetClassResources(K.DB().classResources==false) end)
+Row(page,"Ressourcenposition",-93,function()
+    return K.DB().resourceFree and K.T("Frei") or K.T("Am Spieler"),GOLD
+end,function() K.SetResourceFree(not K.DB().resourceFree) end)
+Heading(page,"Namensplaketten",-128)
 local plateButtons={}
 for i,entry in ipairs({{"all","Alle Gegner"},{"bosses","Boss, Elite, Rare"},{"off","Aus"}}) do
-    plateButtons[entry[1]]=Button(page,entry[2],(i-1)*139,-98,130,function() K.SetNameplates(entry[1]) end)
+    plateButtons[entry[1]]=Button(page,entry[2],(i-1)*139,-148,130,function() K.SetNameplates(entry[1]) end)
 end
 function K.UpdateNameplateLabels()
     for mode,button in pairs(plateButtons) do Mark(button,K.DB().nameplates==mode) end
@@ -195,6 +200,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="plates debug" then K.PlateDebug()
     elseif command=="bosses debug" then K.BossDebug()
     elseif command=="heal debug" then K.HealDebug()
+    elseif command=="resources debug" then K.ResourceDebug()
     elseif command=="build" then SlashCmdList.KEIJINBUILDBAR("toggle")
     elseif command=="text icons" then
         K.DB().combatTextIcons=(K.DB().combatTextIcons==false)

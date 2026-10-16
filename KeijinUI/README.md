@@ -1,4 +1,4 @@
-# KeijinUI 0.6.7
+# KeijinUI 0.7.2
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -19,6 +19,9 @@ From 0.4.0 the whole interface is bilingual. English is the default; German is c
 `/kui lang de`).
 
 ## Features
+
+* Class resources below the player health bar: five red rogue combo points, five smaller purple warlock soul shards, and a copper rage bar for warriors. Requires the learned proc ability and supported native power values. Defaults to attached to the player; Alt dragging or scaling detaches it. Units settings switch the display off or restore attachment.
+* One original chamfered contour for rectangular panels, bars and icon frames. Player and target free ends use the same short diagonal; portraits and combo points stay round.
 
 * Run overview with zone, run clock, progress bar and bosses with two time columns: boss time (active time since the boss appeared) and run time. Example: `3:23 | 0:23` means the boss died at 3:23 run time after 23 seconds. Stopped times turn green. Bosses that died before the interface loaded show question marks, because the game provides no past times of death.
 * Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned. A counter row below shows kills, gold, chest price, caches opened and the estimated time until the next cache is affordable (an estimate, not a chest timer).
@@ -63,33 +66,13 @@ Ability names (recommendation title, tooltips, meter) follow the language: Germa
 
 ## Data
 
+Class resources read native active power rather than counting combat events. The reported Survivors encoding uses 20 absolute units per point or shard, with a native maximum of 100. Other ranges stay hidden. Rage accepts native maximum 100 or 1000 and shows progress to full. These adapters are covered by fixture tests; the packaged game value transitions still require confirmation. `/kui resources debug` prints current native inputs without saving them.
+
 Run time, level, kills, elites, guardians, bosses, gold, cache count and damage totals come straight from the game interface. Pause and card choice use the stopped game time. Missing values show as question marks. The damage meter takes over all sources of the native meter, including talents and items. The native reset does not affect this interface. Frames you move yourself can overlap again.
 
 ## Changelog
 
-* 0.6.7: New setting for damage numbers with four styles: off, compact (the previous look), scrolling (new default: numbers rise in a light arc that falls back slightly, alternating left and right, coloured by damage school with spell icons, small normal numbers, large crits with a pop, small hits in grey, following the nameplate and showing misses) and game (the native numbers). Set in the options or with `/kui text off|compact|scroll|game`; the spell icons can be switched with `/kui text icons`. Earlier "off" choices carry over.
-* 0.6.6: More room between unit levels and the curved rim. Target text layout fully mirrors the player: level and health percent on the left, name and health points toward its portrait on the right. Each damage-meter row now shows total damage and DPS in separate columns, using the same time interval as the summary and the Reset button.
-* 0.6.5: Player and target frames have one sculpted housing with a dark name shoulder, a raised portrait bezel and a softly tapered end. The health opening stays tall, flush with the portrait at the bottom, with colour reaching the portrait edge. Original geometric artwork, no imported Dragonflight assets. Warlock abilities have deliberate, stable colours instead of repeated blue hash colours; damage and critical-hit lists still match in both languages.
-
-* 0.6.4: Calmer lists: run statistics are plain key and value lines with a faint separator instead of framed bars. Damage meter and critical hits use own bars with corner radius 4, a 1 unit outline with a slightly brighter top edge, and a fill that keeps the rounded left end at every value.
-* 0.6.3: The health color of the unit frames now fills the whole inside of the outline, without a dark stripe at the top and the ends. The rows of statistics, damage meter, critical hits, run progress and nameplates get a plain line of one unit as border instead of the soft metal frame.
-* 0.6.2: New unit frames "Freier Verbund": round portrait and health bar share one outline without a box, the health color reaches the portrait edge, the bar is taller (158 × 30). Health points left, percent right, name and level above. The target bar is now mirrored and stays attached to its portrait. Own geometric artwork in media/soft.
-* 0.6.1: Thinner frames: the bar border is less than half as thick, panel and unit frame borders use edge size 10 instead of 14, the minimap border 8 instead of 10. Panels and buttons use edge size 7, the bar border has slightly rounded corners and the fill now reaches both ends. The chosen language now survives the reload (the client loads saved variables after the addon files), and the boss schedule in the run overview is kept across a reload, since the game sends it only when it changes.
-* 0.6.0: Everything in the package is now original work: the combat message reader (`CombatParser.lua`) is a new implementation that derives its line shapes from the client's own combat strings, and the bar graphics (frame pieces and fill) are generated by `development/keijinui/prepare_bar_art.py`. The unused unit frame images in `media/units` and the unused blue fill are removed, and the license and source notes that belonged to them are gone. New tests cover every combat template that is read.
-* 0.5.3: Language only by hand (English or German, default English); the automatic detection is removed because it read outdated English game data after a language change and switched wrongly. Changing the language reloads the interface. The native displays (clock, kills bar, damage meter, boss bars, spell bar) stay hidden as long as the matching KeijinUI element is switched on, even without game data, so nothing appears twice; they come back when the element is switched off. A native display that the game switches on again is hidden again at the next update.
-* 0.5.2: `/kachi debug` records system messages (persistent, last 60, `/kachi log`, `/kachi log clear`) to check whether achievement lines reach addons. Achievements are also recognized in the general form `Text: [Name] (N ...)`, since no German client text is known.
-* 0.5.1: Default layout: all elements start in the arrangement of the author (fresh install and "reset layout"); the default is not stored, so later changes of it apply, and saved positions keep priority. Nameplates default to bosses, elites and rares.
-* 0.5.0: Player and target frames in the panel style (square portrait box, metal health bar, heading strip). Square minimap in the KeijinUI style with zoom by mouse wheel, layout key `minimap` and a switch in the settings. Estimated healing breakdown (leech, heal per kill, regeneration) in the tooltip of the healing row.
-* 0.4.2: Settings window with tabs (Display, Units, Layout, General), switches as clickable rows, the last tab is remembered. Automatic language detection now always runs along: `/kui lang auto` applies the detected language at once, without evidence the stored detection stays, the majority of known names decides.
-* 0.4.1: Bar fill and background of list rows (encounters, meter) stay inside the rounded border corners.
-* 0.4.0: Bilingual interface (German or English), detection and `/kui lang`, `/kui reload`, English arguments for `/kbb`, bilingual README.
-* 0.3.7: The build tip names abilities in the interface language, even if the spell book reports English names.
-* 0.3.6: Grid and snapping in layout mode.
-* 0.3.5: Buffs can be left aligned.
-* 0.3.4: Damage numbers never cover frames. The build rating maps meter values through ability keys.
-* 0.3.3: Statistic row "Healing (effective)" and `/kui heal debug`.
-* 0.3.2: Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own chat window, damage numbers in the world, target debuffs.
-* 0.2.x: Action bar, build overview, class colored health bars, nameplates.
+All changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Credits
 
@@ -113,6 +96,9 @@ Ab 0.4.0 ist die ganze Oberfläche zweisprachig. Englisch ist der Standard, Deut
 `/kui lang de`).
 
 ## Funktionen
+
+* Klassenressourcen unter dem Spielerbalken: fünf rote Combopunkte beim Schurken, fünf kleinere violette Seelensplitter beim Hexenmeister und eine kupferrote Wutleiste beim Krieger. Nur mit gelernter Fähigkeit und unterstützten nativen Werten. Folgt zunächst dem Spieler; Alt und Ziehen oder Skalieren löst die Bindung. Im Tab Einheiten abschaltbar und wieder anheftbar.
+* Eigene gemeinsame Kontur mit kurzen Schrägen für rechteckige Panels, Leisten und Symbolrahmen. Auch die freien Enden der Spieler und Zielframes sind abgeschrägt. Porträts und Combopunkte bleiben rund.
 
 * Runübersicht mit Zone, Runuhr, Fortschrittsbalken und Bossen mit zwei Zeitspalten: Bosszeit (aktive Zeit seit dem Erscheinen) und Runzeit. Beispiel: `3:23 | 0:23` bedeutet, dass der Boss bei 3:23 Runzeit nach 23 Sekunden besiegt wurde. Gestoppte Zeiten werden grün. Bosse, die vor dem Laden der Oberfläche besiegt wurden, zeigen Fragezeichen, weil die Spielschnittstelle keine vergangenen Todeszeitpunkte liefert.
 * Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, Heilung (effektiv), Gold verdient. Eine Zählerzeile darunter zeigt Kills, Gold, Cachepreis, geöffnete Caches und die geschätzte Zeit, bis der nächste Cache bezahlbar ist (eine Schätzung, kein Kistentimer).
@@ -158,33 +144,13 @@ Fähigkeitsnamen (Titel der Empfehlung, Tooltips, Meter) folgen der Sprache: deu
 
 ## Daten
 
+Klassenressourcen lesen die aktive native Ressource statt Kampfeignisse zu zählen. Die berichtete Survivors Zuordnung verwendet 20 absolute Einheiten pro Punkt oder Splitter bei einem nativen Maximum von 100. Andere Bereiche werden ausgeblendet. Wut unterstützt ein natives Maximum von 100 oder 1000 und zeigt den Fortschritt bis voll. Die Adapter sind mit Testdaten geprüft; die Wertübergänge im ausgelieferten Spiel müssen noch bestätigt werden. `/kui resources debug` gibt aktuelle native Eingaben aus, ohne sie zu speichern.
+
 Runzeit, Level, Kills, Eliten, Wächter, Bosse, Goldverdienst, Cacheanzahl und Schadenssummen kommen direkt aus der Spielschnittstelle. Pause und Kartenwahl verwenden die angehaltene Spielzeit. Fehlende Werte erscheinen als Fragezeichen. Die Schadensanzeige übernimmt alle Quellen des nativen Meters, einschließlich Talenten und Gegenständen. Der native Reset beeinflusst diese Schnittstelle nicht. Selbst verschobene Rahmen können wieder Überlappungen erzeugen.
 
 ## Änderungen
 
-* 0.6.7: Neue Einstellung für Schadenszahlen mit vier Stilen: aus, kompakt (das bisherige Aussehen), scrollend (neuer Standard: Zahlen steigen in einem leichten Bogen, der am Ende etwas abfällt, abwechselnd links und rechts, nach Zauberschule gefärbt mit Zaubersymbolen, kleine normale Zahlen, große Krits mit Pop, kleine Treffer grau, folgen der Namensplakette und zeigen Fehlschläge) und Spiel (die eigenen Zahlen des Spiels). Einstellbar in den Optionen oder mit `/kui text off|compact|scroll|game`; die Zaubersymbole schaltet `/kui text icons`. Frühere Aus Einstellungen bleiben erhalten.
-* 0.6.6: Mehr Abstand zwischen Level und gebogener Außenkante. Der Zielrahmen spiegelt jetzt auch die Texte vollständig: Level und Lebensprozent links, Name und Lebenspunkte rechts am Porträt. Jede Zeile der Schadensanzeige zeigt Gesamtschaden und DPS in eigenen Spalten, mit demselben Zeitraum wie die Gesamtrate und der Resetfunktion.
-* 0.6.5: Spieler und Zielframe erhalten eine gemeinsame modellierte Fassung mit dunkler Namensfläche, schmaler Porträtkante und weich auslaufendem Ende. Die Lebensfläche bleibt hoch, unten bündig und reicht farbig bis an die Porträtkante. Eigene geometrische Grafiken ohne übernommene Dragonflight Bilder. Hexenmeisterfähigkeiten erhalten bewusst festgelegte Farben statt mehrfach derselben blauen Zufallszuordnung; Schaden und kritische Treffer bleiben in beiden Sprachen gleich gefärbt.
-
-* 0.6.4: Ruhigere Listen: Die Runstatistik zeigt Beschriftung und Wert als schlichte Zeilen mit schwacher Trennlinie statt gerahmter Balken. Schadensanzeige und kritische Treffer nutzen eigene Balken mit Eckenradius 4, einer Kontur von einer Einheit mit leicht hellerer Oberkante und einer Füllung, die bei jedem Wert das runde linke Ende behält.
-* 0.6.3: Die Lebensfarbe der Unitframes füllt jetzt die ganze Innenfläche der Kontur, ohne dunklen Streifen oben und an den Enden. Die Zeilen von Statistik, Schadensanzeige, kritischen Treffern, Runfortschritt und Namensplaketten erhalten statt des weichen Metallrahmens eine einfache Linie von einer Einheit.
-* 0.6.2: Neue Unitframes „Freier Verbund“: Rundes Porträt und Lebensbalken teilen eine Kontur ohne Kasten, die Lebensfarbe reicht bis an die Porträtkante, der Balken ist höher (158 × 30). Lebenspunkte links, Prozent rechts, Name und Level darüber. Der Zielbalken ist jetzt gespiegelt und bleibt an seinem Porträt angeschlossen. Eigene geometrische Grafiken in media/soft.
-* 0.6.1: Dünnere Rahmen: Der Balkenrahmen ist weniger als halb so dick, Panel und Einheitenrahmen nutzen Randstärke 10 statt 14, die Minimap 8 statt 10. Panels und Knöpfe nutzen Randstärke 7, der Balkenrahmen hat nur leicht abgerundete Ecken und die Füllung reicht bis an beide Enden. Die gewählte Sprache bleibt nach dem Neuladen erhalten (der Client lädt die gespeicherten Einstellungen erst nach den Addon Dateien), und die Bossliste der Runübersicht übersteht ein Neuladen, weil das Spiel sie nur bei Änderungen schickt.
-* 0.6.0: Alles im Paket ist jetzt eigene Arbeit: Der Leser für Kampfnachrichten (`CombatParser.lua`) ist neu geschrieben und leitet die Zeilenformen aus den Kampftexten des Clients ab; die Balkengrafiken (Rahmenteile und Füllung) erzeugt `development/keijinui/prepare_bar_art.py`. Die ungenutzten Rahmenbilder in `media/units` und die ungenutzte blaue Füllung sind entfernt, ebenso die zugehörigen Lizenz und Herkunftsdateien. Neue Tests decken jede gelesene Kampftextvorlage ab.
-* 0.5.3: Sprache nur noch von Hand (Englisch oder Deutsch, Standard Englisch); die automatische Erkennung entfällt, weil sie nach einem Sprachwechsel veraltete englische Spieldaten las und falsch umschaltete. Ein Sprachwechsel lädt die Oberfläche neu. Die eigenen Anzeigen des Spiels (Uhr, Kill Leiste, Schadensmeter, Bossleisten, Zauberleiste) bleiben versteckt, solange das passende KeijinUI Element eingeschaltet ist, auch ohne Spieldaten, sodass nichts doppelt erscheint; sie kommen zurück, wenn das Element ausgeschaltet wird. Schaltet das Spiel eine Anzeige selbst wieder ein, wird sie beim nächsten Update erneut versteckt.
-* 0.5.2: `/kachi debug` zeichnet Systemmeldungen auf (bleibt über Neustarts aktiv, letzte 60, `/kachi log`, `/kachi log clear`), um zu prüfen, ob Erfolgszeilen bei Addons ankommen. Erfolge werden zusätzlich in der allgemeinen Form `Text: [Name] (N ...)` erkannt, da kein deutscher Clienttext bekannt ist.
-* 0.5.1: Standardlayout: Alle Elemente starten in der Anordnung des Autors (Neuinstallation und "Layout zurücksetzen"); der Standard wird nicht gespeichert, spätere Änderungen daran greifen also, gespeicherte Positionen haben Vorrang. Namensplaketten standardmäßig für Boss, Elite und Rare.
-* 0.5.0: Spieler und Zielframes im Panelstil (eckiger Porträtkasten, Metall Lebensbalken, Titelleiste). Eckige Minimap im KeijinUI Stil mit Zoom per Mausrad, Layoutschlüssel `minimap` und Schalter in den Einstellungen. Geschätzte Heilungsaufschlüsselung (Lebensraub, Heilung pro Kill, Regeneration) im Tooltip der Heilungszeile.
-* 0.4.2: Optionsfenster mit Tabs (Anzeige, Einheiten, Layout, Allgemein), Schalter als anklickbare Zeilen, der zuletzt gewählte Tab wird gemerkt. Die automatische Spracherkennung läuft jetzt immer mit: bei `/kui lang auto` gilt sofort wieder die erkannte Sprache, ohne Belege bleibt die gespeicherte Erkennung, die Mehrheit der bekannten Namen entscheidet.
-* 0.4.1: Füllung und Hintergrund der Listenzeilen (Begegnungen, Schadensliste) bleiben innerhalb der runden Rahmenecken.
-* 0.4.0: Zweisprachige Oberfläche (Deutsch oder Englisch), Erkennung und `/kui lang`, `/kui reload`, englische Argumente für `/kbb`, zweisprachige README.
-* 0.3.7: Die Buildempfehlung nennt Fähigkeiten in der Sprache der Oberfläche, auch wenn das Zauberbuch englische Namen liefert.
-* 0.3.6: Raster und Einrasten im Layoutmodus.
-* 0.3.5: Buffs lassen sich linksbündig ausrichten.
-* 0.3.4: Schadenszahlen liegen nie über Frames. Die Buildbewertung ordnet Meterwerte über Fähigkeitsschlüssel zu.
-* 0.3.3: Statistikzeile "Heilung (effektiv)" und `/kui heal debug`.
-* 0.3.2: Kürzere Statistik. 0.3.1: Begegnungen ohne UnitAffectingCombat. 0.3.0: Eigenes Chatfenster, Schadenszahlen in der Spielwelt, Debuffs am Ziel.
-* 0.2.x: Aktionsleiste, Buildübersicht, Lebensbalken in Klassenfarbe, Namensplaketten.
+Alle Änderungen stehen in [CHANGELOG.md](CHANGELOG.md#deutsch).
 
 ## Dank
 

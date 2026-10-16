@@ -22,9 +22,13 @@ local function Size(entry)
     local button,name=entry.button,entry.name
     button:SetScale(1); button:SetWidth(size); button:SetHeight(size)
     local icon=getglobal(name.."Icon")
-    if icon then icon:ClearAllPoints(); icon:SetAllPoints(button) end
+    if icon then icon:ClearAllPoints(); icon:SetPoint("TOPLEFT",button,"TOPLEFT",2,-2); icon:SetPoint("BOTTOMRIGHT",button,"BOTTOMRIGHT",-2,2) end
+    K.Chamfer(button,2,{0.02,0.02,0.025,0.95})
     local border=getglobal(name.."Border")
-    if border then border:ClearAllPoints(); border:SetAllPoints(button) end
+    if border then
+        if border.GetVertexColor then button:SetBackdropBorderColor(border:GetVertexColor()) end
+        border:Hide()
+    end
     local duration=getglobal(name.."Duration")
     if duration then
         duration:ClearAllPoints(); duration:SetPoint("TOP",button,"BOTTOM",0,-1)

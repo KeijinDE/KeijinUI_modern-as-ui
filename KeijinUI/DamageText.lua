@@ -42,7 +42,7 @@ local function Give(item)
     if item.icon then item.icon:Hide(); table.insert(iconPool,item.icon) end
 end
 -- Spell book as name -> texture, rebuilt on SPELLS_CHANGED and at the first need (same calls as KeijinBuildBar.lua).
-local book
+local book, byName
 local function SpellIcon(name)
     if not name then return nil end
     if not book then
@@ -60,7 +60,17 @@ local function SpellIcon(name)
             end
         end
     end
-    return book[name]
+    if book[name] then return book[name] end
+    -- Fallback: spell name (English or localized) -> ability key -> fixed icon table.
+    if not byName then
+        byName={}
+        for key,value in pairs(KeijinBuildBarNames or {}) do byName[value]=key end
+        for key,list in pairs(KeijinBuildBarAliases or {}) do
+            for index=1,table.getn(list) do if not byName[list[index]] then byName[list[index]]=key end end
+        end
+    end
+    local key=byName[name]
+    return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
 end
 K.On("SPELLS_CHANGED",function() book=nil end)
 -- Weapon icon for melee hits (no spell name).

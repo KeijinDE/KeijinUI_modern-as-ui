@@ -5,8 +5,13 @@ Seit Version 0.6.0 besteht KeijinUI vollständig aus eigener Arbeit.
 * Der Leser für Kampfnachrichten in `CombatParser.lua` ist eine eigene
   Implementierung. Er leitet die Zeilenformen zur Laufzeit aus den Kampftexten
   des Spielclients ab (GlobalStrings) und enthält keinen Code aus anderen Addons.
-* Die Balkengrafiken in `media/` (Rahmenteile und Füllung) erzeugt das Skript
-  `development/keijinui/prepare_bar_art.py` prozedural. `MinimapMask.tga`
+* Die Konturen in `media/chamfer/`, die Klassenressourcen in `media/resources/`
+  und die neuen Endstücke in `media/list/` erzeugt
+  `development/keijinui/prepare_ui_art.py` aus eigener Geometrie. Die eigenen
+  verbundenen Unitframegrafiken in `media/soft/` behalten ihren Porträtring;
+  dasselbe Skript ergänzt das freie schräge Ende in allen drei Texturlagen.
+* Die weiße Statusfüllung erzeugt `development/keijinui/prepare_bar_art.py`.
+  `MinimapMask.tga`
   erzeugt `development/keijinui/prepare_minimap_mask.py`.
 * Die Namens und Fähigkeitstabellen in `modules/` stammen aus dem installierten
   Spielclient.

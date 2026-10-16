@@ -9,14 +9,16 @@ local function Clamp(entry)
     local w,h=UIParent:GetWidth(),UIParent:GetHeight()
     if not w or not h or w<40 or h<40 then return end
     local ratio=Scale(f)/Scale(UIParent)
-    local width,height=f:GetWidth()*ratio,f:GetHeight()*ratio
+    if entry.options.follow and entry.options.follow() then return end
+    local extra=entry.options.bottom and entry.options.bottom() or 0
+    local width,height=f:GetWidth()*ratio,(f:GetHeight()+extra)*ratio
     if width>w-16 or height>h-16 then
         f:SetScale(f:GetScale()*math.min((w-16)/width,(h-16)/height))
-        ratio=Scale(f)/Scale(UIParent); width,height=f:GetWidth()*ratio,f:GetHeight()*ratio
+        ratio=Scale(f)/Scale(UIParent); width,height=f:GetWidth()*ratio,(f:GetHeight()+extra)*ratio
     end
     local x,y=f:GetLeft(),f:GetBottom()
     if not Finite(x) or not Finite(y) then return end
-    x,y=x*ratio,y*ratio
+    x,y=x*ratio,(y-extra)*ratio
     local left=math.max(8,math.min(w-width-8,x))
     local bottom=math.max(8,math.min(h-height-8,y))
     if math.abs(left-x)>0.1 or math.abs(bottom-y)>0.1 then
@@ -51,6 +53,7 @@ L.defaults={
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
+    if entry.options.follow and entry.options.follow() then entry.anchor(f); return end
     if entry.options.scale then entry.baseScale=entry.options.scale() end
     local saved=Valid(p)
     if not saved then p=L.defaults and L.defaults[entry.key] end
@@ -106,6 +109,7 @@ end
 local function Stop()
     if not active then return end
     active.frame:StopMovingOrSizing(); Snap(active); Save(active); active=nil
+    if L.SyncFollowers then L.SyncFollowers() end
 end
 -- Grid overlay: thin textures every STEP units from the screen centre, shown only while editing.
 local grid=CreateFrame("Frame",nil,UIParent)
@@ -153,23 +157,34 @@ function L.Register(key,frame,name,anchor,options)
     if frame.SetUserPlaced then frame:SetUserPlaced(false) end
     local handle=CreateFrame("Frame",nil,UIParent); e.handle=handle
     handle:SetFrameStrata("TOOLTIP"); handle:SetFrameLevel(180)
-    handle:SetBackdrop({bgFile=K.flat,edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",edgeSize=12})
-    handle:SetBackdropColor(0.15,0.3,0.36,0.28); handle:SetBackdropBorderColor(1,0.8,0.25,1)
+    if key=="player" or key=="target" then
+        local outline=handle:CreateTexture(nil,"OVERLAY")
+        outline:SetTexture("Interface\\AddOns\\KeijinUI\\media\\soft\\FrameRim.tga"); outline:SetAllPoints(handle)
+        outline:SetVertexColor(1,0.8,0.25,1)
+        if key=="target" then outline:SetTexCoord(1,0,0,1) end
+    else K.Chamfer(handle,4,{0.15,0.3,0.36,0.28},{1,0.8,0.25,1}) end
     handle.label=K.Text(handle,"",10,"TOP",0,-5)
     K.Live(handle.label,function() return K.T(name).." | "..K.T("Mausrad: Größe") end)
     handle:EnableMouse(true); handle:EnableMouseWheel(true); handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart",function()
         if not editing and not IsAltKeyDown() then return end
+        if e.options.beforeMove then e.options.beforeMove() end
         active=e; frame:StartMoving()
     end)
     handle:SetScript("OnDragStop",Stop)
     handle:SetScript("OnMouseWheel",function()
+        if e.options.beforeMove then e.options.beforeMove() end
         local scale=frame:GetScale()/e.baseScale
         frame:SetScale(e.baseScale*math.max(0.5,math.min(1.8,scale+(arg1>0 and 0.05 or -0.05))))
         Save(e)
+        if L.SyncFollowers then L.SyncFollowers() end
     end)
     handle:Hide(); Apply(e)
     return e
+end
+function L.Save(key) local e=L.entries[key]; if e then Save(e) end end
+function L.SyncFollowers()
+    for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end
 function L.Place(key) local e=L.entries[key]; if e and e~=active then Apply(e) end end
 function L.IsEditing() return editing end
@@ -181,7 +196,7 @@ function L.ToggleGrid()
 end
 function L.ResetKey(key) K.DB().layout[key]=nil; L.Place(key) end
 function L.Reset()
-    Stop(); K.DB().layout={}
+    Stop(); K.DB().layout={}; K.DB().resourceFree=nil
     for _,e in pairs(L.entries) do Apply(e) end
 end
 function L.ClampAll()
@@ -190,6 +205,7 @@ function L.ClampAll()
     end
 end
 function L.Update()
+    L.SyncFollowers()
     local w,h=UIParent:GetWidth(),UIParent:GetHeight()
     if lastWidth and (w~=lastWidth or h~=lastHeight) then
         Stop(); for _,e in pairs(L.entries) do Apply(e) end

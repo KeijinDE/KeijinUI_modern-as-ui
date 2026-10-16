@@ -1,4 +1,9 @@
 local K=KeijinUI
+-- Existing comparison/link tooltips share the contour; keep their native ownership and anchors.
+for _,name in ipairs({"ItemRefTooltip","ShoppingTooltip1","ShoppingTooltip2"}) do
+    local tooltip=getglobal(name)
+    if tooltip then K.Skin(tooltip,7) end
+end
 local anchor=CreateFrame("Frame","KeijinUITooltipAnchor",UIParent)
 anchor:SetWidth(250); anchor:SetHeight(90); anchor:Hide()
 K.layout.Register("tooltip",anchor,"Tooltip",function(f)
@@ -15,6 +20,7 @@ local function Place()
     GameTooltip:ClearAllPoints(); GameTooltip:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x/tooltipScale,y/tooltipScale)
 end
 if GameTooltip then
+    K.Skin(GameTooltip,7)
     local owner=GameTooltip.SetOwner
     GameTooltip.SetOwner=function(tooltip,frame,position,x,y)
         if K.DB().layout.tooltip then owner(tooltip,frame,"ANCHOR_NONE")

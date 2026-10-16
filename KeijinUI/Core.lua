@@ -1,4 +1,4 @@
-KeijinUI = { version = "0.6.6", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "0.6.7", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -17,6 +17,26 @@ function K.DB()
         db.schema=2
     end
     return db
+end
+-- Damage numbers: off, compact (DamageText.lua), scroll (DamageText.lua) or native (the game's own numbers).
+-- Read when needed, not at load time: the saved variables arrive after all addon files.
+K.CombatModes = { "off", "compact", "scroll", "native" }
+function K.CombatTextMode()
+    local db = K.DB()
+    for _,mode in ipairs(K.CombatModes) do if db.combatTextMode == mode then return mode end end
+    db.combatTextMode = db.hideCombatText == true and "off" or "scroll"
+    return db.combatTextMode
+end
+-- The native floating numbers cannot split normal and critical hits, so they only run in the native mode.
+function K.ApplyCombatText()
+    if K.DB().originalCombatDamage == nil then K.DB().originalCombatDamage = GetCVar("CombatDamage") end
+    SetCVar("CombatDamage", K.CombatTextMode() == "native" and "1" or "0")
+end
+function K.SetCombatTextMode(mode)
+    for _,m in ipairs(K.CombatModes) do
+        if m == mode then K.DB().combatTextMode = mode; K.ApplyCombatText(); return mode end
+    end
+    return K.CombatTextMode()
 end
 function K.CombatScale() return math.min(1,math.max(0.5,(UIParent:GetWidth()-624)/686)) end
 local sourceColors={{0.75,0.53,0.16},{0.18,0.4,0.65},{0.5,0.25,0.62},{0.25,0.5,0.32},{0.65,0.28,0.17},
@@ -261,7 +281,5 @@ K.On("PLAYER_LOGOUT", function()
     if K.DB().originalCombatDamage ~= nil then SetCVar("CombatDamage",K.DB().originalCombatDamage) end
 end)
 K.On("PLAYER_ENTERING_WORLD",function()
-    if K.DB().originalCombatDamage == nil then K.DB().originalCombatDamage=GetCVar("CombatDamage") end
-    -- The native floating numbers cannot split normal and critical hits, so DamageText.lua draws them.
-    SetCVar("CombatDamage","0")
+    K.ApplyCombatText()
 end)

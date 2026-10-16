@@ -32,7 +32,7 @@ local tabs={ {"display","Anzeige"},{"units","Einheiten"},{"layout","Layout"},{"g
 local pages,tabButtons={},{}
 for _,entry in ipairs(tabs) do
     local page=CreateFrame("Frame",nil,panel)
-    page:SetWidth(PAGE_WIDTH); page:SetHeight(308); page:SetPoint("TOPLEFT",panel,"TOPLEFT",16,-68)
+    page:SetWidth(PAGE_WIDTH); page:SetHeight(316); page:SetPoint("TOPLEFT",panel,"TOPLEFT",16,-68)
     page:Hide()
     pages[entry[1]]=page
 end
@@ -109,11 +109,17 @@ HiddenSwitch(page,"xp","Erfahrung",-118)
 Heading(page,"Kampf",-150)
 HiddenSwitch(page,"meter","Schadensanzeige",-168)
 HiddenSwitch(page,"crits","Kritische Treffer",-193)
-Row(page,"Schadenszahlen",-218,function() return OnOff(not K.DB().hideCombatText) end,
+local MODE_NAMES={off="Aus",compact="Kompakt",scroll="Scrollend",native="Spiel"}
+Row(page,"Schadenszahlen",-218,function()
+    local mode=K.CombatTextMode()
+    return K.T(MODE_NAMES[mode]),mode=="off" and OFF or GOLD
+end,
     function() SlashCmdList.KEIJINUI("text") end)
-Row(page,"Buildtipps",-243,function() return OnOff(not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false)) end,
+Row(page,"Zaubersymbole",-243,function() return OnOff(K.DB().combatTextIcons~=false) end,
+    function() SlashCmdList.KEIJINUI("text icons") end)
+Row(page,"Buildtipps",-268,function() return OnOff(not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false)) end,
     function() SlashCmdList.KEIJINBUILDBAR("tipps") end)
-Row(page,"Minimap im KeijinUI Stil",-268,function() return OnOff(K.DB().minimapStyle~=false) end,
+Row(page,"Minimap im KeijinUI Stil",-293,function() return OnOff(K.DB().minimapStyle~=false) end,
     function() K.SetMinimapStyle(K.DB().minimapStyle==false) end)
 
 -- Tab Einheiten
@@ -190,9 +196,28 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="bosses debug" then K.BossDebug()
     elseif command=="heal debug" then K.HealDebug()
     elseif command=="build" then SlashCmdList.KEIJINBUILDBAR("toggle")
-    elseif command=="text" then
-        K.DB().hideCombatText=not K.DB().hideCombatText
-        K.Say(K.T("Schadenszahlen")..": "..(K.DB().hideCombatText and K.T("Aus") or K.T("An")))
+    elseif command=="text icons" then
+        K.DB().combatTextIcons=(K.DB().combatTextIcons==false)
+        K.Say(K.T("Zaubersymbole")..": "..(K.DB().combatTextIcons~=false and K.T("An") or K.T("Aus")))
+        RefreshAll()
+    elseif command=="text" or string.find(command,"^text%s") then
+        local _,_,value=string.find(command,"^text%s+(%S+)$")
+        local mode
+        if value then
+            mode=({off="off",compact="compact",scroll="scroll",game="native",native="native"})[value]
+        else
+            local current=K.CombatTextMode()
+            for i,m in ipairs(K.CombatModes) do
+                if m==current then mode=K.CombatModes[math.mod(i,table.getn(K.CombatModes))+1] end
+            end
+        end
+        if mode then
+            K.SetCombatTextMode(mode)
+            K.Say(K.T("Schadenszahlen")..": "..K.T(MODE_NAMES[mode]))
+            RefreshAll()
+        else
+            K.Say(K.T("/kui text off|compact|scroll|game. Aktuell: %s.",K.T(MODE_NAMES[K.CombatTextMode()])))
+        end
     elseif command=="reload" then ReloadUI()
     elseif command=="lang" or string.find(command,"^lang%s") then
         local _,_,value=string.find(command,"^lang%s+(%S+)$")
@@ -203,5 +228,5 @@ SlashCmdList.KEIJINUI=function(message)
         else
             K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

@@ -1,4 +1,4 @@
-# KeijinUI 0.6.6
+# KeijinUI 0.6.7
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -29,7 +29,7 @@ From 0.4.0 the whole interface is bilingual. English is the default; German is c
 * Action bar with six skills and the racial ability on the right, showing ranks and cooldowns only. Build overview below with all spells (rank badge) and jewelry, plus a build tip (`/kbb`).
 * Encounter group at the top center for every living boss, elite or rare in a fight. Mouse wheel scrolls further rows.
 * Nameplates with metal frames. Modes: all enemies, only boss, elite and rare, or off. Debuffs of the current target appear on the target plate.
-* Damage numbers in the world: normal hits small and white, critical hits large and yellow.
+* Damage numbers in the world, four styles: off; compact (normal hits small and white, critical hits large and yellow, rising straight up); scrolling (numbers rise, drift slightly and fall back a little at the end, alternating left and right, coloured by damage school, with the spell icon on the left, the main hand weapon for melee hits and no icon for unknown spells; normal hits are small, crits large, and normal hits under half of your running average are small and grey; crits and misses start with a short pop; the numbers follow the enemy nameplate; your own misses, dodges, parries, blocks, evades, immunes and resists are shown as text; periodic damage is smaller and fainter; the default); game (KeijinUI draws nothing, the game shows its own numbers).
 * Loot notice that replaces the fixed native boss loot notice (last own loot for eight seconds, with item icon and tooltip).
 * Achievement popup (`/kachi`).
 * Layout mode: hold Alt to show labeled frames, drag them with the left mouse button, change size with Alt and the mouse wheel (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
@@ -47,7 +47,8 @@ settings can stay. After changing the enabled addons, restart the game completel
 * `/kui edit`: open or close layout editing. `/kui reset`: reset positions and sizes. `/kui grid`: grid and snapping on or off.
 * `/kui lang de|en`: language. `/kui lang` shows the current language. `/kui reload`: reload the interface.
 * `/kui meter reset`: start the damage meter from now on (run statistics stay complete). `/kui crits reset`: clear observed critical hits.
-* `/kui text`: damage numbers on or off.
+* `/kui text`: switch the damage number style one step (off, compact, scrolling, game). `/kui text off|compact|scroll|game` sets it directly.
+* `/kui text icons`: switches the spell icons next to the scrolling numbers on or off (also a row in the options, on by default).
 * `/kui plates all|bosses|off`: nameplates on all enemies, only boss, elite and rare, or off. `/kui plates debug`: show what the client provides.
 * `/kui bosses debug`, `/kui heal debug`: diagnostics in the chat.
 * `/kui tooltip reset`: back to the normal tooltip position.
@@ -66,6 +67,7 @@ Run time, level, kills, elites, guardians, bosses, gold, cache count and damage 
 
 ## Changelog
 
+* 0.6.7: New setting for damage numbers with four styles: off, compact (the previous look), scrolling (new default: numbers rise in a light arc that falls back slightly, alternating left and right, coloured by damage school with spell icons, small normal numbers, large crits with a pop, small hits in grey, following the nameplate and showing misses) and game (the native numbers). Set in the options or with `/kui text off|compact|scroll|game`; the spell icons can be switched with `/kui text icons`. Earlier "off" choices carry over.
 * 0.6.6: More room between unit levels and the curved rim. Target text layout fully mirrors the player: level and health percent on the left, name and health points toward its portrait on the right. Each damage-meter row now shows total damage and DPS in separate columns, using the same time interval as the summary and the Reset button.
 * 0.6.5: Player and target frames have one sculpted housing with a dark name shoulder, a raised portrait bezel and a softly tapered end. The health opening stays tall, flush with the portrait at the bottom, with colour reaching the portrait edge. Original geometric artwork, no imported Dragonflight assets. Warlock abilities have deliberate, stable colours instead of repeated blue hash colours; damage and critical-hit lists still match in both languages.
 
@@ -121,7 +123,7 @@ Ab 0.4.0 ist die ganze Oberfläche zweisprachig. Englisch ist der Standard, Deut
 * Aktionsleiste mit sechs Skills und der Volksfähigkeit rechts, nur Ränge und Abklingzeiten. Darunter die Buildübersicht mit allen Spells (Rang als Badge) und Schmuck sowie ein Buildtipp (`/kbb`).
 * Begegnungsgruppe oben mittig für jeden lebenden Boss, Elite oder Rare im Kampf. Das Mausrad blättert zu weiteren Zeilen.
 * Namensplaketten mit Metallrahmen. Modi: alle Gegner, nur Boss, Elite und Rare, oder aus. Debuffs des aktuellen Ziels erscheinen an der Zielplakette.
-* Schadenszahlen in der Spielwelt: normale Treffer klein und weiß, kritische Treffer groß und gelb.
+* Schadenszahlen in der Spielwelt, vier Stile: aus; kompakt (normale Treffer klein und weiß, kritische Treffer groß und gelb, steigen gerade auf); scrollend (Zahlen steigen nach oben, driften leicht und fallen am Ende etwas zurück, abwechselnd nach links und rechts, nach Zauberschule gefärbt, mit dem Zaubersymbol links, bei Nahkampftreffern mit der Waffe der Haupthand und ohne Symbol bei unbekannten Zaubern; normale Treffer klein, Krits groß, und normale Treffer unter der Hälfte deines gleitenden Durchschnitts klein und grau; Krits und Fehlschläge starten mit kurzem Pop; die Zahlen folgen der Namensplakette des Gegners; eigene Fehlschläge, Ausweichen, Parieren, Blocken, Entkommen, Immun und Widerstanden erscheinen als Text; periodischer Schaden kleiner und blasser; Standard); Spiel (KeijinUI zeichnet nichts, das Spiel zeigt seine eigenen Zahlen).
 * Beutemeldung, die die feste native Beutemeldung der Bosse ersetzt (letzte eigene Beute acht Sekunden lang, mit Symbol und Tooltip).
 * Erfolgsmeldung (`/kachi`).
 * Layoutmodus: Alt halten zeigt beschriftete Rahmen, mit der linken Maustaste verschieben, Alt und Mausrad ändern die Größe (50 bis 180 Prozent). Raster und Einrasten helfen beim Ausrichten (Shift beim Loslassen schaltet das Einrasten aus). Rahmen bleiben im Bild.
@@ -140,7 +142,8 @@ neu starten. Das Kameraaddon ist ein eigenes Paket.
 * `/kui edit`: Bearbeitung öffnen oder schließen. `/kui reset`: Positionen und Größen zurücksetzen. `/kui grid`: Raster und Einrasten ein oder aus.
 * `/kui lang de|en`: Sprache. `/kui lang` zeigt die aktuelle Sprache. `/kui reload`: Oberfläche neu laden.
 * `/kui meter reset`: Schadensanzeige ab jetzt neu beginnen (die Runstatistik bleibt vollständig). `/kui crits reset`: beobachtete kritische Treffer zurücksetzen.
-* `/kui text`: Schadenszahlen ein oder aus.
+* `/kui text`: schaltet den Stil der Schadenszahlen einen Schritt weiter (aus, kompakt, scrollend, Spiel). `/kui text off|compact|scroll|game` setzt ihn direkt.
+* `/kui text icons`: schaltet die Zaubersymbole neben den scrollenden Zahlen an oder aus (auch eine Zeile in den Optionen, standardmäßig an).
 * `/kui plates all|bosses|off`: Namensplaketten auf allen Gegnern, nur Boss, Elite und Rare, oder aus. `/kui plates debug`: zeigt, was der Client liefert.
 * `/kui bosses debug`, `/kui heal debug`: Diagnose im Chat.
 * `/kui tooltip reset`: zurück zur normalen Tooltip Position.
@@ -159,6 +162,7 @@ Runzeit, Level, Kills, Eliten, Wächter, Bosse, Goldverdienst, Cacheanzahl und S
 
 ## Änderungen
 
+* 0.6.7: Neue Einstellung für Schadenszahlen mit vier Stilen: aus, kompakt (das bisherige Aussehen), scrollend (neuer Standard: Zahlen steigen in einem leichten Bogen, der am Ende etwas abfällt, abwechselnd links und rechts, nach Zauberschule gefärbt mit Zaubersymbolen, kleine normale Zahlen, große Krits mit Pop, kleine Treffer grau, folgen der Namensplakette und zeigen Fehlschläge) und Spiel (die eigenen Zahlen des Spiels). Einstellbar in den Optionen oder mit `/kui text off|compact|scroll|game`; die Zaubersymbole schaltet `/kui text icons`. Frühere Aus Einstellungen bleiben erhalten.
 * 0.6.6: Mehr Abstand zwischen Level und gebogener Außenkante. Der Zielrahmen spiegelt jetzt auch die Texte vollständig: Level und Lebensprozent links, Name und Lebenspunkte rechts am Porträt. Jede Zeile der Schadensanzeige zeigt Gesamtschaden und DPS in eigenen Spalten, mit demselben Zeitraum wie die Gesamtrate und der Resetfunktion.
 * 0.6.5: Spieler und Zielframe erhalten eine gemeinsame modellierte Fassung mit dunkler Namensfläche, schmaler Porträtkante und weich auslaufendem Ende. Die Lebensfläche bleibt hoch, unten bündig und reicht farbig bis an die Porträtkante. Eigene geometrische Grafiken ohne übernommene Dragonflight Bilder. Hexenmeisterfähigkeiten erhalten bewusst festgelegte Farben statt mehrfach derselben blauen Zufallszuordnung; Schaden und kritische Treffer bleiben in beiden Sprachen gleich gefärbt.
 

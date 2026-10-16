@@ -18,7 +18,7 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * Damage meter with total and DPS per ability, list of the biggest critical hits
 * Player and target frames with round portrait and joined health bar, square minimap, action bar with ranks and cooldowns
 * Build overview with spells, jewelry and a build tip
-* Encounter bars for bosses, elites and rares, modern nameplates, damage numbers in the world
+* Encounter bars for bosses, elites and rares, modern nameplates, scrolling combat text with spell icons
 * Loot notice, achievement popup and one chat window in the same frame style
 * Settings window with tabs, layout mode with grid and snapping, a ready made default layout
 * English and German interface
@@ -64,7 +64,7 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * Schadensanzeige mit Gesamtschaden und DPS je Fähigkeit, Liste der größten kritischen Treffer
 * Spieler und Zielframe mit rundem Porträt und angeschlossenem Lebensbalken, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten
 * Buildübersicht mit Zaubern, Schmuck und Buildtipp
-* Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, Schadenszahlen in der Spielwelt
+* Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, scrollender Kampftext mit Zaubersymbolen
 * Beutemeldung, Erfolgsmeldung und ein Chatfenster im gleichen Rahmenstil
 * Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
 * Oberfläche auf Englisch und Deutsch

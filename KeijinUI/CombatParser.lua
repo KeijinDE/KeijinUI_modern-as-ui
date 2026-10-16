@@ -1,6 +1,8 @@
 -- KeijinUI combat line reader.
 -- Turns the chat lines of the damage channels into small records
--- { kind="damage", amount, targetName, sourceName, spell, school, critical, periodic, origin }.
+-- { kind="damage", amount, targetName, sourceName, spell, school, critical, periodic, origin }
+-- and, for the player's own attacks and spells that did not land,
+-- { kind="miss", missType, targetName, spell }.
 --
 -- Nothing is hard coded in English. Every line shape is the client's own
 -- format string (SPELLLOGSELFOTHER and friends). At first use a format string is
@@ -133,6 +135,29 @@ local SHIELD = {
     theirs = { stem = "DAMAGESHIELDOTHEROTHER", args = { "sourceName", "amount", "school", "targetName" } },
 }
 
+-- The player's own misses. Only the "you are the source" wording is read, so every line
+-- is the player's. missType: miss, dodge, parry, block, evade, immune, resist.
+local MISSES = {
+    melee = {
+        { stem = "MISSEDSELFOTHER",     args = { "targetName" }, missType = "miss" },
+        { stem = "VSDODGESELFOTHER",    args = { "targetName" }, missType = "dodge" },
+        { stem = "VSPARRYSELFOTHER",    args = { "targetName" }, missType = "parry" },
+        { stem = "VSBLOCKSELFOTHER",    args = { "targetName" }, missType = "block" },
+        { stem = "VSEVADESELFOTHER",    args = { "targetName" }, missType = "evade" },
+        { stem = "VSIMMUNESELFOTHER",   args = { "targetName" }, missType = "immune" },
+        { stem = "VSRESISTSELFOTHER",   args = { "targetName" }, missType = "resist" },
+    },
+    spell = {
+        { stem = "SPELLMISSSELFOTHER",    args = { "spell", "targetName" }, missType = "miss" },
+        { stem = "SPELLDODGEDSELFOTHER",  args = { "spell", "targetName" }, missType = "dodge" },
+        { stem = "SPELLPARRIEDSELFOTHER", args = { "spell", "targetName" }, missType = "parry" },
+        { stem = "SPELLBLOCKEDSELFOTHER", args = { "spell", "targetName" }, missType = "block" },
+        { stem = "SPELLEVADEDSELFOTHER",  args = { "spell", "targetName" }, missType = "evade" },
+        { stem = "SPELLIMMUNESELFOTHER",  args = { "spell", "targetName" }, missType = "immune" },
+        { stem = "SPELLRESISTSELFOTHER",  args = { "spell", "targetName" }, missType = "resist" },
+    },
+}
+
 local function WithSource(args)
     local list = { "sourceName" }
     for n = 1, table.getn(args) do table.insert(list, args[n]) end
@@ -192,6 +217,19 @@ local function TryShapes(line, list, origin, viewpoint, trusted)
     return nil
 end
 
+local function TryMisses(line, list)
+    for n = 1, table.getn(list) do
+        local rule = list[n]
+        local record = Read(line, rule.stem, rule.args)
+        if record and record.targetName and record.targetName ~= "" then
+            record.kind = "miss"
+            record.missType = rule.missType
+            return record
+        end
+    end
+    return nil
+end
+
 local function TryPair(line, pair, origin, viewpoint, trusted)
     local rule = pair[viewpoint]
     local record = Read(line, rule.stem, rule.args)
@@ -205,8 +243,13 @@ local function MeleeLine(viewpoint, trusted)
     return function(line) return TryShapes(line, SHAPES.melee, "melee", viewpoint, trusted) end
 end
 local function SpellLine(viewpoint, trusted)
-    return function(line) return TryShapes(line, SHAPES.spell, "spell", viewpoint, trusted) end
+    return function(line)
+        local hit = TryShapes(line, SHAPES.spell, "spell", viewpoint, trusted)
+        if not hit and viewpoint == "mine" then hit = TryMisses(line, MISSES.spell) end
+        return hit
+    end
 end
+local function MeleeMissLine(line) return TryMisses(line, MISSES.melee) end
 local function PeriodicLine(line)
     return TryPair(line, PERIODIC, "periodic", "mine")
         or TryPair(line, PERIODIC, "periodic", "theirs")
@@ -221,6 +264,7 @@ end
 -- One entry per chat event; the keys also tell callers what to register for.
 local READERS = {
     CHAT_MSG_COMBAT_SELF_HITS                     = MeleeLine("mine"),
+    CHAT_MSG_COMBAT_SELF_MISSES                   = MeleeMissLine,
     CHAT_MSG_COMBAT_PET_HITS                      = MeleeLine("theirs", true),
     CHAT_MSG_SPELL_SELF_DAMAGE                    = SpellLine("mine"),
     CHAT_MSG_SPELL_PET_DAMAGE                     = SpellLine("theirs", true),
@@ -234,7 +278,7 @@ local READERS = {
 
 K.tools.CombatEvents = READERS
 
--- Returns a damage record for a damage line of the given chat event, otherwise nil.
+-- Returns a damage or miss record for a line of the given chat event, otherwise nil.
 function K.tools.ParseCombatLine(eventName, line)
     if type(line) ~= "string" or line == "" then return nil end
     local reader = READERS[eventName]

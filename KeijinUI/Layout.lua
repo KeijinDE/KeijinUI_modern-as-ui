@@ -33,15 +33,15 @@ local function Save(entry)
     if not Finite(x) or not Finite(y) then return end
     K.DB().layout[entry.key]={x=x*ratio/UIParent:GetWidth(),y=y*ratio/UIParent:GetHeight(),scale=f:GetScale()/entry.baseScale}
 end
--- Standard layout (version 0.5.1): same format as the saved layout, never written to the DB by Apply.
+-- Standard layout (version 0.5.1, statistics taller since 0.7.4): same format as the saved layout, never written to the DB by Apply.
 L.defaults={
     achievements={x=0.3588,y=0.3057,scale=1},
     bosses={x=0.4076,y=0.9906,scale=1},
     buffs={x=0.4096,y=0.3660,scale=1},
     chat={x=0.0053,y=0.2082,scale=1},
-    crits={x=0.0053,y=0.5692,scale=0.9},
+    crits={x=0.0053,y=0.5293,scale=0.9},
     loot={x=0.8157,y=0.4990,scale=0.9},
-    meter={x=0.0053,y=0.8161,scale=0.9},
+    meter={x=0.0053,y=0.7762,scale=0.9},
     minimap={x=0.8682,y=0.9906,scale=1},
     player={x=0.2587,y=0.4320,scale=1},
     skills={x=0.4092,y=0.4230,scale=0.9},
@@ -226,5 +226,38 @@ function L.Update()
         else e.handle:Hide() end
     end
 end
+-- 0.7.4: the statistics grew by two rows (166 -> 204). A saved damage meter in the same column below
+-- them moves down only as far as needed to stay clear of the taller panel (GAP units apart); critical
+-- hits below the meter follow only as far as the meter at its tallest would otherwise cover them, and
+-- never further than the meter moved. Frames with room to spare stay where they are. Once per account,
+-- on ADDON_LOADED, when the saved variables exist.
+local OLD_STATS,NEW_STATS,GAP=166,204,2
+function L.MigrateStatistics()
+    local db=K.DB()
+    if db.layoutMigration074 then return end
+    db.layoutMigration074=true
+    local saved,stats=db.layout,db.layout.statistics
+    local entry,meterEntry=L.entries.statistics,L.entries.meter
+    local h=UIParent:GetHeight()
+    if not Valid(stats) or not entry or not meterEntry or not Finite(h) or h<=0 then return end
+    local s=entry.baseScale*stats.scale
+    local width=entry.frame:GetWidth()*s/UIParent:GetWidth()
+    local function Below(p,top) return Valid(p) and math.abs(p.x-stats.x)<width and p.y<top end
+    local meter=saved.meter
+    if not Below(meter,stats.y) then return end
+    local limit=stats.y-NEW_STATS*s/h-GAP/h
+    local moved=math.max(0,meter.y-limit)
+    if moved<=0 then return end
+    local crits,meterTop=saved.crits,meter.y
+    meter.y=meter.y-moved
+    if Below(crits,meterTop) then
+        local ms=meterEntry.baseScale*meter.scale
+        local tallest=K.MeterMaxHeight and K.MeterMaxHeight() or 232
+        local critLimit=meter.y-tallest*ms/h-GAP/h
+        crits.y=crits.y-math.min(moved,math.max(0,crits.y-critLimit))
+    end
+    L.Place("meter"); L.Place("crits")
+end
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then L.MigrateStatistics() end end)
 table.insert(K.updates,L.Update)
 K.On("PLAYER_LEAVING_WORLD",function() editing=false; Stop(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)

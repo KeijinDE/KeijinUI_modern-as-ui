@@ -1,7 +1,9 @@
 local K=KeijinUI
-local stats=K.Panel("KeijinUIStatistics","Dieser Run",260,166)
+local stats=K.Panel("KeijinUIStatistics","Dieser Run",260,204)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end)
+-- Level and experience of the current level only: the game hands out no run total of experience.
 local definitions={
+    {"lvl","Level"},{"xp","Erfahrung"},
     {"ek","Eliten besiegt"},{"gk","Wächter besiegt"},{"bk","Bosse besiegt"},
     {"taken","Schaden erlitten"},{"heal","Heilung (effektiv)"},{"ge","Gold verdient"}
 }
@@ -15,6 +17,8 @@ local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,236)
 local meterRows,baseline={},{}
 local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
+-- Height of the meter with data: as many rows as the screen allows, 3 to MAX_ROWS.
+function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((UIParent:GetHeight()-563)/22)))*22 end
 for i=1,MAX_ROWS do
     local row=K.ListBarRow(meter,i,20)
     -- Separate, bounded columns: ability | total damage | damage per second.
@@ -135,8 +139,19 @@ local function Update()
         for i,def in ipairs(definitions) do
             local key=def[1]; local value=r[key]
             if key=="heal" then value=valid and healed or nil end
-            rows[i].value:SetText(K.Short(value))
-            rows[i].tip=K.T(def[2]); rows[i].detail=key=="heal" and HealDetail(value) or (K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten"))
+            rows[i].tip=K.T(def[2])
+            if key=="xp" then
+                local need=r.xpn
+                if K.Number(value) and K.Number(need) and need>0 then
+                    rows[i].value:SetText(K.Short(value).." / "..K.Short(need))
+                    rows[i].detail=K.T("%.0f / %.0f, %.0f %% bis zum nächsten Level",value,need,math.min(100,value/need*100))
+                else
+                    rows[i].value:SetText(K.Short(nil)); rows[i].detail=K.T("Noch keine Spieldaten")
+                end
+            else
+                rows[i].value:SetText(K.Short(value))
+                rows[i].detail=key=="heal" and HealDetail(value) or (K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten"))
+            end
         end
         stats:Show()
     else stats:Hide() end
@@ -152,8 +167,8 @@ local function Update()
     end
     if meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
-        local visible=math.max(3,math.min(MAX_ROWS,math.floor((UIParent:GetHeight()-563)/22)))
-        meter:SetHeight(56+visible*22)
+        meter:SetHeight(K.MeterMaxHeight())
+        local visible=(meter:GetHeight()-56)/22
         offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
         local duration=seconds-meterStart
         for i,row in ipairs(meterRows) do

@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 0.7.4 (2026-10-16, release v0.7.4)
+
+Level and experience move from the run tracker into the run statistics: one row for the level, one for the experience of the current level with the share to the next level in the tooltip. The game provides no run total of experience, so none is shown. The tracker is one line shorter, and the default layout moves the damage meter and critical hits down accordingly. Saved layouts follow once on the first load: a damage meter below the statistics moves down only as far as the taller panel would otherwise cover it, critical hits below only as far as the full meter needs. Frames with room to spare stay put.
+
 ### 0.7.3 (2026-10-16, release v0.7.3)
 
 Priests see the Lightwell countdown under the player frame, taken from the game's spell cooldown data.
@@ -120,6 +124,10 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 0.7.4 (2026-10-16, Release v0.7.4)
+
+Level und Erfahrung wandern vom Rundentimer in die Runstatistik: eine Zeile für das Level, eine für die Erfahrung im aktuellen Level, der Anteil bis zum nächsten Level steht im Tooltip. Eine Gesamtsumme der Erfahrung im Run liefert das Spiel nicht, daher wird keine angezeigt. Der Rundentimer ist eine Zeile kürzer, im Standardlayout rücken Schadensanzeige und kritische Treffer entsprechend nach unten. Gespeicherte Layouts ziehen beim ersten Laden einmalig nach: Eine Schadensanzeige unter der Statistik rückt nur so weit, wie die höhere Statistik sie sonst überdecken würde, die kritischen Treffer darunter nur so weit, wie die volle Schadensanzeige es braucht. Fenster mit genug Abstand bleiben stehen.
 
 ### 0.7.3 (2026-10-16, Release v0.7.3)
 

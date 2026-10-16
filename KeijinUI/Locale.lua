@@ -87,7 +87,7 @@ EN["Runzeit beim Sieg: %s\nBosszeit: %s\nErschienen bei: %s\nAktive Runzeit ohne
 EN["Bereits besiegt. Der Todeszeitpunkt wurde nicht erfasst.\nDie Spielschnittstelle liefert keine vergangenen Todeszeitpunkte."]="Already defeated. The time of death was not recorded.\nThe game interface does not provide past times of death."
 EN["Seit Erscheinen: %s\nErschienen bei: %s\nPausen und Kartenwahl zählen nicht mit."]="Since appearing: %s\nAppeared at: %s\nPauses and card choices are not counted."
 EN["Erscheint bei: %s Runzeit."]="Appears at %s run time."
-EN["Level %s   %s / %s EP"]="Level %s   %s / %s XP"
+EN["%.0f / %.0f, %.0f %% bis zum nächsten Level"]="%.0f / %.0f, %.0f %% to the next level"
 EN["Warte auf Spieldaten"]="Waiting for game data"
 EN["Bereit"]="Ready"
 EN["geöffnet %s"]="opened %s"

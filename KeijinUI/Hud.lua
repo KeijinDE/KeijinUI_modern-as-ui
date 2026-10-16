@@ -264,8 +264,9 @@ local function Update()
             row:Show()
         end
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
-        tracker:SetHeight(154+count*18)
-        level:SetText(K.T("Level %s   %s / %s EP",K.Short(r.lvl),K.Short(r.xp),K.Short(r.xpn)))
+        -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
+        tracker:SetHeight(136+count*18)
+        level:SetText("")
         tracker:Show(); K.Native("clock",true)
     else
         K.Native("clock",not K.DB().hidden.tracker)

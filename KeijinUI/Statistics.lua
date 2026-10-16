@@ -6,14 +6,26 @@ local definitions={
     {"taken","Schaden erlitten"},{"heal","Heilung (effektiv)"},{"ge","Gold verdient"}
 }
 local rows={}
-for i,v in ipairs(definitions) do rows[i]=K.Row(stats,i,19); K.Live(rows[i].label,function() return K.T(v[2]) end) end
+for i,v in ipairs(definitions) do rows[i]=K.ValueRow(stats,i,19); K.Live(rows[i].label,function() return K.T(v[2]) end) end
+-- The panel border closes the list, so the last row needs no line of its own.
+rows[table.getn(rows)].line:Hide()
 local meter=K.Panel("KeijinUIDamage","Schaden",260,235)
 K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end)
 local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,236)
 local meterRows,baseline={},{}
 local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
-for i=1,MAX_ROWS do meterRows[i]=K.Row(meter,i,20) end
+for i=1,MAX_ROWS do
+    local row=K.ListBarRow(meter,i,20)
+    -- Separate, bounded columns: ability | total damage | damage per second.
+    -- Use the existing text layer so all three stay above the bar artwork.
+    row.label:SetWidth(104)
+    row.value:ClearAllPoints(); row.value:SetPoint("RIGHT",row,"RIGHT",-73,0)
+    row.value:SetWidth(53); row.value:SetHeight(16); row.value:SetJustifyH("RIGHT")
+    row.dps=K.Text(row.value:GetParent(),"",10,"RIGHT",-6,0,62)
+    row.dps:SetJustifyH("RIGHT"); row.dps:SetTextColor(0.84,0.82,0.75)
+    meterRows[i]=row
+end
 meter:EnableMouseWheel(true)
 meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -1 or 1)) end)
 local reset=CreateFrame("Button",nil,meter)
@@ -34,7 +46,7 @@ crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}
 local critNote=K.LText(crit,"Seit Laden der Oberfläche",9,"BOTTOMLEFT",13,9,270)
-for i=1,8 do critRows[i]=K.Row(crit,i,19) end
+for i=1,8 do critRows[i]=K.ListBarRow(crit,i,19) end
 -- Effective healing: sum of positive health gains of the player between two samples.
 local healed,lastHp,lastMax=0,nil,nil
 -- Estimated gross healing by source, integrated at every sample with the value valid at that moment:
@@ -125,7 +137,6 @@ local function Update()
             if key=="heal" then value=valid and healed or nil end
             rows[i].value:SetText(K.Short(value))
             rows[i].tip=K.T(def[2]); rows[i].detail=key=="heal" and HealDetail(value) or (K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten"))
-            rows[i].bar:SetValue(1); rows[i].bar:SetStatusBarColor(0.19,0.17,0.11,0.45)
         end
         stats:Show()
     else stats:Hide() end
@@ -148,13 +159,17 @@ local function Update()
         for i,row in ipairs(meterRows) do
             local v=sorted[i+offset]
             if v and i<=visible then
+                -- Same run clock and reset baseline as the summary and tooltip;
+                -- do not mix native run DPS with damage measured since Reset.
+                local dps=duration>0 and v.dmg/duration or 0
                 row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
+                row.dps:SetText(K.Short(dps).." DPS")
                 row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
                 local red,green,blue=K.SourceColor(v.name)
                 row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=K.DisplayName(v.name)
                 row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
-                    K.Short(duration>0 and v.dmg/duration or 0),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+                    K.Short(dps),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
                 row:Show()
             else row:Hide() end
         end

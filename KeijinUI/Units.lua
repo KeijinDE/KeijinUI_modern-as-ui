@@ -53,60 +53,59 @@ function K.UpdateDebuffRow(row,unit)
     row.shown=n
     return n
 end
--- Unit frames in the language of the panels: flat dark fill with tooltip border (K.Skin), the name
--- in a heading strip like the panel titles, the health bar in the metal frame of K.MetalBar (fill
--- inset 1 px like K.Row), the portrait in a square box with the same border. The client cuts
--- portraits to a circle itself, so the portrait is round inside its square box.
-local BORDER={0.62,0.57,0.43}
+-- One sculpted housing: portrait bezel, dark name shoulder, tapered health rail.
+-- All artwork is original and uses ordinary 1.12 textures, including the mirror.
+local BORDER={0.88,0.82,0.67}
 local FRAME_W,FRAME_H=206,58
-local BOX=46
-local HOLDER_W,HOLDER_H=136,24
+local BOX=54
+local HOLDER_W,HOLDER_H=158,30
+local S=K.UnitFrameShapes
 local function Create(unit,mirror)
     local name=unit=="player" and "KeijinUIPlayer" or "KeijinUITarget"
     local f=CreateFrame("Button",name,UIParent)
     f:SetWidth(FRAME_W); f:SetHeight(FRAME_H); f:SetFrameStrata("LOW")
     f:SetScale(K.CombatScale()); f:EnableMouse(true); f:RegisterForClicks("LeftButtonUp","RightButtonUp")
-    K.Skin(f)
-    -- Content column (strip, health bar) and portrait box sit on opposite sides for player and target.
-    local contentLeft=mirror and 8 or 62
-    local boxLeft=mirror and (FRAME_W-6-BOX) or 6
-    local strip=f:CreateTexture(nil,"BORDER")
-    strip:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-Skills-Bar")
-    strip:SetVertexColor(0.6,0.53,0.36,0.55)
-    strip:SetPoint("TOPLEFT",f,"TOPLEFT",contentLeft,-6)
-    strip:SetWidth(HOLDER_W); strip:SetHeight(16)
-    -- Health bar: holder with metal frame, fill inset like K.Row.
+    -- Transparent click and layout container. It has no backdrop.
+    local contentLeft=mirror and 4 or 44
+    local boxLeft=mirror and 152 or 0
     local holder=CreateFrame("Frame",nil,f)
     holder:SetWidth(HOLDER_W); holder:SetHeight(HOLDER_H)
     holder:SetPoint("TOPLEFT",f,"TOPLEFT",contentLeft,-28)
-    local back=holder:CreateTexture(nil,"BACKGROUND")
-    back:SetTexture(K.flat); back:SetVertexColor(0.04,0.04,0.05,0.6)
-    back:SetPoint("TOPLEFT",holder,"TOPLEFT",1,-1); back:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-1,1)
-    local bar=CreateFrame("StatusBar",name.."Health",holder)
-    bar:SetPoint("TOPLEFT",holder,"TOPLEFT",1,-1); bar:SetPoint("BOTTOMRIGHT",holder,"BOTTOMRIGHT",-1,1)
-    bar:SetMinMaxValues(0,1); bar:SetValue(0)
-    bar:SetStatusBarColor(unit=="player" and 0.12 or 0.85,unit=="player" and 0.88 or 0.08,0.08)
-    K.MetalBar(holder,bar)
-    -- Portrait: box with the panel border, round portrait in it.
+    local body=S.Texture(f,"BACKGROUND","FrameBack.tga",206,58,0,0)
+    if mirror then body:SetTexCoord(1,0,0,1) end
+    -- The alpha-shaped fill follows the portrait edge and the lower connector.
+    local bar=S.ConnectedFill(holder,name.."Health",mirror)
+    bar:SetPoint("TOPLEFT",holder,"TOPLEFT",mirror and 1 or -17,-1)
+    local rimLayer=CreateFrame("Frame",nil,f)
+    rimLayer:SetAllPoints(f); rimLayer:SetFrameLevel(bar:GetFrameLevel()+2)
+    local rim=S.Texture(rimLayer,"OVERLAY","FrameRim.tga",206,58,0,0)
+    if mirror then rim:SetTexCoord(1,0,0,1) end
     local box=CreateFrame("Frame",nil,f)
-    box:SetWidth(BOX); box:SetHeight(BOX); box:SetPoint("TOPLEFT",f,"TOPLEFT",boxLeft,-6)
-    K.Skin(box)
-    local picture=CreateFrame("Frame",nil,f); picture:SetAllPoints(f); picture:SetFrameLevel(box:GetFrameLevel()+1)
-    local portrait=picture:CreateTexture(name.."Portrait","ARTWORK")
-    portrait:SetWidth(BOX-6); portrait:SetHeight(BOX-6)
-    portrait:SetPoint("TOPLEFT",f,"TOPLEFT",boxLeft+3,-9)
-    -- Text has its own layer on top of bar and portrait.
-    local layer=CreateFrame("Frame",nil,f); layer:SetAllPoints(f); layer:SetFrameLevel(bar:GetFrameLevel()+3)
-    f.health=K.Text(layer,"? / ?",10,"CENTER",0,0)
-    f.health:ClearAllPoints(); f.health:SetPoint("CENTER",holder,"CENTER",0,0)
-    f.health:SetWidth(HOLDER_W-10); f.health:SetHeight(14); f.health:SetJustifyH("CENTER")
-    f.label=K.Text(layer,unit=="player" and K.T("Spieler") or K.T("Kein Ziel"),11,"TOPLEFT",contentLeft+5,-7,HOLDER_W-44)
-    f.label:SetHeight(14)
-    f.label:SetTextColor(1,0.82,0.28)
-    f.level=K.Text(layer,"",10,"TOPLEFT",contentLeft+HOLDER_W-36,-8,31)
-    f.level:SetHeight(12); f.level:SetJustifyH("RIGHT")
-    f.level:SetTextColor(1,0.82,0.28)
-    f.unit,f.portrait,f.bar,f.box=unit,portrait,bar,box
+    box:SetWidth(BOX); box:SetHeight(BOX)
+    box:SetPoint("TOPLEFT",f,"TOPLEFT",boxLeft,-4)
+    box:SetFrameLevel(bar:GetFrameLevel()+1)
+    local portrait=box:CreateTexture(name.."Portrait","ARTWORK")
+    portrait:SetWidth(48); portrait:SetHeight(48)
+    portrait:SetPoint("TOPLEFT",box,"TOPLEFT",3,-3)
+    -- The shared metal texture sits above both portrait and fill, keeping the
+    -- circular bevel intact at the join. No square portrait backdrop is added.
+    local ring=rim
+    rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
+    local layer=CreateFrame("Frame",nil,f)
+    layer:SetAllPoints(f); layer:SetFrameLevel(rimLayer:GetFrameLevel()+1)
+    -- Reflect each text box, including its alignment. Text stays readable:
+    -- target percent/level on the left, health/name next to its portrait.
+    local function TextLeft(left,width) return mirror and FRAME_W-left-width or left end
+    f.health=K.Text(layer,"?",10,"TOPLEFT",TextLeft(59,80),-36,80)
+    f.health:SetHeight(14); f.health:SetJustifyH(mirror and "RIGHT" or "LEFT")
+    f.percent=K.Text(layer,"?%",10,"TOPLEFT",TextLeft(156,36),-36,36)
+    f.percent:SetHeight(14); f.percent:SetJustifyH(mirror and "LEFT" or "RIGHT")
+    f.label=K.Text(layer,unit=="player" and K.T("Spieler") or K.T("Kein Ziel"),11,"TOPLEFT",TextLeft(58,90),-13,90)
+    f.label:SetHeight(14); f.label:SetJustifyH(mirror and "RIGHT" or "LEFT"); f.label:SetTextColor(1,0.82,0.28)
+    -- End at x=184 instead of 192: more air below the curved outer rim.
+    f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(153,31),-14,31)
+    f.level:SetHeight(12); f.level:SetJustifyH(mirror and "LEFT" or "RIGHT"); f.level:SetTextColor(1,0.82,0.28)
+    f.unit,f.portrait,f.bar,f.box,f.ring,f.rim=unit,portrait,bar,box,ring,rim
     f:SetScript("OnClick",function()
         if arg1=="RightButton" then if ToggleGameMenu then ToggleGameMenu() end
         elseif UnitExists(unit) and TargetUnit then TargetUnit(unit) end
@@ -163,19 +162,20 @@ local function Update()
             local mark=(class=="elite" and "+") or (class=="rareelite" and "R+") or (class=="rare" and "R") or (class=="worldboss" and "+") or ""
             f.level:SetText((lvl and lvl>0 and tostring(lvl) or "??")..mark)
             local border=(class=="elite" or class=="worldboss") and {1,0.82,0.28} or ((class=="rare" or class=="rareelite") and {0.78,0.84,0.95}) or BORDER
-            f:SetBackdropBorderColor(border[1],border[2],border[3],1)
+            f.rim:SetVertexColor(border[1],border[2],border[3],1)
             if K.Number(hp) and K.Number(max) and max>0 then
                 local pct=math.max(0,math.min(1,hp/max))
-                f.bar:SetValue(pct); f.health:SetText(string.format("%.0f%% / %.0f",math.floor(pct*100),hp))
+                f.bar:SetValue(pct); f.health:SetText(K.Short(hp))
+                f.percent:SetText(string.format("%.0f%%",math.floor(pct*100)))
                 f.exact=string.format("%.0f / %.0f",hp,max)
-            else f.bar:SetValue(0); f.health:SetText("? / ?"); f.exact=nil end
+            else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil end
             f.bar:SetStatusBarColor(HealthColor(unit))
             SetPortraitTexture(f.portrait,unit)
             f.portrait:Show()
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
-            f.health:SetText("? / ?"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
-            f:SetBackdropBorderColor(BORDER[1],BORDER[2],BORDER[3],1)
+            f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
+            f.rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
             f.portrait:SetTexture(nil); f.portrait:Hide()
         end
         if unit=="target" and not UnitExists(unit) then

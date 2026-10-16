@@ -168,7 +168,7 @@ local announced=false
 local function Announce()
     if not announced then
         announced=true
-        DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r |cffffff88KeijinUI|r v0.6.1 – Use /kui")
+        DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r |cffffff88KeijinUI|r v"..K.version.." – Use /kui")
     end
 end
 K.On("PLAYER_ENTERING_WORLD",Announce)

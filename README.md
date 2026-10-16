@@ -15,8 +15,8 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 
 * Run overview with zone, run clock, progress and boss schedule (boss time and run time)
 * Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned
-* Damage meter and list of the biggest critical hits
-* Player and target frames, square minimap, action bar with ranks and cooldowns
+* Damage meter with total and DPS per ability, list of the biggest critical hits
+* Player and target frames with round portrait and joined health bar, square minimap, action bar with ranks and cooldowns
 * Build overview with spells, jewelry and a build tip
 * Encounter bars for bosses, elites and rares, modern nameplates, damage numbers in the world
 * Loot notice, achievement popup and one chat window in the same frame style
@@ -39,6 +39,8 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * `/kui lang de` switches to German, `/kui lang en` back to English (default).
 * `/kui reset` restores the default layout.
 
+![Settings window](screenshots/settings.png)
+
 All commands, details and the changelog are in [KeijinUI/README.md](KeijinUI/README.md).
 
 ### Credits
@@ -59,8 +61,8 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 
 * Runübersicht mit Zone, Runuhr, Fortschritt und Bossplan (Bosszeit und Runzeit)
 * Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, effektive Heilung, Gold verdient
-* Schadensanzeige und Liste der größten kritischen Treffer
-* Spieler und Zielframe, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten
+* Schadensanzeige mit Gesamtschaden und DPS je Fähigkeit, Liste der größten kritischen Treffer
+* Spieler und Zielframe mit rundem Porträt und angeschlossenem Lebensbalken, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten
 * Buildübersicht mit Zaubern, Schmuck und Buildtipp
 * Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, Schadenszahlen in der Spielwelt
 * Beutemeldung, Erfolgsmeldung und ein Chatfenster im gleichen Rahmenstil

@@ -175,8 +175,14 @@ Heading(page,"Oberfläche",-80)
 Button(page,"Oberfläche neu laden",0,-98,200,function() SlashCmdList.KEIJINUI("reload") end)
 Button(page,"Erfolgsvorschau",208,-98,200,function() SlashCmdList.KEIJINACHIEVEMENTS("test") end)
 Heading(page,"Befehle",-140)
-local commands=K.LText(page,"/kui: Einstellungen, Layout und Sprache\n/kbb: Zauber, Schmuck und Buildtipps\n/kachi: Erfolgsmeldung",10,"TOPLEFT",0,-158,PAGE_WIDTH)
-commands:SetHeight(44)
+local commands=K.LText(page,"/kui: Einstellungen, Layout und Sprache\n/kui runs: Rundenübersicht\n/kbb: Zauber, Schmuck und Buildtipps\n/kachi: Erfolgsmeldung",10,"TOPLEFT",0,-158,PAGE_WIDTH)
+commands:SetHeight(56)
+Heading(page,"Runs",-222)
+Button(page,"Rundenübersicht",0,-240,200,function() K.runs.Toggle() end)
+Row(page,"Run Meldung",-272,function() return OnOff(K.runs.MessageOn()) end,
+    function() K.runs.SetMessage(not K.runs.MessageOn()) end)
+Row(page,"Minimapknopf",-297,function() return OnOff(K.MinimapButtonOn()) end,
+    function() K.SetMinimapButton(not K.MinimapButtonOn()) end)
 
 Button(panel,"Schließen",170,-388,100,function() panel:Hide() end)
 RefreshAll()
@@ -211,6 +217,14 @@ SlashCmdList.KEIJINUI=function(message)
         local _,_,rest=string.find(command,"^caches%s+(.-)$")
         K.CachesCommand(rest or "")
         RefreshAll()
+    elseif command=="runs" or string.find(command,"^runs%s") then
+        local _,_,rest=string.find(command,"^runs%s+(.-)$")
+        K.RunsCommand(rest or "")
+        RefreshAll()
+    elseif command=="button" or string.find(command,"^button%s") then
+        local _,_,rest=string.find(command,"^button%s+(.-)$")
+        K.MinimapButtonCommand(rest or "")
+        RefreshAll()
     elseif command=="build" then SlashCmdList.KEIJINBUILDBAR("toggle")
     elseif command=="text icons" then
         K.DB().combatTextIcons=(K.DB().combatTextIcons==false)
@@ -244,5 +258,5 @@ SlashCmdList.KEIJINUI=function(message)
         else
             K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

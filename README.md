@@ -23,6 +23,7 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * Settings window with tabs, layout mode with grid and snapping, a ready made default layout
 * Class resources: rogue combo points, warlock soul shards and warrior rage; attached to the player or movable with Alt
 * Caches on the minimap with a pointer to the nearest one, optional screen arrow
+* Run overview per zone and character (`/kui runs`) with a start message in chat, and a minimap button
 * Original chamfered frames with warm bronze unit borders
 * English and German interface
 
@@ -72,6 +73,7 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
 * Klassenressourcen: Combopunkte, Seelensplitter und Wut; am Spieler befestigt oder mit Alt frei beweglich
 * Caches auf der Minimap mit Hinweis auf die nächste, optionaler Bildschirmpfeil
+* Rundenübersicht je Zone und Charakter (`/kui runs`) mit Startmeldung im Chat und ein Minimapknopf
 * Eigene abgeschrägte Rahmen mit warmen bronzefarbenen Unitkanten
 * Oberfläche auf Englisch und Deutsch
 

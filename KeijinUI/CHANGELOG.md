@@ -5,6 +5,16 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 0.9.0 (2026-10-17, release v0.9.0)
+
+Run overview. A new window (`/kui runs`, or Settings, General, Run overview) lists, per zone and character, the number of runs, wins, the last time, the fastest win and the longest survival. One page per zone, switched with the arrows; zones follow the order of the game, characters appear in their class color, missing values show a dash. The data is stored account wide, so all characters appear together. The game reports only the run in progress, so the overview counts from this version on; earlier runs cannot be added.
+
+As soon as you enter the zone for a new run (before the first move) a chat line names the zone, the class (in class color), the number of the run and, once there are any, the fastest win and the longest survival, for example "Elwynn Forest, Priest: This is your 4th run. Fastest win 15:42, longest survival 28:40." The first run says "This is your first run here." The line follows the interface language and appears once per run, not again after a reload in the middle of a run or while waiting to start. It can be switched off in Settings, General, or with `/kui runs msg` (on by default). `/kui runs debug` prints what the game reports (phase, run time, zone, open run) for troubleshooting.
+
+A run counts once it has lasted 90 seconds (or earlier with a win); shorter runs are not stored at all and do not use up a run number. A win is stored at the moment the game reports the final boss dead; endless mode after a win stays the same run, with a longer survival time. Runs that end by death or by leaving count with the time reached. A reload in the middle of a run is recognized through the open run kept in the saved variables and counts nothing twice.
+
+Minimap button. A small button with the wordmark "Kui" at the edge of the minimap, by default at the right middle: left click opens or closes the settings, right click the run overview, dragging with the left mouse button moves it around the map. On the square KeijinUI minimap it runs along the square edge, on the original minimap along the circle; the angle is saved and the button follows when the minimap style is switched. The tooltip lists the clicks. Switch it in Settings, General, or with `/kui button on|off` (on by default).
+
 ### 0.8.0 (2026-10-16, release v0.8.0)
 
 Caches on the minimap. Every cache waiting to be opened gets a chest symbol on the minimap (own artwork); caches closer than 10 yards share one symbol with a number, and the tooltip shows the count, the distance and the price of the next cache. When the nearest cache is out of sight, a small arrow at the minimap border points toward it, clamped to the square border of the KeijinUI minimap (or the circle of the original one). An optional large screen arrow (off by default, movable in the layout editor) shows direction, distance and price of the nearest cache. The game gives no scale for the zone map, so it is measured from the world and map positions of caches and lairs; without a measurement nothing is drawn. The minimap diameter per zoom level follows the client's own table. The facing direction comes from `GetPlayerFacing` if it exists, else from the minimap arrow model, else from the direction of movement, else north. A chat notice for a new cache is optional (off by default). Settings, Units, Caches has a switch for the symbols, the edge arrow, the screen arrow and the notice. `/kui caches debug` prints what the game delivers (scale, zoom, map position, facing sources) and `/kui caches source` forces a direction source.
@@ -130,6 +140,16 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 0.9.0 (2026-10-17, Release v0.9.0)
+
+Rundenübersicht. Ein neues Fenster (`/kui runs` oder Einstellungen, Allgemein, Rundenübersicht) listet je Zone und Charakter die Anzahl der Runs, die Siege, die letzte Zeit, den schnellsten Sieg und das längste Überleben. Pro Zone eine Seite, per Pfeil umschaltbar; die Zonen folgen der Reihenfolge des Spiels, die Charaktere erscheinen in Klassenfarbe, fehlende Werte zeigen einen Strich. Die Daten liegen kontoweit, alle Charaktere erscheinen also zusammen. Das Spiel meldet nur den laufenden Run, deshalb zählt die Übersicht ab dieser Version; frühere Runs lassen sich nicht nachtragen.
+
+Sobald du die Zone für einen neuen Run betrittst (vor der ersten Bewegung), nennt eine Chatzeile die Zone, die Klasse (in Klassenfarbe), die Nummer des Runs und, sobald vorhanden, den schnellsten Sieg und das längste Überleben, zum Beispiel "Elwynn Forest, Priester: Das ist dein 4. Lauf. Schnellster Sieg 15:42, längstes Überleben 28:40." Der erste Lauf lautet "Das ist dein erster Lauf hier." Die Zeile folgt der Sprache der Oberfläche und erscheint einmal pro Run, nicht erneut nach einem Reload mitten im Run oder beim Warten auf den Start. Sie lässt sich in den Einstellungen unter Allgemein oder mit `/kui runs msg` abschalten (Standard an). `/kui runs debug` gibt zur Fehlersuche aus, was das Spiel meldet (Phase, Laufzeit, Zone, offener Run).
+
+Ein Run zählt, sobald er 90 Sekunden gedauert hat (oder früher mit einem Sieg); kürzere Runs werden gar nicht gespeichert und verbrauchen keine Nummer. Ein Sieg wird in dem Moment gespeichert, in dem das Spiel den Endboss als besiegt meldet; Endless nach einem Sieg bleibt derselbe Run, mit längerer Überlebenszeit. Runs, die durch Tod oder Verlassen enden, zählen mit der erreichten Zeit. Ein Reload mitten im Run wird über den in den gespeicherten Variablen offen gehaltenen Run erkannt und zählt nichts doppelt.
+
+Minimapknopf. Ein kleiner Knopf mit dem Schriftzug "Kui" am Rand der Minimap, standardmäßig rechts in der Mitte: Linksklick öffnet oder schließt die Einstellungen, Rechtsklick die Rundenübersicht, Ziehen mit der linken Maustaste verschiebt ihn um die Karte. Auf der quadratischen KeijinUI Minimap läuft er am quadratischen Rand entlang, auf der Originalminimap am Kreis; der Winkel wird gespeichert und der Knopf folgt beim Umschalten des Minimapstils. Der Tooltip nennt die Klicks. Schaltbar unter Einstellungen, Allgemein, oder mit `/kui button on|off` (Standard an).
 
 ### 0.8.0 (2026-10-16, Release v0.8.0)
 

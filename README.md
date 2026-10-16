@@ -23,7 +23,8 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * Settings window with tabs, layout mode with grid and snapping, a ready made default layout
 * Class resources: rogue combo points, warlock soul shards and warrior rage; attached to the player or movable with Alt
 * Caches on the minimap with a pointer to the nearest one, optional screen arrow
-* Run overview per zone and character (`/kui runs`) with a start message in chat, and a minimap button
+* Run history per zone and character (`/kui runs`): runs, wins, last time, fastest win and longest survival, plus a start message in chat for every run
+* Minimap button **Kui**: left click opens the settings, right click the run history, drag it along the minimap edge
 * Original chamfered frames with warm bronze unit borders
 * English and German interface
 
@@ -42,8 +43,11 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * Hold **Alt** to see all frames, drag them with the left mouse button, Alt and mouse wheel changes the size.
 * `/kui lang de` switches to German, `/kui lang en` back to English (default).
 * `/kui reset` restores the default layout.
+* The **Kui** button on the minimap opens the settings (left click) and the run history (right click).
 
 ![Settings window](screenshots/settings.png)
+
+![Minimap button](screenshots/minimap-button.png) ![General settings with the run history](screenshots/settings-general.png)
 
 All commands and details are in [KeijinUI/README.md](KeijinUI/README.md). The full version history is in [CHANGELOG.md](KeijinUI/CHANGELOG.md).
 
@@ -73,7 +77,8 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
 * Klassenressourcen: Combopunkte, Seelensplitter und Wut; am Spieler befestigt oder mit Alt frei beweglich
 * Caches auf der Minimap mit Hinweis auf die nächste, optionaler Bildschirmpfeil
-* Rundenübersicht je Zone und Charakter (`/kui runs`) mit Startmeldung im Chat und ein Minimapknopf
+* Rundenübersicht je Zone und Charakter (`/kui runs`): Runs, Siege, letzte Zeit, schnellster Sieg und längstes Überleben, dazu eine Startmeldung im Chat zu jedem Run
+* Minimapknopf **Kui**: Linksklick öffnet die Optionen, Rechtsklick die Rundenübersicht, am Minimaprand verschiebbar
 * Eigene abgeschrägte Rahmen mit warmen bronzefarbenen Unitkanten
 * Oberfläche auf Englisch und Deutsch
 
@@ -90,6 +95,7 @@ KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläc
 * **Alt** halten zeigt alle Rahmen, mit der linken Maustaste verschieben, Alt und Mausrad ändern die Größe.
 * `/kui lang de` stellt auf Deutsch um, `/kui lang en` zurück auf Englisch (Standard).
 * `/kui reset` stellt das Standardlayout wieder her.
+* Der Knopf **Kui** an der Minimap öffnet die Optionen (Linksklick) und die Rundenübersicht (Rechtsklick).
 
 Alle Befehle und Details stehen in [KeijinUI/README.md](KeijinUI/README.md). Der vollständige Versionsverlauf steht in [CHANGELOG.md](KeijinUI/CHANGELOG.md).
 

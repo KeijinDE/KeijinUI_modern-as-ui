@@ -38,6 +38,7 @@ L.defaults={
     achievements={x=0.3588,y=0.3057,scale=1},
     bosses={x=0.4076,y=0.9906,scale=1},
     buffs={x=0.4096,y=0.3660,scale=1},
+    cachearrow={x=0.4531,y=0.8021,scale=1},
     chat={x=0.0053,y=0.2082,scale=1},
     crits={x=0.0053,y=0.5293,scale=0.9},
     loot={x=0.8157,y=0.4990,scale=0.9},

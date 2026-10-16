@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 0.8.0 (2026-10-16, release v0.8.0)
+
+Caches on the minimap. Every cache waiting to be opened gets a chest symbol on the minimap (own artwork); caches closer than 10 yards share one symbol with a number, and the tooltip shows the count, the distance and the price of the next cache. When the nearest cache is out of sight, a small arrow at the minimap border points toward it, clamped to the square border of the KeijinUI minimap (or the circle of the original one). An optional large screen arrow (off by default, movable in the layout editor) shows direction, distance and price of the nearest cache. The game gives no scale for the zone map, so it is measured from the world and map positions of caches and lairs; without a measurement nothing is drawn. The minimap diameter per zoom level follows the client's own table. The facing direction comes from `GetPlayerFacing` if it exists, else from the minimap arrow model, else from the direction of movement, else north. A chat notice for a new cache is optional (off by default). Settings, Units, Caches has a switch for the symbols, the edge arrow, the screen arrow and the notice. `/kui caches debug` prints what the game delivers (scale, zoom, map position, facing sources) and `/kui caches source` forces a direction source.
+
+While the KeijinUI damage text runs (compact or scroll), the game's own floating combat text over the character is paused; the red "-N" numbers no longer appear twice. In the native mode and on logout the game setting is restored.
+
 ### 0.7.4 (2026-10-16, release v0.7.4)
 
 Level and experience move from the run tracker into the run statistics: one row for the level, one for the experience of the current level with the share to the next level in the tooltip. The game provides no run total of experience, so none is shown. The tracker is one line shorter, and the default layout moves the damage meter and critical hits down accordingly. Saved layouts follow once on the first load: a damage meter below the statistics moves down only as far as the taller panel would otherwise cover it, critical hits below only as far as the full meter needs. Frames with room to spare stay put.
@@ -124,6 +130,12 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 0.8.0 (2026-10-16, Release v0.8.0)
+
+Caches auf der Minimap. Jede Cache, die noch geöffnet werden kann, bekommt ein Truhensymbol auf der Minimap (eigene Grafik); Caches unter 10 Yards Abstand teilen sich ein Symbol mit Zahl, der Tooltip nennt Anzahl, Entfernung und Preis der nächsten Cache. Liegt die nächste Cache außer Sicht, zeigt ein kleiner Pfeil am Minimaprand in ihre Richtung, begrenzt auf den quadratischen Rand der KeijinUI Minimap (bei der Originalminimap auf den Kreis). Ein optionaler großer Bildschirmpfeil (Standard aus, im Layouteditor verschiebbar) zeigt Richtung, Entfernung und Preis der nächsten Cache. Das Spiel liefert keinen Maßstab für die Zonenkarte, deshalb wird er aus den Welt und Kartenpositionen von Caches und Lairs gemessen; ohne Messung wird nichts gezeichnet. Der Minimapdurchmesser je Zoomstufe folgt der Tabelle des Clients. Die Blickrichtung kommt aus `GetPlayerFacing`, falls vorhanden, sonst aus dem Pfeilmodell der Minimap, sonst aus der Bewegungsrichtung, sonst Norden. Eine Chatmeldung bei einer neuen Cache ist optional (Standard aus). Unter Einstellungen, Einheiten, Caches gibt es je einen Schalter für Symbole, Randpfeil, Bildschirmpfeil und Meldung. `/kui caches debug` zeigt, was das Spiel liefert (Maßstab, Zoom, Kartenposition, Richtungsquellen), `/kui caches source` erzwingt eine Richtungsquelle.
+
+Solange der KeijinUI Kampftext läuft (kompakt oder scrollend), pausiert der Kampftext des Spiels über der Figur; die roten "-N" Zahlen erscheinen nicht mehr doppelt. Im nativen Modus und beim Ausloggen gilt wieder die Spieleinstellung.
 
 ### 0.7.4 (2026-10-16, Release v0.7.4)
 

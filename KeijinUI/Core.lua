@@ -1,4 +1,4 @@
-KeijinUI = { version = "0.7.4", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "0.8.0", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -28,9 +28,15 @@ function K.CombatTextMode()
     return db.combatTextMode
 end
 -- The native floating numbers cannot split normal and critical hits, so they only run in the native mode.
+-- The game's floating combat text (SHOW_COMBAT_TEXT, the "-N" over the character) is paused while
+-- the own text runs; CombatText_UpdateDisplayedMessages drops its events at once.
 function K.ApplyCombatText()
-    if K.DB().originalCombatDamage == nil then K.DB().originalCombatDamage = GetCVar("CombatDamage") end
-    SetCVar("CombatDamage", K.CombatTextMode() == "native" and "1" or "0")
+    local db, mode = K.DB(), K.CombatTextMode()
+    if db.originalCombatDamage == nil then db.originalCombatDamage = GetCVar("CombatDamage") end
+    SetCVar("CombatDamage", mode == "native" and "1" or "0")
+    if db.originalShowCombatText == nil then db.originalShowCombatText = SHOW_COMBAT_TEXT or "0" end
+    SHOW_COMBAT_TEXT = (mode == "compact" or mode == "scroll") and "0" or db.originalShowCombatText
+    if CombatText_UpdateDisplayedMessages then CombatText_UpdateDisplayedMessages() end
 end
 function K.SetCombatTextMode(mode)
     for _,m in ipairs(K.CombatModes) do
@@ -276,6 +282,7 @@ K.On("PLAYER_LOGOUT", function()
     for part in pairs(K.DB().native) do table.insert(parts,part) end
     for _,part in ipairs(parts) do K.Native(part,false) end
     if K.DB().originalCombatDamage ~= nil then SetCVar("CombatDamage",K.DB().originalCombatDamage) end
+    if K.DB().originalShowCombatText ~= nil then SHOW_COMBAT_TEXT = K.DB().originalShowCombatText end
 end)
 K.On("PLAYER_ENTERING_WORLD",function()
     K.ApplyCombatText()

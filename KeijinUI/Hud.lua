@@ -15,6 +15,54 @@ progress:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar"); progres
 progress:SetMinMaxValues(0,1)
 progress:SetBackdrop({bgFile=K.flat}); progress:SetBackdropColor(0.02,0.02,0.025,1)
 K.MetalBar(progress,progress)
+-- Checkpoints: one thin mark per scheduled boss at its spawn time (schedule "at" over run length),
+-- colored like its row (due light, up orange, dead green). A layer above the bar keeps them visible.
+-- The marks stay 2 px inside the bar's border (K.MetalBar) on every side. A boss at the full run length
+-- (the final boss) gets no mark: the end of the bar is its time, and a mark there covers the border.
+local PROGRESS_W=272
+local markLayer=CreateFrame("Frame",nil,progress)
+markLayer:SetAllPoints(progress); markLayer:SetFrameLevel(progress:GetFrameLevel()+2)
+local marks={}
+-- The chamfer rim of a 12 px bar draws its side edges about 0.6 px wide; in the client the right one falls
+-- between pixels and disappears (screenshot: corners there, edge missing). Both ends get a solid 1 px edge,
+-- and the rim's own side edges (pieces 1 and 2 of K.Chamfer) are hidden so both ends look the same.
+local function HideRimSides()
+    if progress.chamfer then progress.chamfer.rim[1]:Hide(); progress.chamfer.rim[2]:Hide() end
+end
+HideRimSides()
+-- A flat 1 unit edge rounds to 2 px on one side and 1 px on the other (one unit is about 1.14 px). The edges
+-- are 4 unit wide pieces of the bar rim art whose outer quarter is the line: the client snaps the piece to
+-- whole pixels and samples the art at pixel centres, which gives exactly one pixel at either end.
+for i,side in ipairs({"LEFT","RIGHT"}) do
+    local edge=markLayer:CreateTexture(nil,"OVERLAY")
+    edge:SetTexture("Interface\\AddOns\\KeijinUI\\media\\chamfer\\BarRim.tga")
+    edge:SetTexCoord((i-1)/8+0.5/256,i/8-0.5/256,0.5/32,31.5/32)
+    edge:SetVertexColor(0.62,0.57,0.43,1); edge:SetWidth(4)
+    edge:SetPoint("TOP"..side,progress,"TOP"..side,0,-2); edge:SetPoint("BOTTOM"..side,progress,"BOTTOM"..side,0,2)
+end
+local MARK_COLORS={dead={0.48,0.7,0.43},up={1,0.5,0.25}}
+local function DrawMarks(schedule,count,duration)
+    HideRimSides()
+    local shown=0
+    for i=1,count do
+        local v=schedule[i]
+        if K.Number(v.at) and v.at>0 and v.at<duration then
+            shown=shown+1
+            local mark=marks[shown]
+            if not mark then
+                mark=markLayer:CreateTexture(nil,"OVERLAY")
+                mark:SetTexture(K.flat); mark:SetWidth(2); mark:SetHeight(8)
+                marks[shown]=mark
+            end
+            local x=math.floor(math.min(PROGRESS_W-4,math.max(2,PROGRESS_W*math.min(1,v.at/duration)-1)))
+            mark:ClearAllPoints(); mark:SetPoint("TOPLEFT",progress,"TOPLEFT",x,-2)
+            local c=MARK_COLORS[v.state] or {0.85,0.82,0.75}
+            mark:SetVertexColor(c[1],c[2],c[3],0.95)
+            mark:Show()
+        end
+    end
+    for i=shown+1,table.getn(marks) do marks[i]:Hide() end
+end
 local schedules={}
 K.LText(tracker,"Boss",9,"TOPLEFT",14,-105,130):SetTextColor(0.65,0.63,0.58)
 K.LText(tracker,"Bosszeit",9,"TOPRIGHT",-84,-105):SetTextColor(0.65,0.63,0.58)
@@ -264,6 +312,7 @@ local function Update()
             row:Show()
         end
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
+        DrawMarks(schedule,count,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
         local guardians=K.guardians.Draw(tracker,-127-count*18)
         tracker:SetHeight(136+count*18+guardians)
@@ -277,6 +326,7 @@ local function Update()
             time:SetText(K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
             level:SetText(K.T("Warte auf Spieldaten")); tracker:SetHeight(154); tracker:Show()
             for _,row in ipairs(schedules) do row:Hide() end
+            DrawMarks({},0,0)
             K.guardians.Hide()
         end
     end

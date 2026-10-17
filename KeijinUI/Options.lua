@@ -185,6 +185,10 @@ Row(page,"Run Meldung",-272,function() return OnOff(K.runs.MessageOn()) end,
     function() K.runs.SetMessage(not K.runs.MessageOn()) end)
 Row(page,"Minimapknopf",-297,function() return OnOff(K.MinimapButtonOn()) end,
     function() K.SetMinimapButton(not K.MinimapButtonOn()) end)
+-- Left click one hour later, right click one hour earlier.
+local clockRow=Row(page,"Zeitzone der Uhr",-322,function() return K.ClockOffsetText(),GOLD end,
+    function() K.SetClockOffset(K.ClockOffset()+(arg1=="RightButton" and -1 or 1)) end)
+clockRow:RegisterForClicks("LeftButtonUp","RightButtonUp")
 
 Button(panel,"Schließen",170,-437,100,function() panel:Hide() end)
 RefreshAll()

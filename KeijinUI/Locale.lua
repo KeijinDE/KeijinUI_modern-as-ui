@@ -113,6 +113,7 @@ EN["%s gesamt   ·   %s / s"]="%s total   ·   %s / s"
 EN["Noch kein Schaden"]="No damage yet"
 EN["Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"]="Biggest: %.0f\nLast: %.0f\nAverage: %.0f\nSmallest: %.0f\nCritical hits: %d"
 EN["Minimap im KeijinUI Stil"]="Minimap in KeijinUI style"
+EN["Zeitzone der Uhr"]="Clock time zone"
 -- Minimap button (0.9.0)
 EN["Minimapknopf"]="Minimap button"
 EN["Linksklick: Optionen"]="Left click: settings"

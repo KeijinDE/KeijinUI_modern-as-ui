@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 1.0.3 (2026-10-17, release v1.0.3)
+
+Minimap: a clock (hours and minutes) in UTC plus the time zone set in Settings, General, "Clock time zone" (left click one hour later, right click one hour earlier; the game reports the system time only as UTC and the server time is not the local time) at the top right of the minimap panel, on the line of the zone name.
+
+Run overview: the progress bar under the run time shows a thin checkpoint mark at the spawn time of every scheduled boss before the final boss, colored like its row (upcoming light, up orange, defeated green).
+
 ### 1.0.2 (2026-10-17, release v1.0.2)
 
 Run overview window: the race follows the interface language. The game names the race in English even in a German client ("Paladin, Dwarf"); German now shows "Paladin, Zwerg".
@@ -160,6 +166,12 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 1.0.3 (2026-10-17, Release v1.0.3)
+
+Minimap: Eine Uhr (Stunden und Minuten) in UTC plus der Zeitzone aus Einstellungen, Allgemein, "Zeitzone der Uhr" (Linksklick eine Stunde später, Rechtsklick eine früher; die Systemzeit liefert das Spiel nur als UTC, die Serverzeit ist nicht die Ortszeit) oben rechts im Minimap Feld, in der Zeile des Zonennamens.
+
+Runübersicht: Der Fortschrittsbalken unter der Runzeit zeigt bei der Erscheinungszeit jedes geplanten Bosses vor dem Endboss einen schmalen Strich, gefärbt wie seine Zeile (kommend hell, aktiv orange, besiegt grün).
 
 ### 1.0.2 (2026-10-17, Release v1.0.2)
 

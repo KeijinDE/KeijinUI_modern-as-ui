@@ -13,7 +13,8 @@ local PANEL_W,PANEL_H,SIZE=180,198,160
 local MASK="Interface\\AddOns\\KeijinUI\\media\\MinimapMask.tga"
 local DEFAULT_MASK="Textures\\MinimapMask"
 local NATIVE={"MinimapBorderTop","MinimapBorder","MinimapBackdrop","MinimapToggleButton","MinimapZoneTextButton","GameTimeFrame"}
-local saved,styled,panel,zone,lastZone
+local CLOCK_W=40
+local saved,styled,panel,zone,lastZone,clock,lastClock
 local hidden={}
 local function Wanted() return K.DB().minimapStyle~=false end
 local function Register()
@@ -30,8 +31,12 @@ local function Build()
     panel:SetParent(MinimapCluster); panel:SetFrameStrata("BACKGROUND")
     panel:SetFrameLevel(math.max(0,Minimap:GetFrameLevel()-1))
     panel:ClearAllPoints(); panel:SetPoint("TOPLEFT",MinimapCluster,"TOPLEFT",0,0)
-    zone=K.Text(panel,"",11,"TOPLEFT",13,-10,PANEL_W-26)
+    zone=K.Text(panel,"",11,"TOPLEFT",13,-10,PANEL_W-26-CLOCK_W)
     zone:SetTextColor(1,0.82,0.28)
+    -- Clock at the right of the zone line. date() in this client always formats UTC (no timezone,
+    -- benilla stdlib.rs) and GetGameTime() is the server time, so the clock is UTC plus the offset
+    -- set in the options (K.DB().clockOffset, whole hours).
+    clock=K.Text(panel,"",11,"TOPRIGHT",-13,-10)
     -- Thin border around the map, above it (higher frame level), only the edge is drawn.
     local inner=CreateFrame("Frame",nil,MinimapCluster)
     inner:SetFrameLevel(Minimap:GetFrameLevel()+1)
@@ -90,7 +95,7 @@ local function Disable()
         if f then f:Show() end
     end
     hidden={}
-    lastZone=nil
+    lastZone=nil; lastClock=nil
 end
 -- Style on or off; the setting is saved, off restores the native look.
 function K.SetMinimapStyle(on)
@@ -98,6 +103,22 @@ function K.SetMinimapStyle(on)
     if not MinimapCluster or not Minimap then return end
     if on then Enable() else Disable() end
     if K.layout then K.layout.Place("minimap"); K.layout.Place("tracker") end
+end
+-- Clock offset to UTC in whole hours, -12 .. +14.
+function K.ClockOffset()
+    local v=tonumber(K.DB().clockOffset) or 0
+    return math.max(-12,math.min(14,math.floor(v)))
+end
+function K.SetClockOffset(v)
+    v=math.floor(tonumber(v) or 0)
+    if v>14 then v=-12 elseif v<-12 then v=14 end
+    K.DB().clockOffset=v
+    lastClock=nil
+end
+function K.ClockOffsetText()
+    local v=K.ClockOffset()
+    if v==0 then return "UTC" end
+    return "UTC"..(v>0 and "+" or "")..v
 end
 function K.MinimapStyled() return styled and true or false end
 local function Update()
@@ -109,6 +130,12 @@ local function Update()
     HideNative()
     local text=(GetMinimapZoneText and GetMinimapZoneText()) or (GetRealZoneText and GetRealZoneText()) or ""
     if text~=lastZone then lastZone=text; zone:SetText(text) end
+    local now=""
+    if type(date)=="function" and type(time)=="function" then
+        local ok,value=pcall(date,"!%H:%M",time()+K.ClockOffset()*3600)
+        if ok and value then now=value end
+    end
+    if now~=lastClock then lastClock=now; clock:SetText(now) end
 end
 table.insert(K.updates,Update)
 Register()

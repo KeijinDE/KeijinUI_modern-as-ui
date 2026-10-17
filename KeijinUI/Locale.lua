@@ -157,6 +157,7 @@ EN["Volle Wut löst automatisch Flächenschaden aus."]="Full rage automatically 
 -- Run overview (0.9.0)
 EN["Rundenübersicht"]="Run overview"
 EN["Charakter"]="Character"
+EN["Klasse und Volk"]="Class and race"
 EN["Runs"]="Runs"
 EN["Siege"]="Wins"
 EN["Letzte Zeit"]="Last time"
@@ -234,7 +235,7 @@ EN["Widerstanden"]="Resist"
 EN["/kui text off|compact|scroll|game. Aktuell: %s."]="/kui text off|compact|scroll|game. Current: %s."
 EN["Sprache"]="Language"
 EN["/kui lang de|en. Aktuell: %s."]="/kui lang de|en. Current: %s."
-EN["/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."]="/kui, /kui edit, /kui reset, /kui grid (grid and snapping), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (run overview), /kui runs msg, /kui guardians on|off (guardians), /kui button on|off (minimap button), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (language), /kui reload (reload the interface). /kbb for build tips, /kachi for achievements."
+EN["/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."]="/kui, /kui edit, /kui reset, /kui grid (grid and snapping), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (run overview), /kui runs msg, /kui guardians on|off|debug (guardians), /kui button on|off (minimap button), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (language), /kui reload (reload the interface). /kbb for build tips, /kachi for achievements."
 -- Advisor
 EN["Tipp"]="Tip"
 EN["Sammle Daten"]="Collecting data"

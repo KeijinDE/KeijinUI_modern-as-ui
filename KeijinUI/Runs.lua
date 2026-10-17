@@ -1,7 +1,10 @@
 -- Run overview (0.9.0): per zone and character the number of runs, wins, last time, fastest win and longest survival.
 -- Data: AZS_ZONE (sent at the start of a run: zone, zname, class, cname), AZS_RUN (phase, t, won), AZS_GetPhase(), AZS_GetRunTime().
 -- The game knows only the current run, so counting starts with the installation of this version.
--- Storage in the account wide KeijinUIDB.runs[zone][charKey] = {name, class, runs, wins, lastTime, lastDate, bestWin, longest}.
+-- Storage in the account wide KeijinUIDB.runs[zone][heroKey] = {class, cname, race, rname, name, runs, wins, lastTime, lastDate,
+-- bestWin, longest}. Every hero of an account carries the account name and class and race change from run to run, so
+-- heroKey is "CLASS-Race" (since 1.0.1); the name is only kept for the tooltip. The 0.9 and 1.0.0 data mixed all classes in
+-- one row and cannot be split, so it is cleared once (KeijinUIDB.runs.keys=3).
 -- KeijinUIDB.runs.names[zone] keeps the zone name, KeijinUIDB.runs.open the run in progress:
 -- {zone, char, name, class, cname, start (time()), last (last seen run time), won, winTime, counted}.
 -- A run counts only from MIN_TIME seconds of run time (or a win); until then it leaves no trace in the data.
@@ -30,16 +33,31 @@ local offset=0
 -- Storage ----------------------------------------------------------------------------------------------
 local function Store()
     local db=K.DB()
-    if type(db.runs)~="table" then db.runs={} end
+    if type(db.runs)~="table" or db.runs.keys~=3 then db.runs={keys=3} end
     if type(db.runs.names)~="table" then db.runs.names={} end
     return db.runs
 end
+local function ClassToken()
+    local z=AZS_ZONE
+    if type(z)=="table" and type(z.class)=="string" and z.class~="" then return string.upper(z.class) end
+    if UnitClass then local _,token=UnitClass("player"); if type(token)=="string" and token~="" then return token end end
+    return nil
+end
+-- Race of the hero: localized name and token (UnitRace), "?" when the client gives none.
+local function Race()
+    if type(UnitRace)~="function" then return "?",nil end
+    local localized,token=UnitRace("player")
+    if type(token)~="string" or token=="" then token=nil end
+    if type(localized)~="string" or localized=="" then localized=nil end
+    return token or localized or "?",localized
+end
 local function CharKey()
     local name=UnitName and UnitName("player")
-    if type(name)~="string" or name=="" then return nil,nil end
-    local realm=GetRealmName and GetRealmName()
-    if type(realm)=="string" and realm~="" then return name.."-"..realm,name end
-    return name,name
+    if type(name)~="string" or name=="" then name=nil end
+    local class=ClassToken()
+    if not class then return nil,nil end
+    local race=Race()
+    return class.."-"..race,name
 end
 local function Now() return type(time)=="function" and time() or 0 end
 local function Today()
@@ -111,7 +129,7 @@ local function Count(open)
     if type(runs[open.zone])~="table" then runs[open.zone]={} end
     local e=runs[open.zone][open.char]
     if type(e)~="table" then e={runs=0,wins=0}; runs[open.zone][open.char]=e end
-    e.name=open.name; e.class=open.class; e.cname=open.cname
+    e.name=open.name; e.class=open.class; e.cname=open.cname; e.race,e.rname=Race()
     e.runs=(K.Number(e.runs) and e.runs or 0)+1
     open.counted=true
     if Render then Render() end
@@ -241,7 +259,7 @@ table.insert(K.updates,Update)
 -- Window -----------------------------------------------------------------------------------------------
 local WIDTH=560
 local COLUMNS={   -- key, caption, x, width, justify
-    {"name","Charakter",5,135,"LEFT"},{"runs","Runs",145,40,"RIGHT"},{"wins","Siege",190,40,"RIGHT"},
+    {"name","Klasse und Volk",5,135,"LEFT"},{"runs","Runs",145,40,"RIGHT"},{"wins","Siege",190,40,"RIGHT"},
     {"lastTime","Letzte Zeit",235,75,"RIGHT"},{"bestWin","Schnellster Sieg",315,105,"RIGHT"},
     {"longest","Längstes Überleben",425,110,"RIGHT"}
 }
@@ -317,8 +335,10 @@ function Render()
     for key,e in pairs(type(store[zone])=="table" and store[zone] or {}) do
         if type(e)=="table" then table.insert(sorted,{key=key,e=e}) end
     end
+    -- Sorted by class, then race; the name only breaks ties.
+    local function Order(e,key) return string.lower(tostring(e.cname or e.class or key)..""..tostring(e.rname or e.race or "")..""..tostring(e.name or "")) end
     table.sort(sorted,function(a,b)
-        local x,y=string.lower(tostring(a.e.name or a.key)),string.lower(tostring(b.e.name or b.key))
+        local x,y=Order(a.e,a.key),Order(b.e,b.key)
         if x==y then return a.key<b.key end
         return x<y
     end)
@@ -328,11 +348,14 @@ function Render()
         if item then
             local e=item.e
             local red,green,blue=ClassColor(e.class)
-            row.cells.name:SetText(tostring(e.name or item.key)); row.cells.name:SetTextColor(red,green,blue)
+            -- Class and race tell the rows apart; the name is in the tooltip.
+            local label=tostring(e.cname or e.class or item.key)
+            if e.rname or (e.race and e.race~="?") then label=label..", "..tostring(e.rname or e.race) end
+            row.cells.name:SetText(label); row.cells.name:SetTextColor(red,green,blue)
             row.cells.runs:SetText(Count(e.runs)); row.cells.wins:SetText(Count(e.wins))
             row.cells.lastTime:SetText(Dash(e.lastTime)); row.cells.bestWin:SetText(Dash(e.bestWin))
             row.cells.longest:SetText(Dash(e.longest))
-            row.tip=tostring(e.name or item.key)
+            row.tip=label..(e.name and (" ("..e.name..")") or "")
             row.detail=e.lastDate and K.T("Letzter Run: %s",e.lastDate) or nil
             row:Show()
         else row:Hide() end

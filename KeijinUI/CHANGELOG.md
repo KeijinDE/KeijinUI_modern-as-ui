@@ -5,6 +5,14 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 1.0.1 (2026-10-17, release v1.0.1)
+
+Run overview window: one row per class and race. All heroes of an account carry the account name while class and race change from run to run, so 0.9 and 1.0.0 counted every class in one row (with the class of the last counted run, and the start message counted all classes together). Rows are now kept per class and race, sorted by class and then race, in class color; the column is called "Class and race" and the hero name is in the tooltip. Because the old data mixed classes and cannot be split, the run history is cleared once when 1.0.1 loads.
+
+"Again" after a death: the boss bar of the fight in which the hero died no longer stays in the new run. The game sends the unit and lair lists only when they change, and the new run does not reload the interface; data older than the start of the current run is now ignored until the game sends new data.
+
+Guardians: a waiting lair without a game message for more than five seconds shows "?" instead of a frozen countdown. `/kui guardians debug` prints the lairs and guardian units the game delivers.
+
 ### 1.0.0 (2026-10-17, release v1.0.0)
 
 Guardians in the run overview. Below the boss schedule, separated by a faint line, the run overview lists the guardian lairs of the map, one line each: "asleep", "fighting" with the guardian's health, "back in 1:23" while a lair waits for its next guardian, "due" once that time is up. The header shows how many guardians are up, for example "2 of 4 up". The tooltip of a row gives the lair position on the map. The data comes from the game (AZS_LAIRS); between two updates the countdown runs on for at most two seconds. Switch it in Settings, Display, "Guardians in the run overview", or with `/kui guardians on|off` (on by default). The settings window is a little taller for the new row.
@@ -148,6 +156,14 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 1.0.1 (2026-10-17, Release v1.0.1)
+
+Fenster Rundenübersicht: eine Zeile je Klasse und Volk. Alle Helden eines Kontos tragen den Kontonamen, Klasse und Volk wechseln von Run zu Run; 0.9 und 1.0.0 zählten deshalb alle Klassen in einer Zeile (mit der Klasse des zuletzt gezählten Runs, und die Startmeldung zählte alle Klassen zusammen). Die Zeilen werden jetzt je Klasse und Volk geführt, nach Klasse und dann Volk sortiert, in Klassenfarbe; die Spalte heißt "Klasse und Volk", der Heldenname steht im Tooltip. Weil die alten Daten Klassen vermischen und sich nicht trennen lassen, wird die Rundenübersicht beim ersten Laden von 1.0.1 einmalig geleert.
+
+"Nochmal" nach dem Tod: Die Bossleiste des Kampfes, in dem der Held starb, bleibt im neuen Run nicht mehr stehen. Das Spiel schickt Einheiten und Horte nur bei Änderungen, und der neue Run lädt die Oberfläche nicht neu; Daten, die älter als der Start des laufenden Runs sind, werden jetzt ignoriert, bis das Spiel neue schickt.
+
+Wächter: Ein wartender Hort ohne Spielmeldung seit mehr als fünf Sekunden zeigt "?" statt eines stehenden Countdowns. `/kui guardians debug` gibt die Horte und Wächtereinheiten aus, die das Spiel liefert.
 
 ### 1.0.0 (2026-10-17, Release v1.0.0)
 

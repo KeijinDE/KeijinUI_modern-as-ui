@@ -127,7 +127,7 @@ local function EngagedList(diag)
     local up={}
     for _,s in ipairs(K.Schedule()) do if s.state=="up" and s.name then up[s.name]=true end end
     local listed={}
-    for _,u in ipairs(AZS_UNITS or {}) do
+    for _,u in ipairs(K.Fresh(AZS_UNITS_UPDATED) and AZS_UNITS or {}) do
         local kind=u.kind
         local active=kind=="final" or kind=="boss" or kind=="elite" or (kind=="guardian" and u.state==1)
         local numbers=K.Number(u.id) and K.Number(u.hp) and K.Number(u.hpm) and u.hpm>0

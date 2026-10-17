@@ -53,8 +53,24 @@ local function Observe()
     end
 end
 function K.BossTimes.Get(boss) return times[Key(boss)] end
+-- Start of the current run as GetTime(). "Again" after a death starts a new run without a reload, and the game sends
+-- AZS_UNITS and AZS_LAIRS only on change: until then they still hold the run before (a boss bar of the old fight).
+-- K.Fresh(updated) is false for a table whose *_UPDATED is older than this start. Unknown times count as fresh.
+local lastPhase,lastClock
+local function MarkStart() K.runStart=GetTime and GetTime() or nil end
+function K.Fresh(updated)
+    return not (K.Number(K.runStart) and K.Number(updated) and updated<K.runStart)
+end
+local function WatchStart()
+    local phase=AZS_GetPhase and AZS_GetPhase()
+    local now=AZS_GetRunTime and AZS_GetRunTime()
+    if (phase=="ready" and lastPhase and lastPhase~="ready") or (K.Number(now) and K.Number(lastClock) and now<lastClock-1) then MarkStart() end
+    lastPhase=phase
+    if K.Number(now) then lastClock=now end
+end
+table.insert(K.updates,WatchStart)
 K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then Reset(); K.DB().bossSnapshot=nil
+    if prefix=="AZSZONE" then Reset(); K.DB().bossSnapshot=nil; MarkStart()
     elseif prefix=="AZSBOSSES" then Observe() end
 end)
 K.On("PLAYER_LOGOUT",function()

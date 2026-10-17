@@ -18,21 +18,34 @@ local function Left(lair)
     end
     return math.max(0,left)
 end
-local function Health(id)
-    if not K.Number(id) or id==0 or type(AZS_UNITS)~="table" then return nil end
+-- Seconds since the last lair message; nil when the game never sent one.
+local function Age()
+    if not K.Number(AZS_LAIRS_UPDATED) or not GetTime then return nil end
+    return math.max(0,GetTime()-AZS_LAIRS_UPDATED)
+end
+-- The guardian unit of a held lair, by id, for its health. Units from the run before do not count.
+local function Unit(lair)
+    if type(AZS_UNITS)~="table" or not K.Fresh(AZS_UNITS_UPDATED) then return nil end
+    if not K.Number(lair.id) or lair.id==0 then return nil end
     for _,u in ipairs(AZS_UNITS) do
-        if u.kind=="guardian" and u.id==id and K.Number(u.hp) and K.Number(u.hpm) and u.hpm>0 then return u.hp/u.hpm end
+        if u.kind=="guardian" and u.id==lair.id then return u end
     end
+end
+local function Health(u)
+    if u and K.Number(u.hp) and K.Number(u.hpm) and u.hpm>0 then return u.hp/u.hpm end
 end
 -- Text and color of one lair.
 function G.Status(lair)
-    if lair.state=="asleep" then return K.T("schläft"),0.48,0.7,0.43 end
     if lair.state=="awake" then
-        local share=Health(lair.id)
+        local share=Health(Unit(lair))
         if share then return K.T("im Kampf").." "..string.format("%.0f%%",100*share),1,0.5,0.25 end
         return K.T("im Kampf"),1,0.5,0.25
     end
+    if lair.state=="asleep" then return K.T("schläft"),0.48,0.7,0.43 end
     local left=Left(lair)
+    -- A waiting lair is sent every second; without a message for five seconds the countdown is unknown.
+    local age=Age()
+    if K.Number(left) and left>0 and age and age>5 then return "?",0.6,0.6,0.62 end
     if K.Number(left) and left>0 then return K.T("zurück in %s",K.Clock(left)),1,0.75,0.4 end
     if left==0 then return K.T("fällig"),1,0.82,0.28 end
     return K.T("leer"),0.6,0.6,0.62
@@ -67,7 +80,7 @@ function G.Hide()
 end
 -- Draws the lairs into parent from top (negative y) downward and returns the height used, 0 when nothing is shown.
 function G.Draw(parent,top)
-    local list=type(AZS_LAIRS)=="table" and AZS_LAIRS or {}
+    local list=type(AZS_LAIRS)=="table" and K.Fresh(AZS_LAIRS_UPDATED) and AZS_LAIRS or {}
     local n=G.On() and math.min(MAX,table.getn(list)) or 0
     if n==0 then G.Hide(); return 0 end
     if not head then
@@ -100,7 +113,20 @@ function G.Draw(parent,top)
     head:Show(); count:Show(); line:Show()
     return 25+n*18
 end
+function G.Debug()
+    local age=Age()
+    K.Say("guardians debug: AZS_LAIRS "..(type(AZS_LAIRS)=="table" and table.getn(AZS_LAIRS) or "nil")
+        .." age "..(age and string.format("%.1f",age) or "nil").." AZS_GetLairs "..tostring(AZS_GetLairs~=nil)
+        .." run gu/ga/lairs "..(type(AZS_RUN)=="table" and (tostring(AZS_RUN.gu).."/"..tostring(AZS_RUN.ga).."/"..tostring(AZS_RUN.lairs)) or "nil"))
+    for _,l in ipairs(type(AZS_LAIRS)=="table" and AZS_LAIRS or {}) do
+        K.Say(string.format("lair %s %s %s id=%s left=%s",tostring(l.index),tostring(l.name),tostring(l.state),tostring(l.id),tostring(l.left)))
+    end
+    for _,u in ipairs(type(AZS_UNITS)=="table" and AZS_UNITS or {}) do
+        if u.kind=="guardian" then K.Say(string.format("unit %s %s hp=%s/%s state=%s",tostring(u.id),tostring(u.name),tostring(u.hp),tostring(u.hpm),tostring(u.state))) end
+    end
+end
 function G.Command(rest)
+    if rest=="debug" then G.Debug(); return end
     if rest=="on" then G.Set(true) elseif rest=="off" then G.Set(false) else G.Set(not G.On()) end
     K.Say(K.T("Wächter in der Runübersicht")..": "..(G.On() and K.T("An") or K.T("Aus")))
 end

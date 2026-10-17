@@ -265,7 +265,8 @@ local function Update()
         end
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
-        tracker:SetHeight(136+count*18)
+        local guardians=K.guardians.Draw(tracker,-127-count*18)
+        tracker:SetHeight(136+count*18+guardians)
         level:SetText("")
         tracker:Show(); K.Native("clock",true)
     else
@@ -276,6 +277,7 @@ local function Update()
             time:SetText(K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
             level:SetText(K.T("Warte auf Spieldaten")); tracker:SetHeight(154); tracker:Show()
             for _,row in ipairs(schedules) do row:Hide() end
+            K.guardians.Hide()
         end
     end
     DrawBosses(phase)

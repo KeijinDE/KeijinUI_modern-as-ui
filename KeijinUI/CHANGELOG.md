@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 1.0.0 (2026-10-17, release v1.0.0)
+
+Guardians in the run overview. Below the boss schedule, separated by a faint line, the run overview lists the guardian lairs of the map, one line each: "asleep", "fighting" with the guardian's health, "back in 1:23" while a lair waits for its next guardian, "due" once that time is up. The header shows how many guardians are up, for example "2 of 4 up". The tooltip of a row gives the lair position on the map. The data comes from the game (AZS_LAIRS); between two updates the countdown runs on for at most two seconds. Switch it in Settings, Display, "Guardians in the run overview", or with `/kui guardians on|off` (on by default). The settings window is a little taller for the new row.
+
 ### 0.9.1 (2026-10-17, release v0.9.1)
 
 Settings window: the window is a little taller, so the Close button no longer touches the Minimap button row on the General tab. The README on GitHub shows the minimap button and the General tab.
@@ -144,6 +148,10 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 1.0.0 (2026-10-17, Release v1.0.0)
+
+Wächter in der Runübersicht. Unter dem Bosszeitplan, abgesetzt durch eine feine Linie, listet die Runübersicht die Wächterhorte der Karte, je eine Zeile: "schläft", "im Kampf" mit dem Leben des Wächters, "zurück in 1:23", solange ein Hort auf den nächsten Wächter wartet, "fällig", sobald die Zeit abgelaufen ist. Die Kopfzeile zeigt, wie viele Wächter da sind, etwa "2 von 4 da". Der Tooltip einer Zeile nennt die Lage des Horts auf der Karte. Die Daten kommen vom Spiel (AZS_LAIRS); zwischen zwei Meldungen läuft der Countdown höchstens zwei Sekunden weiter. Schalter in Einstellungen, Anzeige, "Wächter in der Runübersicht", oder `/kui guardians on|off` (standardmäßig an). Das Optionsfenster ist für die neue Zeile etwas höher.
 
 ### 0.9.1 (2026-10-17, Release v0.9.1)
 

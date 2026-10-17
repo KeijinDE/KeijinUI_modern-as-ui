@@ -13,7 +13,7 @@ English first, [Deutsch below](#deutsch).
 
 KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single visual style:
 
-* Run overview with zone, run clock, progress and boss schedule (boss time and run time)
+* Run overview with zone, run clock, progress and boss schedule (boss time and run time), below it the guardian lairs of the map (asleep, fighting, back in, due)
 * Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned
 * Damage meter with total and DPS per ability, list of the biggest critical hits
 * Player and target frames with round portrait and joined health bar, square minimap, action bar with ranks and cooldowns
@@ -67,7 +67,7 @@ Eine vollständige, einheitliche Oberfläche für **Azeroth Survivors** (WoW 1.1
 
 KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläche in einem Stil:
 
-* Runübersicht mit Zone, Runuhr, Fortschritt und Bossplan (Bosszeit und Runzeit)
+* Runübersicht mit Zone, Runuhr, Fortschritt und Bossplan (Bosszeit und Runzeit), darunter die Wächterhorte der Karte (schläft, im Kampf, zurück in, fällig)
 * Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, effektive Heilung, Gold verdient
 * Schadensanzeige mit Gesamtschaden und DPS je Fähigkeit, Liste der größten kritischen Treffer
 * Spieler und Zielframe mit rundem Porträt und angeschlossenem Lebensbalken, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten

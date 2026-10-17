@@ -1,5 +1,5 @@
 local K=KeijinUI
-local panel=K.Panel("KeijinUIOptions","KeijinUI",440,448)
+local panel=K.Panel("KeijinUIOptions","KeijinUI",440,473)
 panel:SetFrameStrata("DIALOG")
 -- Opaque background: the dialog texture itself is translucent, so the panel uses the flat fill.
 K.Skin(panel,7)
@@ -31,7 +31,7 @@ local tabs={ {"display","Anzeige"},{"units","Einheiten"},{"layout","Layout"},{"g
 local pages,tabButtons={},{}
 for _,entry in ipairs(tabs) do
     local page=CreateFrame("Frame",nil,panel)
-    page:SetWidth(PAGE_WIDTH); page:SetHeight(316); page:SetPoint("TOPLEFT",panel,"TOPLEFT",16,-68)
+    page:SetWidth(PAGE_WIDTH); page:SetHeight(341); page:SetPoint("TOPLEFT",panel,"TOPLEFT",16,-68)
     page:Hide()
     pages[entry[1]]=page
 end
@@ -101,24 +101,26 @@ end
 local page=pages.display
 Heading(page,"Übersichten",0)
 HiddenSwitch(page,"tracker","Runübersicht",-18)
-HiddenSwitch(page,"bosses","Begegnungen",-43)
-HiddenSwitch(page,"statistics","Runstatistiken",-68)
-HiddenSwitch(page,"tally","Kills und Gold",-93)
-HiddenSwitch(page,"xp","Erfahrung",-118)
-Heading(page,"Kampf",-150)
-HiddenSwitch(page,"meter","Schadensanzeige",-168)
-HiddenSwitch(page,"crits","Kritische Treffer",-193)
+Row(page,"Wächter in der Runübersicht",-43,function() return OnOff(K.guardians.On()) end,
+    function() K.guardians.Set(not K.guardians.On()) end)
+HiddenSwitch(page,"bosses","Begegnungen",-68)
+HiddenSwitch(page,"statistics","Runstatistiken",-93)
+HiddenSwitch(page,"tally","Kills und Gold",-118)
+HiddenSwitch(page,"xp","Erfahrung",-143)
+Heading(page,"Kampf",-175)
+HiddenSwitch(page,"meter","Schadensanzeige",-193)
+HiddenSwitch(page,"crits","Kritische Treffer",-218)
 local MODE_NAMES={off="Aus",compact="Kompakt",scroll="Scrollend",native="Spiel"}
-Row(page,"Schadenszahlen",-218,function()
+Row(page,"Schadenszahlen",-243,function()
     local mode=K.CombatTextMode()
     return K.T(MODE_NAMES[mode]),mode=="off" and OFF or GOLD
 end,
     function() SlashCmdList.KEIJINUI("text") end)
-Row(page,"Zaubersymbole",-243,function() return OnOff(K.DB().combatTextIcons~=false) end,
+Row(page,"Zaubersymbole",-268,function() return OnOff(K.DB().combatTextIcons~=false) end,
     function() SlashCmdList.KEIJINUI("text icons") end)
-Row(page,"Buildtipps",-268,function() return OnOff(not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false)) end,
+Row(page,"Buildtipps",-293,function() return OnOff(not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false)) end,
     function() SlashCmdList.KEIJINBUILDBAR("tipps") end)
-Row(page,"Minimap im KeijinUI Stil",-293,function() return OnOff(K.DB().minimapStyle~=false) end,
+Row(page,"Minimap im KeijinUI Stil",-318,function() return OnOff(K.DB().minimapStyle~=false) end,
     function() K.SetMinimapStyle(K.DB().minimapStyle==false) end)
 
 -- Tab Einheiten
@@ -184,7 +186,7 @@ Row(page,"Run Meldung",-272,function() return OnOff(K.runs.MessageOn()) end,
 Row(page,"Minimapknopf",-297,function() return OnOff(K.MinimapButtonOn()) end,
     function() K.SetMinimapButton(not K.MinimapButtonOn()) end)
 
-Button(panel,"Schließen",170,-412,100,function() panel:Hide() end)
+Button(panel,"Schließen",170,-437,100,function() panel:Hide() end)
 RefreshAll()
 ShowTab(K.DB().optionsTab)
 local announced=false
@@ -220,6 +222,10 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="runs" or string.find(command,"^runs%s") then
         local _,_,rest=string.find(command,"^runs%s+(.-)$")
         K.RunsCommand(rest or "")
+        RefreshAll()
+    elseif command=="guardians" or string.find(command,"^guardians%s") then
+        local _,_,rest=string.find(command,"^guardians%s+(.-)$")
+        K.guardians.Command(rest or "")
         RefreshAll()
     elseif command=="button" or string.find(command,"^button%s") then
         local _,_,rest=string.find(command,"^button%s+(.-)$")
@@ -258,5 +264,5 @@ SlashCmdList.KEIJINUI=function(message)
         else
             K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

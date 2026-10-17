@@ -1,4 +1,4 @@
-# KeijinUI 0.9.1
+# KeijinUI 1.0.0
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -23,7 +23,7 @@ From 0.4.0 the whole interface is bilingual. English is the default; German is c
 * Class resources below the player health bar: five red rogue combo points, five smaller purple warlock soul shards, a copper rage bar for warriors, and a golden Lightwell countdown bar for priests. Requires the learned proc ability and supported native power values. Defaults to attached to the player; Alt dragging or scaling detaches it. Units settings switch the display off or restore attachment.
 * One original chamfered contour for rectangular panels, bars and icon frames. Player and target free ends use the same short diagonal; portraits and combo points stay round.
 
-* Run overview with zone, run clock, progress bar and bosses with two time columns: boss time (active time since the boss appeared) and run time. Example: `3:23 | 0:23` means the boss died at 3:23 run time after 23 seconds. Stopped times turn green. Bosses that died before the interface loaded show question marks, because the game provides no past times of death.
+* Run overview with zone, run clock, progress bar and bosses with two time columns: boss time (active time since the boss appeared) and run time. Example: `3:23 | 0:23` means the boss died at 3:23 run time after 23 seconds. Stopped times turn green. Bosses that died before the interface loaded show question marks, because the game provides no past times of death. Below the bosses the guardian lairs of the map: asleep, fighting with health, or empty with the time until the next guardian comes; hover a row for the lair position. Switch it in Settings, Display, or with `/kui guardians on|off` (on by default).
 * Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned. A counter row below shows kills, gold, chest price, caches opened and the estimated time until the next cache is affordable (an estimate, not a chest timer).
 * Damage meter and list of biggest critical hits. Every ability keeps one fixed color. Each meter row shows total damage and DPS over the same period as the summary (since run start, or since the last meter reset). Critical hits are read from the native combat messages and are collected from the moment the interface loads.
 * Player and target frames: the round portrait and the health bar form one shape with a single outline, the health color reaches right up to the portrait edge. Name and level stand above the bar, current health points on the left and percent on the right inside the player bar; the target also mirrors the text layout, with percent and level on the left and health points and name on the right. Exact values are in the tooltip. The player bar loses health toward the portrait from the right, the mirrored target bar from the left. Class colored health bars (switchable to green and red). The target frame appears only with a target, marks elite (`+`) and rare (`R`) targets by the level text and the outline color, and shows the target's debuffs below it.
@@ -52,6 +52,7 @@ settings can stay. After changing the enabled addons, restart the game completel
 * `/kui`: open the settings window with tabs (movable, remembers its position and the last tab).
 * `/kui edit`: open or close layout editing. `/kui reset`: reset positions and sizes. `/kui grid`: grid and snapping on or off.
 * `/kui lang de|en`: language. `/kui lang` shows the current language. `/kui reload`: reload the interface.
+* `/kui guardians on|off`: guardian lairs in the run overview.
 * `/kui runs`: open or close the run overview. `/kui runs msg`: the start message on or off.
 * `/kui button on|off`: the minimap button on or off (without argument: toggle).
 * `/kui meter reset`: start the damage meter from now on (run statistics stay complete). `/kui crits reset`: clear observed critical hits.

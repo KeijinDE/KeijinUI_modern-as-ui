@@ -28,6 +28,8 @@ local ZONE_NAMES={   -- English names from the game, used while no name was rece
     arena="Gurubashi Arena",av="Alterac Valley",brm="Blackrock Mountain",aq="Gates of Ahn'Qiraj"
 }
 local page,sorted=nil,{}
+-- The client names the race in English even in a German client: German source texts by token, translated by K.T.
+local RACES={Human="Mensch",Dwarf="Zwerg",NightElf="Nachtelf",Gnome="Gnom",Orc="Orc",Scourge="Untoter",Tauren="Tauren",Troll="Troll"}
 local offset=0
 
 -- Storage ----------------------------------------------------------------------------------------------
@@ -350,7 +352,8 @@ function Render()
             local red,green,blue=ClassColor(e.class)
             -- Class and race tell the rows apart; the name is in the tooltip.
             local label=tostring(e.cname or e.class or item.key)
-            if e.rname or (e.race and e.race~="?") then label=label..", "..tostring(e.rname or e.race) end
+            local race=RACES[e.race] and K.T(RACES[e.race]) or e.rname or (e.race~="?" and e.race) or nil
+            if race then label=label..", "..tostring(race) end
             row.cells.name:SetText(label); row.cells.name:SetTextColor(red,green,blue)
             row.cells.runs:SetText(Count(e.runs)); row.cells.wins:SetText(Count(e.wins))
             row.cells.lastTime:SetText(Dash(e.lastTime)); row.cells.bestWin:SetText(Dash(e.bestWin))

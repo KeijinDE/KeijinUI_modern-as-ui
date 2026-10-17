@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 1.0.2 (2026-10-17, release v1.0.2)
+
+Run overview window: the race follows the interface language. The game names the race in English even in a German client ("Paladin, Dwarf"); German now shows "Paladin, Zwerg".
+
 ### 1.0.1 (2026-10-17, release v1.0.1)
 
 Run overview window: one row per class and race. All heroes of an account carry the account name while class and race change from run to run, so 0.9 and 1.0.0 counted every class in one row (with the class of the last counted run, and the start message counted all classes together). Rows are now kept per class and race, sorted by class and then race, in class color; the column is called "Class and race" and the hero name is in the tooltip. Because the old data mixed classes and cannot be split, the run history is cleared once when 1.0.1 loads.
@@ -156,6 +160,10 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 1.0.2 (2026-10-17, Release v1.0.2)
+
+Fenster Rundenübersicht: Das Volk folgt der Sprache der Oberfläche. Das Spiel nennt das Volk auch im deutschen Client englisch ("Paladin, Dwarf"); auf Deutsch steht jetzt "Paladin, Zwerg".
 
 ### 1.0.1 (2026-10-17, Release v1.0.1)
 

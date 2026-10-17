@@ -144,7 +144,7 @@ end
 function K.RefreshTargetDebuffs()
     local f=K.units and K.units.target
     if not f or not f.debuffs then return end
-    if UnitExists("target") and not K.targetPlateShown then K.UpdateDebuffRow(f.debuffs,"target")
+    if UnitExists("target") and (K.DB().targetDebuffsBoth~=false or not K.targetPlateShown) then K.UpdateDebuffRow(f.debuffs,"target")
     else K.UpdateDebuffRow(f.debuffs,nil) end
 end
 local function Update()

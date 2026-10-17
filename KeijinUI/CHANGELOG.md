@@ -5,6 +5,22 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 1.1.1 (2026-10-17, release v1.1.1)
+
+Run timeline: border, fill and boss checkpoints now share the display pixel grid, including fractional UI scaling and moved panels. The top and bottom border use the same thickness, all checkpoints have equal widths and symmetric clearances. The fill follows the inner chamfer without crossing the border. Bronze coloring is retained.
+
+Thin section headers: titles are vertically centered in the header strip while retaining their left alignment and existing content spacing.
+
+### 1.1.0 (2026-10-17)
+
+Run tracker: the progress bar uses the same complete chamfered border as the other bars. Boss checkpoints have dark outlines and a brighter green for defeated bosses, which is also used on the boss rows.
+
+Combat text: the full text and icon footprint is kept clear of player, target, skills, counters and class resources throughout the animation, including moving nameplates and the largest crit pop. Text is drawn behind the HUD. Bursts of the same ability and damage kind within 0.12 seconds are summed as total damage and hit count (for example `200 x20`); crits, periodic hits and different abilities remain separate. Toggle merging in Settings, Controls.
+
+Target debuffs appear both below the target frame and on its nameplate by default. Settings, Controls, Debuffs in both places restores the previous nameplate-first behavior when switched off. The four HUD panels (run tracker, statistics, damage and crits) have Normal, Thin and Off header modes; content moves up and panels become shorter without resetting saved positions. Dialogs retain their headers and the meter Reset button remains available.
+
+Settings gain a Controls tab. Auto run can be assigned to a key, modifier combination, mouse button (including mouse button 5) or wheel using the client's native TOGGLEAUTORUN binding. An occupied key requires a second press before replacement; Escape cancels. Removing or changing the custom binding restores its earlier action only while the addon still owns the key. Other native auto-run keys remain unchanged, and loading the addon never edits bindings.
+
 ### 1.0.3 (2026-10-17, release v1.0.3)
 
 Minimap: a clock (hours and minutes) in UTC plus the time zone set in Settings, General, "Clock time zone" (left click one hour later, right click one hour earlier; the game reports the system time only as UTC and the server time is not the local time) at the top right of the minimap panel, on the line of the zone name.
@@ -166,6 +182,22 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 1.1.1 (2026-10-17, Release v1.1.1)
+
+Rundenfortschritt: Rahmen, Fuellung und Bossmarkierungen liegen auch bei ungerader UI Skalierung und verschobenen Fenstern auf demselben Bildschirmraster. Oberer und unterer Rand sind gleich dick, alle Markierungen gleich breit und mit symmetrischen Abstaenden versehen. Die Fuellung folgt der inneren Abschraegung ohne den Rand zu beruehren. Der Bronzeton bleibt erhalten.
+
+Schmale Abschnittstitel sitzen vertikal mittig im Titelstreifen. Linke Ausrichtung und Inhaltsabstaende bleiben erhalten.
+
+### 1.1.0 (2026-10-17)
+
+Rundentracker: Der Fortschrittsbalken verwendet denselben vollstaendigen abgeschraegten Rand wie die anderen Balken. Bossmarkierungen erhalten eine dunkle Kontur und fuer besiegte Bosse ein helleres Gruen, das auch in den Bosszeilen verwendet wird.
+
+Kampftext: Die vollstaendige Text und Symbolflaeche haelt waehrend der gesamten Animation Abstand zu Spieler, Ziel, Aktionsleiste, Zaehlern und Klassenressourcen, auch bei bewegten Namensplaketten und vergroesserten Krits. Die Zahlen liegen hinter dem HUD. Treffer derselben Faehigkeit und Schadensart innerhalb von 0,12 Sekunden werden als Gesamtschaden mit Trefferzahl gebuendelt, zum Beispiel `200 x20`. Krits, periodische Treffer und andere Faehigkeiten bleiben getrennt. Die Buendelung ist unter Einstellungen, Bedienung abschaltbar.
+
+Debuffs erscheinen standardmaessig gleichzeitig unter dem Zielframe und an seiner Namensplakette. Einstellungen, Bedienung, Debuffs an beiden Stellen stellt ausgeschaltet das bisherige Verhalten wieder her. Die vier HUD Anzeigen Runuebersicht, Statistik, Schaden und Krits bieten normale, schmale oder ausgeblendete Titel. Inhalt und Hoehe werden angepasst, gespeicherte Positionen bleiben erhalten. Dialoge behalten ihre Titel und Reset der Schadensanzeige bleibt erreichbar.
+
+Neuer Tab Bedienung in den Einstellungen. Automatisches Laufen wird ueber die native TOGGLEAUTORUN Belegung einer Taste, Tastenkombination, Maustaste einschliesslich Maustaste 5 oder dem Mausrad zugewiesen. Belegte Tasten muessen zum Ersetzen zweimal gedrueckt werden; Escape bricht ab. Entfernen oder Wechseln stellt die vorherige Aktion nur wieder her, solange die eigene Belegung noch besteht. Andere native Lauftasten bleiben erhalten. Beim Laden werden keine Tastenbelegungen veraendert.
 
 ### 1.0.3 (2026-10-17, Release v1.0.3)
 

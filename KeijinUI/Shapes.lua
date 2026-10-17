@@ -94,3 +94,79 @@ function K.CutFill(parent)
     fill:Color(1,1,1,1)
     return fill
 end
+
+
+-- Only the run timeline uses this raster. One local unit is one display pixel;
+-- all rows, insets and checkpoint rectangles therefore share the same grid.
+function K.PixelProgress(bar)
+    local face=CreateFrame("Frame",nil,bar)
+    face:SetFrameLevel(bar:GetFrameLevel()+1)
+    bar.pixelBar=face
+    bar:SetBackdrop({}); bar:SetStatusBarColor(0,0,0,0)
+    local rows={}
+    local function ResolutionHeight()
+        local resolution
+        if GetScreenResolutions and GetCurrentResolution then
+            local list={GetScreenResolutions()}
+            resolution=list[GetCurrentResolution()]
+        end
+        if not resolution and GetCVar then resolution=GetCVar("gxResolution") end
+        local _,_,height=string.find(resolution or "","%d+%s*[xX]%s*(%d+)")
+        return tonumber(height) or 768
+    end
+    local function Round(v) return math.floor(v+0.5) end
+    local function Span(t,x,y,width,color)
+        if width<=0 then t:Hide(); return end
+        t:ClearAllPoints(); t:SetPoint("TOPLEFT",face,"TOPLEFT",x,-y)
+        t:SetWidth(width); t:SetHeight(1); t:SetVertexColor(unpack(color)); t:Show()
+    end
+    local bronze={0.62*245/255,0.57*245/255,0.43*245/255,1}
+    local dark={0.025,0.025,0.03,1}
+    function face:Paint()
+        local display=ResolutionHeight()/768
+        local scale=bar:GetEffectiveScale()*display
+        if scale<=0 then return end
+        local left,top=bar:GetLeft(),bar:GetTop()
+        if not left or not top then return end
+        local width=math.max(4,Round(bar:GetWidth()*scale))
+        local height=math.max(4,Round(bar:GetHeight()*scale))
+        if self.layoutScale~=scale or self.layoutLeft~=left or self.layoutTop~=top or self.layoutWidth~=width or self.layoutHeight~=height then
+            self:SetScale(1/scale)
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT",bar,"TOPLEFT",Round(left*scale)-left*scale,Round(top*scale)-top*scale)
+            self:SetWidth(width); self:SetHeight(height)
+            self.layoutScale,self.layoutLeft,self.layoutTop,self.layoutWidth,self.layoutHeight=scale,left,top,width,height
+        end
+        local cut=math.min(Round(4*scale),math.floor((height-1)/2))
+        local stroke=math.max(1,Round(scale))
+        self.pixelsPerUnit=scale; self.stroke=stroke; self.cut=cut
+        local low,high=bar:GetMinMaxValues()
+        local share=high>low and math.max(0,math.min(1,((tonumber(bar:GetValue()) or low)-low)/(high-low))) or 0
+        local finish=stroke+Round((width-2*stroke)*share)
+        -- Layout can move during dragging, while unchanged row geometry stays cached.
+        if self.drawWidth==width and self.drawHeight==height and self.drawCut==cut and self.drawStroke==stroke and self.finish==finish then return end
+        self.drawWidth,self.drawHeight,self.drawCut,self.drawStroke,self.finish=width,height,cut,stroke,finish
+        for y=0,height-1 do
+            local row=rows[y+1]
+            if not row then
+                row={face:CreateTexture(nil,"BACKGROUND"),face:CreateTexture(nil,"BORDER"),face:CreateTexture(nil,"ARTWORK")}
+                for _,t in ipairs(row) do t:SetTexture(K.flat) end
+                rows[y+1]=row
+            end
+            local cy=y+0.5
+            local edge=math.max(0,cut-cy,cut-height+cy)
+            local x=math.max(0,math.ceil(edge-0.5))
+            Span(row[1],x,y,width-2*x,bronze)
+            local inside=cy>=stroke and cy<=height-stroke
+            local inset=math.max(stroke,cut+stroke*math.sqrt(2)-cy,cut+stroke*math.sqrt(2)-height+cy)
+            local ix=math.max(stroke,math.ceil(inset-0.5))
+            local length=inside and math.max(0,width-2*ix) or 0
+            Span(row[2],ix,y,length,dark)
+            local shade=0.96-0.27*y/math.max(1,height-1)
+            Span(row[3],ix,y,math.min(length,math.max(0,finish-ix)),{0.24*shade,0.56*shade,0.83*shade,1})
+        end
+        for i=height+1,table.getn(rows) do for _,t in ipairs(rows[i]) do t:Hide() end end
+    end
+    face:Paint()
+    return face
+end

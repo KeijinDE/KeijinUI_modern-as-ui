@@ -1,4 +1,4 @@
-# KeijinUI 1.0.3
+# KeijinUI 1.1.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -19,6 +19,8 @@ From 0.4.0 the whole interface is bilingual. English is the default; German is c
 `/kui lang de`).
 
 ## Features
+
+* Settings, Controls: Normal / Thin / Off HUD headers, target debuffs in both places, area-hit merging, and a native auto-run key assignment (including mouse button 5). Existing layouts and other auto-run keys stay intact.
 
 * Class resources below the player health bar: five red rogue combo points, five smaller purple warlock soul shards, a copper rage bar for warriors, and a golden Lightwell countdown bar for priests. Requires the learned proc ability and supported native power values. Defaults to attached to the player; Alt dragging or scaling detaches it. Units settings switch the display off or restore attachment.
 * One original chamfered contour for rectangular panels, bars and icon frames. Player and target free ends use the same short diagonal; portraits and combo points stay round.
@@ -170,3 +172,7 @@ SurvivorsDragonUi und Survivor UI dienten als Inspiration und funktionale Vorbil
 ## Prüfung
 
 Die Integration wird mit Lua 5.1 und der extrahierten Spielschnittstelle geprüft (`py -3.12 development/keijinui/test_keijinui.py`). Diese Tests ersetzen keine Sichtprüfung im laufenden Spiel.
+
+## Bedienung und Lesbarkeit
+
+Im neuen Tab Bedienung lassen sich die Titel der vier HUD Anzeigen normal, schmal oder ausgeblendet darstellen. Debuffs erscheinen standardmaessig am Gegner und am Zielframe. Flächentreffer werden kurzzeitig als Summe mit Trefferzahl gebuendelt; die Option ist abschaltbar. Krits bleiben getrennt. Automatisches Laufen kann einer Taste oder Maustaste zugewiesen werden. Eine belegte Taste muss zweimal gedrueckt werden; Escape bricht ab. Die eigene Belegung kann entfernt werden, ohne die anderen nativen Lauftasten zu loeschen.

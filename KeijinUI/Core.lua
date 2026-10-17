@@ -1,4 +1,4 @@
-KeijinUI = { version = "1.0.3", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "1.1.1", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -128,11 +128,12 @@ function K.Panel(name, title, width, height)
     f.title = K.Text(f, "", 12, "TOPLEFT", 13, -11, width - 26)
     K.Live(f.title, function() return K.T(title) end)
     f.title:SetTextColor(1, 0.82, 0.28)
+    if K.headers and K.headers.eligible[name] then K.headers.Attach(f) end
     f:Hide()
     return f
 end
 -- Native value/range semantics with a clipped original fill and closed chamfered rim.
-function K.MetalBar(frame,bar)
+function K.MetalBar(frame,bar,fixedCut)
     local nativeValue=bar.SetValue
     local r,g,b,a=bar:GetStatusBarColor()
     local color={r or 1,g or 1,b or 1,a or 1}
@@ -142,7 +143,7 @@ function K.MetalBar(frame,bar)
     local function Paint()
         local width,height=frame:GetWidth(),frame:GetHeight()
         if width<=2 or height<=2 then return end
-        local cut=math.min(4,height*0.2)
+        local cut=fixedCut or math.min(4,height*0.2)
         if not frame.chamfer or math.abs(frame.chamfer.cut-cut)>0.01 then
             K.Chamfer(frame,cut,{0.025,0.025,0.03,0.92})
         end
@@ -161,7 +162,7 @@ end
 -- sits on its own layer above whatever the row draws.
 local function RowBase(parent, index, height)
     local row = CreateFrame("Frame", nil, parent)
-    row:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, -33 - (index-1)*(height+2))
+    K.HeaderPoint(row,parent,"TOPLEFT",10,-33-(index-1)*(height+2))
     row:SetWidth(parent:GetWidth()-20); row:SetHeight(height)
     local textLayer = CreateFrame("Frame", nil, row)
     textLayer:SetAllPoints(row); textLayer:SetFrameLevel(row:GetFrameLevel()+4)

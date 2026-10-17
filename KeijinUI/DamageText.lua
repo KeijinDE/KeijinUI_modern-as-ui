@@ -28,7 +28,7 @@ local ICON_GAP=2
 local average          -- running average of the own normal hits (scroll style)
 local MAX=60
 local host=CreateFrame("Frame","KeijinUIDamageText",UIParent)
-host:SetFrameStrata("HIGH"); host:SetWidth(1); host:SetHeight(1)
+host:SetFrameStrata("BACKGROUND"); host:SetWidth(1); host:SetHeight(1)
 host:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",0,0); host:EnableMouse(false)
 local active,pool,iconPool={}, {}, {}
 K.damageText={active=active}
@@ -89,27 +89,75 @@ local function Start()
 end
 -- Numbers never cover the unit frames, the skill bar or the counter row: a start point inside such
 -- a frame (an enemy standing behind it) is moved up to just above its top edge, the numbers only rise.
-local function KeepClear(x,y)
-    local names={"KeijinUISkills","KeijinUITally"}
-    local frames={K.units and K.units.player,K.units and K.units.target,getglobal(names[1]),getglobal(names[2])}
+local tickRects
+local function Rectangles()
+    local result={}
+    local frames={K.units and K.units.player,K.units and K.units.target,
+        getglobal("KeijinUISkills"),getglobal("KeijinUITally"),getglobal("KeijinUIResources")}
     local ui=UIParent:GetEffectiveScale()
-    for _=1,3 do
-        local moved
-        for _,f in pairs(frames) do
-            if f.IsShown and f:IsShown() and f.GetLeft and f:GetAlpha()>0 then
-                local l,b,r,t=f:GetLeft(),f:GetBottom(),f:GetRight(),f:GetTop()
-                local ratio=(f:GetEffectiveScale() or 1)/(ui or 1)
-                if K.Number(l) and K.Number(b) and K.Number(r) and K.Number(t) then
-                    l,b,r,t=l*ratio,b*ratio,r*ratio,t*ratio
-                    if x>=l-12 and x<=r+12 and y>=b-14 and y<=t then y=t+6; moved=true end
-                end
+    for _,f in pairs(frames) do
+        if f.IsShown and f:IsShown() and f.GetLeft and f:GetAlpha()>0 then
+            local l,b,r,t=f:GetLeft(),f:GetBottom(),f:GetRight(),f:GetTop()
+            local ratio=f:GetEffectiveScale()/ui
+            if K.Number(l) and K.Number(b) and K.Number(r) and K.Number(t) then
+                table.insert(result,{l*ratio,b*ratio,r*ratio,t*ratio})
+            end
+        end
+    end
+    return result
+end
+local function KeepClear(x,y,halfWidth,height)
+    local bounded=halfWidth~=nil
+    halfWidth,height=halfWidth or 12,height or 14
+    local width,screenHeight=UIParent:GetWidth(),UIParent:GetHeight()
+    if bounded then
+        x=math.max(halfWidth+4,math.min(width-halfWidth-4,x))
+        y=math.max(4,math.min(screenHeight-height-4,y))
+    end
+    local rectangles=tickRects or Rectangles()
+    for _=1,8 do
+        local moved=false
+        for _,rect in ipairs(rectangles) do
+            local l,b,r,t=unpack(rect)
+            if x+halfWidth>=l-4 and x-halfWidth<=r+4 and y+height>=b-4 and y<=t+4 then
+                if not bounded or t+8+height<screenHeight-4 then y=t+8
+                elseif b-height-8>4 then y=b-height-8
+                elseif l-halfWidth-8>halfWidth then x=l-halfWidth-8
+                else x=r+halfWidth+8 end
+                moved=true
             end
         end
         if not moved then break end
     end
-    return x,y
+    local clear=true
+    if bounded then
+        if x-halfWidth<0 or x+halfWidth>width or y<0 or y+height>screenHeight then clear=false end
+        for _,rect in ipairs(rectangles) do
+            local l,b,r,t=unpack(rect)
+            if x+halfWidth>=l-4 and x-halfWidth<=r+4 and y+height>=b-4 and y<=t+4 then clear=false end
+        end
+    end
+    return x,y,clear
 end
 K.damageText.KeepClear=KeepClear
+local function Footprint(item)
+    -- Include the largest pop, the whole label and its left-hand icon. A plate
+    -- can move into a unit frame after spawn, so this is checked every tick.
+    local size=item.style.size*(item.pop and 2 or 1)
+    local measured=item.fs.GetStringWidth and item.fs:GetStringWidth()
+    local width=type(measured)=="number" and measured>0 and measured or string.len(item.fs:GetText() or "")*size*.65
+    if type(measured)=="number" and measured>0 and item.size and item.size>0 then width=measured*size/item.size end
+    return width/2+(item.icon and size+ICON_GAP or 0)+4,size*1.3
+end
+local function Place(item,x,y)
+    local half,height=Footprint(item)
+    local clear
+    x,y,clear=KeepClear(x,y,half,height)
+    item.screenX,item.screenY,item.halfWidth,item.textHeight=x,y,half,height
+    item.fs:SetPoint("BOTTOM",UIParent,"BOTTOMLEFT",x,y)
+    item.blocked=not clear
+    if not clear then item.fs:SetAlpha(0); if item.icon then item.icon:SetAlpha(0) end end
+end
 -- Size factor of the pop: 0.5 to 2.0 in 0.12 s (ease out), back to 1.0 by 0.24 s.
 local function PopFactor(age)
     if age>=0.24 then return 1 end
@@ -148,6 +196,7 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
         if px then item.name=targetName; item.ax=px; item.ay=py; item.ox=x-px; item.oy=y-py end
     end
     table.insert(active,item)
+    fs:ClearAllPoints(); Place(item,x,y)
     return item
 end
 -- school and periodic only matter for the scroll style; spell gives the icon.
@@ -155,6 +204,21 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
     local mode=K.CombatTextMode()
     if (mode~="compact" and mode~="scroll") or not K.Number(amount) or amount<=0 then return end
     local text=string.format("%.0f",amount)
+    -- Merge a short burst of the same ability/kind, including area hits on
+    -- several enemies. Critical and ordinary hits always stay separate.
+    local mergeKey=mode..":"..tostring(spell or "melee")..":"..tostring(school)..":"..tostring(crit and true or false)..":"..tostring(periodic and true or false)
+    if K.DB().combatTextMerge~=false then
+        for i=table.getn(active),1,-1 do
+            local prior=active[i]
+            if prior.mergeKey==mergeKey and prior.age<=0.12 then
+                prior.amount=prior.amount+amount; prior.hits=(prior.hits or 1)+1
+                prior.fs:SetText(string.format("%.0f",prior.amount).." x"..prior.hits)
+                if prior.targetName~=targetName then prior.name=nil end
+                prior.fs:ClearAllPoints(); Place(prior,prior.screenX or prior.x,prior.screenY or prior.y)
+                return
+            end
+        end
+    end
     if mode=="scroll" then
         local style=crit and SCROLL.crit or (periodic and SCROLL.periodic or SCROLL.normal)
         local c=SCHOOL[school] or SCHOOL.Physical
@@ -172,10 +236,12 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
         local item=Add(text,style,r,g,b,targetName,true,crit and true or false,icon)
         item.crit=crit and true or false; item.periodic=periodic and true or false
         item.school=school; item.amount=amount
+        item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
     else
         local style=crit and CRIT or NORMAL
         local item=Add(text,style,style.r,style.g,style.b,targetName,false,false)
         item.crit=crit and true or false; item.amount=amount
+        item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
     end
 end
 -- A miss, dodge, parry ... of the player; only the scroll style shows these.
@@ -196,6 +262,7 @@ combat:SetScript("OnEvent",function()
 end)
 host:SetScript("OnUpdate",function()
     local dt=tonumber(arg1) or 0
+    tickRects=Rectangles()
     local anchors={}   -- plate anchor per name, asked once per tick
     local i=1
     while i<=table.getn(active) do
@@ -226,7 +293,6 @@ host:SetScript("OnUpdate",function()
                 -- (0.76 rise), ending at half the rise.
                 local e=1-(1-t)*(1-t)
                 item.x,item.y=item.x0+item.dir*item.drift*e,item.y0+s.rise*(2.4*t-1.9*t*t)
-                item.fs:SetPoint("BOTTOM",UIParent,"BOTTOMLEFT",item.x,item.y)
                 local alpha=(s.alpha or 1)*(t<0.7 and 1 or (1-t)/0.3)
                 item.fs:SetAlpha(alpha)
                 if item.icon then item.icon:SetAlpha(alpha) end
@@ -234,13 +300,15 @@ host:SetScript("OnUpdate",function()
                     local size=math.floor(s.size*PopFactor(item.age)+0.5)
                     if size~=item.size then SetSize(item,size) end
                 end
+                Place(item,item.x,item.y)
             else
-                item.fs:SetPoint("BOTTOM",UIParent,"BOTTOMLEFT",item.x,item.y+s.rise*t)
+                Place(item,item.x,item.y+s.rise*t)
                 item.fs:SetAlpha(t<0.6 and 1 or (1-t)/0.4)
             end
             i=i+1
         end
     end
+    tickRects=nil
 end)
 K.On("PLAYER_ENTERING_WORLD",function() average=nil end)
 K.On("PLAYER_LEAVING_WORLD",function() while table.getn(active)>0 do Give(table.remove(active)) end end)

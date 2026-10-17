@@ -27,7 +27,7 @@ end
 
 -- Tabs: one row of buttons under the title, one content frame per tab, only one visible.
 local PAGE_WIDTH=408
-local tabs={ {"display","Anzeige"},{"units","Einheiten"},{"layout","Layout"},{"general","Allgemein"} }
+local tabs={ {"display","Anzeige"},{"units","Einheiten"},{"layout","Layout"},{"general","Allgemein"},{"comfort","Bedienung"} }
 local pages,tabButtons={},{}
 for _,entry in ipairs(tabs) do
     local page=CreateFrame("Frame",nil,panel)
@@ -54,7 +54,7 @@ local function Button(parent,text,x,y,width,fn)
 end
 for i,entry in ipairs(tabs) do
     local key=entry[1]
-    tabButtons[key]=Button(panel,entry[2],16+(i-1)*102,-34,98,function() ShowTab(key) end)
+    tabButtons[key]=Button(panel,entry[2],16+(i-1)*82,-34,78,function() ShowTab(key) end)
 end
 
 local function Heading(page,text,y)
@@ -122,6 +122,24 @@ Row(page,"Buildtipps",-293,function() return OnOff(not (KeijinUIBuildDB and Keij
     function() SlashCmdList.KEIJINBUILDBAR("tipps") end)
 Row(page,"Minimap im KeijinUI Stil",-318,function() return OnOff(K.DB().minimapStyle~=false) end,
     function() K.SetMinimapStyle(K.DB().minimapStyle==false) end)
+
+-- Tab Bedienung
+local comfort=pages.comfort
+Heading(comfort,"Anzeige",0)
+local HEADER_NAMES={normal="Normal",thin="Schmal",off="Aus"}
+Row(comfort,"Abschnittsüberschriften",-18,function() return K.T(HEADER_NAMES[K.headers.Mode()]),GOLD end,
+    function() local nextMode={normal="thin",thin="off",off="normal"}; K.headers.Set(nextMode[K.headers.Mode()]) end)
+Row(comfort,"Debuffs an beiden Stellen",-50,function() return OnOff(K.DB().targetDebuffsBoth~=false) end,
+    function() K.SetTargetDebuffsBoth(K.DB().targetDebuffsBoth==false) end)
+Row(comfort,"Flächentreffer bündeln",-82,function() return OnOff(K.DB().combatTextMerge~=false) end,
+    function() K.DB().combatTextMerge=K.DB().combatTextMerge==false end)
+Heading(comfort,"Automatisch laufen",-130)
+local walk=Button(comfort,"Taste zuweisen",0,-152,200,function() K.autoWalk.Capture() end)
+Button(comfort,"Eigene Belegung entfernen",208,-152,200,function() K.autoWalk.Clear() end)
+Line(comfort,function() return K.T("Aktuelle Taste: %s",K.autoWalk.Label()) end,11,0,-188,408)
+local walkHelp=K.LText(comfort,"Taste zum Ein und Ausschalten wählen. Auch Maustaste 5 ist möglich. Bestehende Belegungen werden erst nach erneutem Drücken ersetzt.",10,"TOPLEFT",0,-218,408)
+walkHelp:SetHeight(64)
+K.autoWalk.onChange=RefreshAll
 
 -- Tab Einheiten
 page=pages.units

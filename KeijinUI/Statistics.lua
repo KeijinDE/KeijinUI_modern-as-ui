@@ -35,6 +35,11 @@ meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -
 local reset=CreateFrame("Button",nil,meter)
 reset:SetWidth(44); reset:SetHeight(20); reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6)
 reset.text=K.Text(reset,"Reset",9,"CENTER",0,0)
+meter.headerExtra=function(mode)
+    reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 16 or 20)
+    if mode=="off" then reset:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4); summary:SetWidth(178)
+    else reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,mode=="thin" and -2 or -6); summary:SetWidth(236) end
+end
 local function ResetMeter()
     baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0
     local lines=AZS_GetMeter and AZS_GetMeter()
@@ -168,7 +173,7 @@ local function Update()
     if meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
         meter:SetHeight(K.MeterMaxHeight())
-        local visible=(meter:GetHeight()-56)/22
+        local visible=(meter.headerHeight-56)/22
         offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
         local duration=seconds-meterStart
         for i,row in ipairs(meterRows) do

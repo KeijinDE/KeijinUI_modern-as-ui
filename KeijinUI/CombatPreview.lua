@@ -29,7 +29,7 @@ function K.CreateCombatPreview(parent,x,y)
         local mode=K.CombatTextMode()
         for _,item in ipairs(self.items) do
             local e=item.example
-            local visible=(mode=="compact" or mode=="scroll") and (not e.extra or K.DB().combatTextMerge==false)
+            local visible=mode~="off" and mode~="native" and (not e.extra or K.DB().combatTextMerge==false)
             if visible then
                 local s,r,g,b,icon,scroll,pop=K.damageText.Describe(mode,e.crit,e.school,false,e.spell)
                 local age=self.age
@@ -41,10 +41,12 @@ function K.CreateCombatPreview(parent,x,y)
                 item.fs:SetHeight(size*1.3)
                 local split=e.column==3 and K.DB().combatTextMerge==false
                 local dx=split and (e.extra and 26 or -26) or 0
-                if scroll then dx=dx+(e.column==2 and 1 or -1)*12*(1-(1-t)*(1-t)) end
-                local dy=scroll and s.rise*(2.4*t-1.9*t*t) or s.rise*t
+                if scroll and not s.straight then dx=dx+(e.column==2 and 1 or -1)*12*(1-(1-t)*(1-t)) end
+                local dy=s.rise*t
+                local alpha=age>=s.life and 0 or (t<.6 and 1 or (1-t)/.4)
+                if s.straight then dy,alpha=K.damageText.RiseMotion(s,t); if age>=s.life then alpha=0 end
+                elseif scroll then dy=s.rise*(2.4*t-1.9*t*t); alpha=age>=s.life and 0 or (s.alpha or 1)*(t<.7 and 1 or (1-t)/.3) end
                 item.fs:ClearAllPoints(); item.fs:SetPoint("BOTTOM",self,"TOPLEFT",(e.column-.5)*172+dx,-101+dy)
-                local alpha=age>=s.life and 0 or (scroll and (s.alpha or 1)*(t<.7 and 1 or (1-t)/.3) or (t<.6 and 1 or (1-t)/.4))
                 item.fs:SetAlpha(alpha); item.fs:Show()
                 if icon then
                     item.icon:SetTexture(icon); item.icon:SetWidth(size); item.icon:SetHeight(size)

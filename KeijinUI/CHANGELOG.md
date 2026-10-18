@@ -5,6 +5,13 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 2.1.0 (2026-10-18, release v2.1.0)
+
+* **Movable combat text.** The floating damage numbers start in an invisible anchor. Hold Alt to show and move it, Alt and mouse wheel change the number size. New choice in Settings, Combat: Position "At the enemy" (default, unchanged: numbers rise above the nameplate) or "Fixed spot" (all numbers start in the anchor and follow no nameplate). Without a nameplate the numbers now start in the anchor instead of the screen center; the anchor sits at the old spot until you move it.
+* **Boss damage.** The damage meter has two tabs, Run and Boss. Boss lists the damage dealt to bosses in the last boss fight, with total and DPS per source, and says "running" while a boss is alive. Reset only applies to the Run tab. New option in Settings, Combat: switch to Boss automatically while a boss lives and back afterwards (off by default; your own tab choice always wins).
+* **Rising style.** New damage number style: numbers rise straight up and fade out slowly, more compact than Scrolling, with school colours and spell icons.
+* **Own numbers only.** Position, spell icons and merging apply to the Compact, Scrolling and Rising styles. In the Game style the game draws the numbers itself and no addon can move them; these options are greyed out then, with a note saying why.
+
 ### 2.0.1 (2026-10-18, release v2.0.1)
 
 * A lag no longer wipes boss times, healing and critical hits. Restart detection now uses the run time reported by the game and allows 3 seconds of fall back, as the run history already did.
@@ -253,6 +260,13 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 2.1.0 (2026-10-18, Release v2.1.0)
+
+* **Verschiebbarer Kampftext.** Die schwebenden Schadenszahlen starten in einem unsichtbaren Anker. Mit Alt wird er sichtbar und verschiebbar, Alt und Mausrad ändern die Zahlengröße. Neue Auswahl unter Einstellungen, Kampf: Position "Am Gegner" (Standard, unverändert: Zahlen steigen über der Namensplakette) oder "Feste Stelle" (alle Zahlen starten im Anker und folgen keiner Plakette). Ohne Plakette starten die Zahlen jetzt im Anker statt in der Bildschirmmitte; der Anker liegt an der alten Stelle, bis du ihn verschiebst.
+* **Bossschaden.** Die Schadensanzeige hat zwei Reiter, Run und Boss. Boss listet den Schaden am Boss im letzten Bosskampf mit Gesamtschaden und DPS je Quelle und zeigt "läuft", solange ein Boss lebt. Reset gilt nur im Reiter Run. Neue Option unter Einstellungen, Kampf: automatisch auf Boss umschalten, solange ein Boss lebt, und danach zurück (standardmäßig aus; deine eigene Reiterwahl hat immer Vorrang).
+* **Stil Aufsteigend.** Neuer Stil für Schadenszahlen: Die Zahlen steigen senkrecht nach oben und blenden langsam aus, kompakter als Scrollend, mit Schulfarben und Zaubersymbolen.
+* **Nur für eigene Zahlen.** Position, Zaubersymbole und Bündeln gelten nur für die Stile Kompakt, Scrollend und Aufsteigend. Im Stil Spiel zeichnet das Spiel die Zahlen selbst und kein Addon kann sie verschieben; diese Optionen sind dann ausgegraut und ein Hinweis nennt den Grund.
 
 ### 2.0.1 (2026-10-18, Release v2.0.1)
 

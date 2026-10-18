@@ -24,14 +24,30 @@ O.Finish(p)
 
 p=O.Page("combat","Kampf","Schadenszahlen und Hinweise im Kampf.")
 O.Section(p,"Schadenszahlen")
-O.Choice(p,"combatText","Stil",K.CombatTextMode,K.SetCombatTextMode,{{"off","Aus"},{"compact","Kompakt"},{"scroll","Scrollend"},{"native","Spiel"}})
-O.Toggle(p,"icons","Zaubersymbole",function() return K.DB().combatTextIcons~=false end,function(on) K.DB().combatTextIcons=on end)
-O.Toggle(p,"merge","Flächentreffer bündeln",function() return K.DB().combatTextMerge~=false end,function(on) K.DB().combatTextMerge=on end)
+O.Choice(p,"combatText","Stil",K.CombatTextMode,K.SetCombatTextMode,{{"off","Aus"},{"compact","Kompakt"},{"scroll","Scrollend"},{"rise","Aufsteigend"},{"native","Spiel"}})
+-- Icons, merging and position only apply to KeijinUI's own numbers (compact, scroll, rise). In the style
+-- "Spiel" the client draws its floating text itself; an addon cannot place it.
+local function OwnNumbers() local mode=K.CombatTextMode(); return mode=="compact" or mode=="scroll" or mode=="rise" end
+O.Requires(O.Toggle(p,"icons","Zaubersymbole",function() return K.DB().combatTextIcons~=false end,function(on) K.DB().combatTextIcons=on end),OwnNumbers)
+O.Requires(O.Toggle(p,"merge","Flächentreffer bündeln",function() return K.DB().combatTextMerge~=false end,function(on) K.DB().combatTextMerge=on end),OwnNumbers)
 O.Help(p,"Fasst gleiche Treffer innerhalb kurzer Zeit zusammen.")
+O.Requires(O.Choice(p,"combatTextPosition","Position",K.damageText.Position,K.damageText.SetPosition,{{"plate","Am Gegner"},{"fixed","Feste Stelle"}}),OwnNumbers)
+local function PositionHelp()
+    local mode=K.CombatTextMode()
+    if mode=="native" then return K.T("Im Stil Spiel zeichnet das Spiel die Zahlen selbst. Ihre Position lässt sich nicht verschieben; für Feste Stelle Kompakt, Scrollend oder Aufsteigend wählen.") end
+    if mode=="off" then return K.T("Schadenszahlen sind aus.") end
+    return K.T("Am Gegner: Zahlen steigen über der Namensplakette. Feste Stelle: alle Zahlen starten im Kampftext Anker. Alt halten, um den Anker zu verschieben, Alt und Mausrad ändert die Größe.")
+end
+local positionHelp=O.Help(p,"")
+K.Live(positionHelp,PositionHelp)
+O.Watch(function() positionHelp:SetText(PositionHelp()) end)
 O.Section(p,"Vorschau")
 O.combatPreview=K.CreateCombatPreview(p,0,p.y)
 O.Watch(function() O.combatPreview:Refresh() end)
-p.y=p.y-148; O.Help(p,"Animierte Beispieltreffer. Zaubersymbole erscheinen im Stil Scrollend.")
+p.y=p.y-148; O.Help(p,"Animierte Beispieltreffer. Zaubersymbole erscheinen in den Stilen Scrollend und Aufsteigend.")
+O.Section(p,"Schadensanzeige")
+O.Toggle(p,"meterAutoBoss","Bei Bosskampf auf Boss umschalten",function() return K.DB().meterAutoBoss==true end,function(on) K.DB().meterAutoBoss=on and true or nil end)
+O.Help(p,"Die Schadensanzeige wechselt auf den Reiter Boss, solange ein Boss lebt, und danach zurück.")
 O.Section(p,"Buildtipps")
 O.Toggle(p,"advisor","Buildtipps",function() return not (KeijinUIBuildDB and KeijinUIBuildDB.advisor==false) end,
     function(on) if not KeijinUIBuildDB then KeijinUIBuildDB={} end; KeijinUIBuildDB.advisor=on end)

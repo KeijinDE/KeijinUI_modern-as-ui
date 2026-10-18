@@ -156,11 +156,11 @@ function O.Choice(page,key,label,get,set,items)
     O.Wheel(button)
     local text=button.text; text:SetWidth(146); text:SetJustifyH("LEFT"); text:ClearAllPoints(); text:SetPoint("LEFT",button,"LEFT",9,0)
     local arrow=K.Text(button,"v",9,"RIGHT",-8,0); arrow:SetTextColor(unpack(GOLD))
-    row.value=text; row.items=items
+    row.value=text; row.items=items; row.button=button
     local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(170); menu:SetHeight(8+table.getn(items)*27); Skin(menu)
     menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",0,-3)
     for i,item in ipairs(items) do
-        local option=O.Button(menu,item[2],4,-4-(i-1)*27,162,function() set(item[1]); O.CloseChoice() end)
+        local option=O.Button(menu,item[2],4,-4-(i-1)*27,162,function() set(item[1]); O.CloseChoice(); O.Refresh() end)
         option:SetHeight(25)
     end
     local function Open()
@@ -173,6 +173,15 @@ function O.Choice(page,key,label,get,set,items)
     O.menus=O.menus or {}; table.insert(O.menus,menu); menu:Hide()
     button:SetScript("OnClick",Open); row:SetScript("OnClick",Open)
     O.Watch(function() for _,v in ipairs(items) do if v[1]==get() then text:SetText(K.T(v[2])); return end end; text:SetText("?") end)
+    return row
+end
+-- A row that only matters while active() is true: dimmed and not clickable otherwise.
+function O.Requires(row,active)
+    O.Watch(function()
+        local on=active() and true or false
+        row:SetAlpha(on and 1 or .4); row:EnableMouse(on); row.locked=not on
+        if row.button then row.button:EnableMouse(on) end
+    end)
     return row
 end
 function O.Pair(page,left,fn,right,other)

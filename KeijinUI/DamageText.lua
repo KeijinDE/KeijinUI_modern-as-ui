@@ -1,14 +1,18 @@
--- Floating damage numbers with two own styles (Core.lua, K.CombatTextMode). compact: the Survivor UI
+-- Floating damage numbers with three own styles (Core.lua, K.CombatTextMode). compact: the Survivor UI
 -- style, normal hits very small and white, only critical hits large and yellow, rising straight up.
 -- scroll: numbers rise with ease out and drift to the left or right, coloured by damage school, with the
 -- spell icon on the left; small normal hits are grey, crits are large; crits and misses start with a pop,
 -- they follow the target's nameplate and misses are shown too.
+-- rise: like scroll, but straight up (no drift), shorter way, smaller, fading slowly (RISE table).
 -- off and native draw nothing here. The native floating text (cvar CombatDamage) cannot do this:
 -- one colour per source, no size for crits (benilla combat_text/mod.rs), so Core.lua keeps it off
 -- and this module draws from the same native combat messages the parser reads (CombatParser.lua).
 -- Position: above the visible nameplate of the hit enemy (Nameplates.lua, K.PlateAnchor). Without
 -- a plate (nameplates off, plate not on screen) the numbers rise over the screen centre, the
 -- player's usual place. There is no world position in the addon API.
+-- 2.1.0: that start point is the movable layout element KeijinUICombatTextAnchor (Alt to move, Alt and
+-- mouse wheel to scale). Option "Position" (K.DB().combatTextPosition): plate (default) or fixed, where
+-- every number starts in the anchor and follows no plate.
 local K=KeijinUI
 local NORMAL={size=10,r=1,g=1,b=1,life=0.8,rise=26}
 local CRIT={size=26,r=1,g=0.82,b=0.1,life=1.3,rise=44}
@@ -18,6 +22,12 @@ local CRIT={size=26,r=1,g=0.82,b=0.1,life=1.3,rise=44}
 local SCROLL={normal={size=12,life=1.1,rise=60},crit={size=30,life=1.5,rise=45,pop=true},
     periodic={size=11,life=1.1,rise=60,alpha=0.85},small={size=11,life=1.1,rise=60},
     miss={size=13,life=1.2,rise=60,pop=true}}
+-- rise style: straight up with ease out, fades slowly (full opacity for the first 30 %, then evenly to 0).
+-- straight marks the style for the update loop and the preview; same fields as SCROLL.
+local RISE={normal={size=11,life=1.6,rise=34,straight=true},crit={size=22,life=1.8,rise=40,pop=true,straight=true},
+    periodic={size=10,life=1.6,rise=34,alpha=0.85,straight=true},small={size=10,life=1.6,rise=34,straight=true},
+    miss={size=12,life=1.6,rise=34,pop=true,straight=true}}
+local RISE_FADE=0.3        -- share of the life with full opacity
 local SCHOOL={Physical={1,0.95,0.85},Holy={1,0.85,0.35},Fire={1,0.5,0.15},Nature={0.45,0.9,0.3},
     Frost={0.45,0.8,1},Shadow={0.75,0.45,1},Arcane={1,0.55,0.95}}
 local MISS_TEXT={miss="Verfehlt",dodge="Ausgewichen",parry="Pariert",block="Geblockt",evade="Entkommen",
@@ -84,12 +94,13 @@ function K.damageText.Describe(mode,crit,school,periodic,spell,small)
         local s=crit and CRIT or NORMAL
         return s,s.r,s.g,s.b,nil,false,false
     end
-    if mode~="scroll" then return end
-    local s=crit and SCROLL.crit or (periodic and SCROLL.periodic or SCROLL.normal)
+    if mode~="scroll" and mode~="rise" then return end
+    local T=mode=="rise" and RISE or SCROLL
+    local s=crit and T.crit or (periodic and T.periodic or T.normal)
     local c=SCHOOL[school] or SCHOOL.Physical
     local r,g,b=c[1],c[2],c[3]
     if crit then r,g,b=r+(1-r)*.35,g+(1-g)*.35,b+(1-b)*.35 end
-    if small and not crit and not periodic then s=SCROLL.small; r,g,b=.62,.62,.62 end
+    if small and not crit and not periodic then s=T.small; r,g,b=.62,.62,.62 end
     local icon
     if K.DB().combatTextIcons~=false then icon=spell and SpellIcon(spell) or (not spell and MeleeIcon()) end
     return s,r,g,b,icon,true,crit and true or false
@@ -97,12 +108,32 @@ end
 -- Font size and icon side always match.
 local function SetSize(item,size)
     item.size=size
-    item.fs:SetFont(K.font,size,"OUTLINE")
-    if item.icon then item.icon:SetWidth(size); item.icon:SetHeight(size) end
+    local shown=math.max(1,math.floor(size*(item.scale or 1)+0.5))
+    item.fs:SetFont(K.font,shown,"OUTLINE")
+    if item.icon then item.icon:SetWidth(shown); item.icon:SetHeight(shown) end
 end
+-- Invisible layout anchor: the centre is the start point of the numbers. Without a saved layout it sits
+-- where Start() always started (screen centre, 50 above), so nothing changes until the player moves it.
+local anchor=CreateFrame("Frame","KeijinUICombatTextAnchor",UIParent)
+anchor:SetWidth(200); anchor:SetHeight(120); anchor:SetFrameStrata("BACKGROUND"); anchor:EnableMouse(false)
+K.layout.Register("combattext",anchor,"Kampftext",function(f)
+    f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"CENTER",0,50)
+end,{hidden=true})
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("combattext") end end)
+K.damageText.anchor=anchor
+-- Centre of the anchor in UIParent units and its scale factor against the interface (1 = unscaled).
+local function AnchorCentre()
+    local w,h=UIParent:GetWidth() or 1024,UIParent:GetHeight() or 768
+    local l,b=anchor:GetLeft(),anchor:GetBottom()
+    local ratio=anchor:GetEffectiveScale()/UIParent:GetEffectiveScale()
+    if not K.Number(l) or not K.Number(b) or not K.Number(ratio) or ratio<=0 then return w/2,h/2+50,1 end
+    return (l+anchor:GetWidth()/2)*ratio,(b+anchor:GetHeight()/2)*ratio,ratio
+end
+function K.damageText.Position() return K.DB().combatTextPosition=="fixed" and "fixed" or "plate" end
+function K.damageText.SetPosition(value) K.DB().combatTextPosition=value=="fixed" and "fixed" or nil end
 local function Start()
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
-    return (w or 1024)/2+math.random(-50,50),(h or 768)/2+40+math.random(0,20)
+    local x,y,ratio=AnchorCentre()
+    return x+math.random(-50,50),y-10+math.random(0,20),ratio
 end
 -- Numbers never cover the unit frames, the skill bar or the counter row: a start point inside such
 -- a frame (an enemy standing behind it) is moved up to just above its top edge, the numbers only rise.
@@ -160,10 +191,11 @@ K.damageText.KeepClear=KeepClear
 local function Footprint(item)
     -- Include the largest pop, the whole label and its left-hand icon. A plate
     -- can move into a unit frame after spawn, so this is checked every tick.
-    local size=item.style.size*(item.pop and 2 or 1)
+    local scale=item.scale or 1
+    local size=item.style.size*scale*(item.pop and 2 or 1)
     local measured=item.fs.GetStringWidth and item.fs:GetStringWidth()
     local width=type(measured)=="number" and measured>0 and measured or string.len(item.fs:GetText() or "")*size*.65
-    if type(measured)=="number" and measured>0 and item.size and item.size>0 then width=measured*size/item.size end
+    if type(measured)=="number" and measured>0 and item.size and item.size>0 then width=measured*size/(item.size*scale) end
     return width/2+(item.icon and size+ICON_GAP or 0)+4,size*1.3
 end
 local function Place(item,x,y)
@@ -183,12 +215,34 @@ local function PopFactor(age)
     return 2-v*v
 end
 K.damageText.PopFactor=PopFactor
--- Common part: place, style and register one number (scroll: rising, otherwise compact).
+-- Rise and fade of the rise style: lift in pixels and opacity at the share t of the life.
+function K.damageText.RiseMotion(s,t)
+    local lift=s.rise*(1-(1-t)*(1-t))
+    local alpha=(s.alpha or 1)*(t<RISE_FADE and 1 or (1-t)/(1-RISE_FADE))
+    return lift,alpha
+end
+-- Common part: place, style and register one number (scroll and rise: rising, otherwise compact).
 -- icon: texture path shown left of a scroll number (nil: none, the text stays centred).
 local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
-    local x,y,px,py
-    if K.PlateAnchor and targetName then px,py=K.PlateAnchor(targetName) end
-    if px then x,y=px+math.random(-14,14),py else x,y=Start() end
+    local x,y,px,py,scale
+    if K.damageText.Position()~="fixed" and K.PlateAnchor and targetName then px,py=K.PlateAnchor(targetName) end
+    if px then
+        local _,_,ratio=AnchorCentre()
+        x,y,scale=px+math.random(-14,14),py,ratio
+    else x,y,scale=Start() end
+    if style.straight then
+        -- A new number of the same target starts one line higher while the previous one is still in the
+        -- lower third of its way, so they do not cover each other.
+        local lift=0
+        for i=1,table.getn(active) do
+            local prior=active[i]
+            if prior.style.straight and prior.tn==targetName and prior.age<prior.style.life/3
+                and math.abs(prior.x0-x)<40 then
+                lift=math.max(lift,prior.y0-y+style.size*1.2)
+            end
+        end
+        y=y+lift
+    end
     x,y=KeepClear(x,y)
     if table.getn(active)>=MAX then Give(table.remove(active,1)) end
     local fs=Take()
@@ -198,7 +252,7 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
     fs:SetText(text)
     fs:SetPoint("BOTTOM",UIParent,"BOTTOMLEFT",x,y)
     fs:SetAlpha(1); fs:Show()
-    local item={fs=fs,x=x,y=y,x0=x,y0=y,age=0,style=style,scroll=scroll,pop=pop}
+    local item={fs=fs,x=x,y=y,x0=x,y0=y,age=0,style=style,scroll=scroll,pop=pop,scale=scale,tn=targetName}
     if icon then
         local tex=table.remove(iconPool) or host:CreateTexture(nil,"OVERLAY")
         tex:SetTexture(icon); tex:SetTexCoord(0.08,0.92,0.08,0.92)
@@ -220,7 +274,7 @@ end
 -- school and periodic only matter for the scroll style; spell gives the icon.
 function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
     local mode=K.CombatTextMode()
-    if (mode~="compact" and mode~="scroll") or not K.Number(amount) or amount<=0 then return end
+    if mode=="off" or mode=="native" or not K.Number(amount) or amount<=0 then return end
     local text=string.format("%.0f",amount)
     -- Merge a short burst of the same ability/kind, including area hits on
     -- several enemies. Critical and ordinary hits always stay separate.
@@ -238,7 +292,7 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
         end
     end
     local small
-    if mode=="scroll" and not crit and not periodic then
+    if (mode=="scroll" or mode=="rise") and not crit and not periodic then
         small=average and amount<average*.5
         average=average and (average*.9+amount*.1) or amount
     end
@@ -250,10 +304,11 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
 end
 -- A miss, dodge, parry ... of the player; only the scroll style shows these.
 function K.damageText.SpawnMiss(missType,targetName,spell)
-    if K.CombatTextMode()~="scroll" or not MISS_TEXT[missType] then return end
+    local mode=K.CombatTextMode()
+    if (mode~="scroll" and mode~="rise") or not MISS_TEXT[missType] then return end
     local icon
     if spell and K.DB().combatTextIcons~=false then icon=SpellIcon(spell) end
-    local item=Add(K.T(MISS_TEXT[missType]),SCROLL.miss,1,0.82,0.1,targetName,true,true,icon)
+    local item=Add(K.T(MISS_TEXT[missType]),(mode=="rise" and RISE or SCROLL).miss,1,0.82,0.1,targetName,true,true,icon)
     item.miss=missType
 end
 local combat=CreateFrame("Frame",nil,UIParent)
@@ -295,9 +350,16 @@ host:SetScript("OnUpdate",function()
                 end
                 -- Rise, drift to one side and fall back slightly at the end: peak at t~0.63
                 -- (0.76 rise), ending at half the rise.
-                local e=1-(1-t)*(1-t)
-                item.x,item.y=item.x0+item.dir*item.drift*e,item.y0+s.rise*(2.4*t-1.9*t*t)
-                local alpha=(s.alpha or 1)*(t<0.7 and 1 or (1-t)/0.3)
+                local alpha
+                if s.straight then
+                    local lift
+                    lift,alpha=K.damageText.RiseMotion(s,t)
+                    item.x,item.y=item.x0,item.y0+lift
+                else
+                    local e=1-(1-t)*(1-t)
+                    item.x,item.y=item.x0+item.dir*item.drift*e,item.y0+s.rise*(2.4*t-1.9*t*t)
+                    alpha=(s.alpha or 1)*(t<0.7 and 1 or (1-t)/0.3)
+                end
                 item.fs:SetAlpha(alpha)
                 if item.icon then item.icon:SetAlpha(alpha) end
                 if item.pop then

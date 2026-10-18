@@ -1,4 +1,4 @@
-KeijinUI = { version = "2.0.1", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "2.1.0", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -33,9 +33,9 @@ function K.DB()
     end
     return db
 end
--- Damage numbers: off, compact (DamageText.lua), scroll (DamageText.lua) or native (the game's own numbers).
+-- Damage numbers: off, compact, scroll, rise (all DamageText.lua) or native (the game's own numbers).
 -- Read when needed, not at load time: the saved variables arrive after all addon files.
-K.CombatModes = { "off", "compact", "scroll", "native" }
+K.CombatModes = { "off", "compact", "scroll", "rise", "native" }
 function K.CombatTextMode()
     local db = K.DB()
     for _,mode in ipairs(K.CombatModes) do if db.combatTextMode == mode then return mode end end
@@ -50,7 +50,7 @@ function K.ApplyCombatText()
     if db.originalCombatDamage == nil then db.originalCombatDamage = GetCVar("CombatDamage") end
     SetCVar("CombatDamage", mode == "native" and "1" or "0")
     if db.originalShowCombatText == nil then db.originalShowCombatText = SHOW_COMBAT_TEXT or "0" end
-    SHOW_COMBAT_TEXT = (mode == "compact" or mode == "scroll") and "0" or db.originalShowCombatText
+    SHOW_COMBAT_TEXT = (mode == "compact" or mode == "scroll" or mode == "rise") and "0" or db.originalShowCombatText
     if CombatText_UpdateDisplayedMessages then CombatText_UpdateDisplayedMessages() end
 end
 function K.SetCombatTextMode(mode)

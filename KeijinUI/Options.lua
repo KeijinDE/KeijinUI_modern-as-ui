@@ -3,7 +3,7 @@ local K=KeijinUI
 local O=K.settings
 local panel=O.panel
 local function RefreshAll() O.Refresh() end
-local MODE_NAMES={off="Aus",compact="Kompakt",scroll="Scrollend",native="Spiel"}
+local MODE_NAMES={off="Aus",compact="Kompakt",scroll="Scrollend",rise="Aufsteigend",native="Spiel"}
 local announced=false
 local function Announce()
     if not announced then
@@ -56,7 +56,7 @@ SlashCmdList.KEIJINUI=function(message)
         local _,_,value=string.find(command,"^text%s+(%S+)$")
         local mode
         if value then
-            mode=({off="off",compact="compact",scroll="scroll",game="native",native="native"})[value]
+            mode=({off="off",compact="compact",scroll="scroll",rise="rise",game="native",native="native"})[value]
         else
             local current=K.CombatTextMode()
             for i,m in ipairs(K.CombatModes) do
@@ -68,7 +68,7 @@ SlashCmdList.KEIJINUI=function(message)
             K.Say(K.T("Schadenszahlen")..": "..K.T(MODE_NAMES[mode]))
             RefreshAll()
         else
-            K.Say(K.T("/kui text off|compact|scroll|game. Aktuell: %s.",K.T(MODE_NAMES[K.CombatTextMode()])))
+            K.Say(K.T("/kui text off|compact|scroll|rise|game. Aktuell: %s.",K.T(MODE_NAMES[K.CombatTextMode()])))
         end
     elseif command=="reload" then ReloadUI()
     elseif command=="lang" or string.find(command,"^lang%s") then
@@ -80,5 +80,5 @@ SlashCmdList.KEIJINUI=function(message)
         else
             K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

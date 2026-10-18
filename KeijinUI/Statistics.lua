@@ -35,10 +35,49 @@ meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -
 local reset=CreateFrame("Button",nil,meter)
 reset:SetWidth(44); reset:SetHeight(20); reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6)
 reset.text=K.Text(reset,"Reset",9,"CENTER",0,0)
+-- Two tabs in the header: Run (everything since the run start or the last Reset) and Boss (the damage
+-- dealt to bosses in the last boss fight, AZS_GetBossMeter). The choice is stored in KeijinUIDB.meterView.
+-- The optional automatic switch (meterAutoBoss) only sets autoView for the time a boss lives.
+local autoView,autoApplied,bossWasAlive
+local tabRun=CreateFrame("Button","KeijinUIMeterTabRun",meter)
+local tabBoss=CreateFrame("Button","KeijinUIMeterTabBoss",meter)
+for _,tab in ipairs({tabRun,tabBoss}) do tab:SetWidth(34); tab:SetHeight(20) end
+tabRun.text=K.Text(tabRun,"Run",9,"CENTER",0,0)
+tabBoss.text=K.Text(tabBoss,"Boss",9,"CENTER",0,0)
+function K.MeterView()
+    if autoView then return autoView end
+    return K.DB().meterView=="boss" and "boss" or "run"
+end
+local function PaintTabs()
+    local view=K.MeterView()
+    local function Paint(tab,on) if on then tab.text:SetTextColor(1,0.82,0.28) else tab.text:SetTextColor(0.62,0.6,0.54) end end
+    Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss")
+end
+function K.SetMeterView(view)
+    K.DB().meterView=view=="boss" and "boss" or nil
+    autoView=nil; autoApplied=nil   -- a manual choice wins over the automatic switch
+    offset=0; PaintTabs()
+end
+function K.SetMeterAuto(on) K.DB().meterAutoBoss=on and true or nil end
+tabRun:SetScript("OnClick",function() K.SetMeterView("run") end)
+tabBoss:SetScript("OnClick",function() K.SetMeterView("boss") end)
 meter.headerExtra=function(mode)
     reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 16 or 20)
-    if mode=="off" then reset:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4); summary:SetWidth(178)
-    else reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,mode=="thin" and -2 or -6); summary:SetWidth(236) end
+    tabRun:ClearAllPoints(); tabBoss:ClearAllPoints()
+    tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20)
+    if mode=="off" then
+        -- No title strip: tabs and Reset share the bottom row with the summary.
+        tabBoss:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4)
+        tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
+        reset:SetPoint("RIGHT",tabRun,"LEFT",-4,0)
+        summary:SetWidth(120)
+    else
+        reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,mode=="thin" and -2 or -6)
+        tabBoss:SetPoint("RIGHT",reset,"LEFT",-4,0)
+        tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
+        summary:SetWidth(236)
+    end
+    PaintTabs()
 end
 local function ResetMeter()
     baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0
@@ -128,6 +167,57 @@ combat:SetScript("OnEvent",function()
     v.best=math.max(v.best,hit.amount); v.min=math.min(v.min,hit.amount)
     v.last=hit.amount; v.sum=v.sum+hit.amount; v.count=v.count+1; critData[name]=v
 end)
+-- Boss view: lines, total and dps of the last boss fight as the game reports them (empty before the first one).
+local function BossAlive() return type(AZS_RUN)=="table" and K.Number(AZS_RUN.bu) and AZS_RUN.bu>0 end
+local function AutoSwitch()
+    local alive=BossAlive() and true or false
+    if alive==bossWasAlive then return end
+    bossWasAlive=alive
+    if not K.DB().meterAutoBoss then autoView=nil; autoApplied=nil; return end
+    if alive then
+        if K.MeterView()=="run" then autoView="boss"; autoApplied=true; offset=0 end
+    elseif autoApplied then
+        autoView=nil; autoApplied=nil; offset=0
+    end
+end
+local function UpdateBoss()
+    local lines,total,dps
+    if AZS_GetBossMeter then lines,total,dps=AZS_GetBossMeter() end
+    local sorted,sum={},0
+    if type(lines)=="table" then
+        for _,v in ipairs(lines) do
+            if type(v.name)=="string" and K.Number(v.dmg) then table.insert(sorted,v); sum=sum+v.dmg end
+        end
+    end
+    if table.getn(sorted)==0 then
+        for _,row in ipairs(meterRows) do row:Hide() end
+        meter:SetHeight(100); summary:SetText(K.T("Noch kein Bosskampf")); meter:Show()
+        return
+    end
+    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    if not K.Number(total) then total=sum end
+    meter:SetHeight(K.MeterMaxHeight())
+    local visible=(meter.headerHeight-56)/22
+    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    for i,row in ipairs(meterRows) do
+        local v=sorted[i+offset]
+        if v and i<=visible then
+            local rate=K.Number(v.dps) and v.dps or 0
+            row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
+            row.dps:SetText(K.Short(rate).." DPS")
+            row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
+            local red,green,blue=K.SourceColor(v.name)
+            row.bar:SetStatusBarColor(red,green,blue,0.85)
+            row.tip=K.DisplayName(v.name)
+            row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
+                K.Short(rate),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+            row:Show()
+        else row:Hide() end
+    end
+    summary:SetText(K.T(BossAlive() and "Bosskampf: %s gesamt   ·   %s / s   (läuft)" or "Bosskampf: %s gesamt   ·   %s / s",
+        K.Short(total),K.Short(K.Number(dps) and dps or 0)))
+    meter:Show()
+end
 local previousReported
 local function Update()
     local phase=AZS_GetPhase and AZS_GetPhase()
@@ -160,17 +250,22 @@ local function Update()
         end
         stats:Show()
     else stats:Hide() end
+    AutoSwitch(); PaintTabs()
     local lines=AZS_GetMeter and AZS_GetMeter()
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
+    local bossView=K.MeterView()=="boss"
+    if bossView then reset:Hide() else reset:Show() end
     local sorted,total={},0
-    if meterValid then
+    if meterValid and not bossView then
         for _,v in ipairs(lines) do
             if type(v.name)~="string" or not K.Number(v.dmg) then meterValid=false; break end
             local value=math.max(0,v.dmg-(baseline[v.name] or 0))
             table.insert(sorted,{name=v.name,dmg=value,proc=v.proc}); total=total+value
         end
     end
-    if meterValid then
+    if bossView and not K.DB().hidden.meter then
+        UpdateBoss(); K.Native("meter",true)
+    elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
         meter:SetHeight(K.MeterMaxHeight())
         local visible=(meter.headerHeight-56)/22

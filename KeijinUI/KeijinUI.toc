@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: KeijinUI
-## Version: 1.1.1
+## Version: 2.0.0
 ## Author: Keijin
 ## Notes: Classic inspired survivor interface, run overview, statistics, damage, builds and achievements.
 ## SavedVariables: KeijinUIDB, KeijinUIBuildDB, KeijinUIAchievementsDB
@@ -20,6 +20,7 @@ modules\Advisor.lua
 modules\KeijinBuildBar.lua
 modules\KeijinAchievements.lua
 BossTimes.lua
+Pace.lua
 Guardians.lua
 Minimap.lua
 Hud.lua
@@ -33,6 +34,12 @@ Tooltip.lua
 Nameplates.lua
 DamageText.lua
 Statistics.lua
+RunSnapshots.lua
 Runs.lua
 MinimapButton.lua
+Cursor.lua
+CharacterStats.lua
+SettingsWidgets.lua
+CombatPreview.lua
+SettingsPages.lua
 Options.lua

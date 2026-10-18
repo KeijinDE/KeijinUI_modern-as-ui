@@ -188,8 +188,26 @@ function L.SyncFollowers()
     for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end
 function L.Place(key) local e=L.entries[key]; if e and e~=active then Apply(e) end end
+local hint=K.Panel("KeijinUILayoutHint","Layoutmodus aktiv",470,92)
+hint:SetFrameStrata("TOOLTIP"); hint:SetFrameLevel(220); hint:SetScale(.85)
+hint:SetPoint("TOP",UIParent,"TOP",0,-72); hint:SetBackdropColor(.04,.04,.05,1)
+K.LText(hint,"Ziehen: verschieben · Mausrad: Größe ändern",11,"TOPLEFT",14,-35,335)
+K.LText(hint,"Escape oder Fertig zum Beenden",11,"TOPLEFT",14,-59,335):SetTextColor(1,.82,.28)
+local done=CreateFrame("Button",nil,hint); done:SetWidth(92); done:SetHeight(30)
+done:SetPoint("RIGHT",hint,"RIGHT",-14,-10)
+K.Chamfer(done,4,{.18,.14,.07,1},{.67,.57,.36,1}); K.LText(done,"Fertig",12,"CENTER",0,0)
+L.hint,L.done=hint,done; hint:Hide()
+table.insert(UISpecialFrames,"KeijinUILayoutHint")
 function L.IsEditing() return editing end
-function L.Toggle() editing=not editing; if not editing then Stop() end; RefreshGrid(editing or IsAltKeyDown()) end
+function L.SetEditing(on)
+    editing=on and true or false
+    if editing then hint:Show() else Stop(); hint:Hide() end
+    RefreshGrid(editing or IsAltKeyDown())
+    L.Update()
+end
+function L.Toggle() L.SetEditing(not editing) end
+done:SetScript("OnClick",function() L.SetEditing(false) end)
+hint:SetScript("OnHide",function() if editing then L.SetEditing(false) end end)
 function L.ToggleGrid()
     K.DB().snap=(K.DB().snap==false)
     K.Say(K.T("Raster und Einrasten")..": "..(K.DB().snap and K.T("An (Shift beim Loslassen: ohne Einrasten)") or K.T("Aus")))
@@ -261,4 +279,4 @@ function L.MigrateStatistics()
 end
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then L.MigrateStatistics() end end)
 table.insert(K.updates,L.Update)
-K.On("PLAYER_LEAVING_WORLD",function() editing=false; Stop(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)
+K.On("PLAYER_LEAVING_WORLD",function() editing=false; Stop(); hint:Hide(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)

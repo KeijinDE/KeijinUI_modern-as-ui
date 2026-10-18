@@ -41,7 +41,7 @@ local function Attached() return K.DB().resourceFree~=true end
 local function Anchor(f)
     local player=K.units.player
     f:ClearAllPoints(); f:SetScale(player:GetScale())
-    f:SetPoint("TOPLEFT",player,"BOTTOMLEFT",54,-4)
+    f:SetPoint("TOP",player,"BOTTOM",0,-4)
 end
 local function Detach()
     if not Attached() then return end

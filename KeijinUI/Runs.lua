@@ -20,7 +20,7 @@ local RUNNING={playing=true,choosing=true,paused=true,victory=true}
 local WAIT=2          -- seconds to wait for the first run line after a zone line
 local BACK=3          -- seconds the run time may fall back before it counts as a restart
 local needZone=false  -- the last run ended, the zone line of the next one is still to come
-local zoneAt,gotRun   -- a zone line arrived at this time; has a run line followed?
+local zoneAt,gotRun,pendingZone -- wait for matching run data; never read the previous run on a new zone event
 local MAX_ROWS=10
 local MIN_TIME=90    -- seconds of run time before a run counts
 local ZONE_NAMES={   -- English names from the game, used while no name was received or stored
@@ -39,26 +39,29 @@ local function Store()
     if type(db.runs.names)~="table" then db.runs.names={} end
     return db.runs
 end
-local function ClassToken()
-    local z=AZS_ZONE
+local function ClassToken(z)
+    z=z or AZS_ZONE
     if type(z)=="table" and type(z.class)=="string" and z.class~="" then return string.upper(z.class) end
     if UnitClass then local _,token=UnitClass("player"); if type(token)=="string" and token~="" then return token end end
     return nil
 end
 -- Race of the hero: localized name and token (UnitRace), "?" when the client gives none.
-local function Race()
+local function Race(z)
+    if type(z)=="table" and type(z.race)=="string" and z.race~="" then
+        return z.race,type(z.rname)=="string" and z.rname~="" and z.rname or z.race
+    end
     if type(UnitRace)~="function" then return "?",nil end
     local localized,token=UnitRace("player")
     if type(token)~="string" or token=="" then token=nil end
     if type(localized)~="string" or localized=="" then localized=nil end
     return token or localized or "?",localized
 end
-local function CharKey()
-    local name=UnitName and UnitName("player")
+local function CharKey(z)
+    local name=type(z)=="table" and z.hero or (UnitName and UnitName("player"))
     if type(name)~="string" or name=="" then name=nil end
-    local class=ClassToken()
+    local class=ClassToken(z)
     if not class then return nil,nil end
-    local race=Race()
+    local race=Race(z)
     return class.."-"..race,name
 end
 local function Now() return type(time)=="function" and time() or 0 end
@@ -67,9 +70,18 @@ local function Today()
     local ok,value=pcall(date,"%Y-%m-%d")
     return ok and value or nil
 end
+-- A short diagnostic trail survives reloads, without adding chat spam or a run per tick.
+local function Trace(kind,open,detail)
+    local db=K.DB()
+    if type(db.runTrace)~="table" then db.runTrace={} end
+    table.insert(db.runTrace,{kind=kind,date=Today(),at=Now(),zone=open and open.zone,
+        char=open and open.char,t=open and open.last,detail=detail})
+    while table.getn(db.runTrace)>24 do table.remove(db.runTrace,1) end
+end
 -- GetTime() of the last zone line (AZS_ZONE_UPDATED). The game sends the zone line again when the new run's world
 -- entry reloads the interface, and that reload wipes the chat: a message from the session before must not count.
 local function ZoneStamp()
+    if zoneAt then return zoneAt end
     local at=AZS_ZONE_UPDATED
     if type(at)=="number" then return at end
     return nil
@@ -104,8 +116,8 @@ function R.Ordinal(n)
     return n..suffix
 end
 local function ClassColor(class)
-    local c=type(RAID_CLASS_COLORS)=="table" and class and RAID_CLASS_COLORS[class]
-    if type(c)=="table" and type(c.r)=="number" then return c.r,c.g,c.b end
+    local r,g,b=K.ClassColor(class)
+    if r then return r,g,b end
     return 1,1,1
 end
 local function Hex(r,g,b) return string.format("|cff%02x%02x%02x",math.floor(r*255+0.5),math.floor(g*255+0.5),math.floor(b*255+0.5)) end
@@ -131,23 +143,71 @@ local function Count(open)
     if type(runs[open.zone])~="table" then runs[open.zone]={} end
     local e=runs[open.zone][open.char]
     if type(e)~="table" then e={runs=0,wins=0}; runs[open.zone][open.char]=e end
-    e.name=open.name; e.class=open.class; e.cname=open.cname; e.race,e.rname=Race()
+    e.name=open.name; e.class=open.class; e.cname=open.cname
+    e.race,e.rname=open.race,open.rname
+    if not e.race then e.race,e.rname=Race() end
     e.runs=(K.Number(e.runs) and e.runs or 0)+1
     open.counted=true
+    Trace("count",open)
     if Render then Render() end
 end
 -- Writes last time, date and longest survival of the open run into the totals. Safe to repeat.
 local function Commit(open)
-    if not open.counted then return end
+    if not open.counted then return false end
     local e=Entry(open.zone,open.char)
-    if not e or not K.Number(open.last) or open.last<=0 then return end
-    e.lastTime=open.last; e.lastDate=Today()
-    if not K.Number(e.longest) or open.last>e.longest then e.longest=open.last end
+    if type(e)~="table" or not K.Number(open.last) or open.last<=0 then return false end
+    local recorded=open.won and not open.endless and open.winTime or open.last
+    if not K.Number(recorded) then return false end
+    e.lastTime=recorded; e.lastDate=Today()
+    if not K.Number(e.longest) or recorded>e.longest then e.longest=recorded end
+    if open.won then K.runSnapshots.Capture(open); K.runSnapshots.Extend(open) end
+    -- Confirm the same stored entry the overview reads, not merely a received packet.
+    local stored=Entry(open.zone,open.char)
+    return stored==e and K.Number(stored.runs) and stored.runs>=1 and stored.lastTime==recorded
+        and (not open.won or (K.Number(stored.wins) and stored.wins>=1 and K.Number(stored.bestWin)
+            and K.Number(open.winTime) and stored.bestWin<=open.winTime))
+end
+local function Feedback(open,kind)
+    if kind=="win" then
+        if open.winFeedback then return end
+        open.winFeedback=true
+    else
+        if open.finishFeedback then return end
+        open.finishFeedback=true
+        -- Victory was already confirmed; only report again if continued play changed the time.
+        if kind=="saved" and open.winFeedback then
+            if open.last<=(open.winTime or open.last) then return end
+            kind="updated"
+        end
+    end
+    if not R.MessageOn() then return end
+    local label=open.cname or open.class or "?"
+    local race=RACES[open.race] and K.T(RACES[open.race]) or open.rname or open.race
+    if race and race~="?" then label=label..", "..race end
+    local zone,duration=R.ZoneName(open.zone),K.Clock(kind=="win" and open.winTime or open.last or 0)
+    if kind=="win" then
+        K.Say(K.T("Sieg in Rundenübersicht gespeichert: %s · %s · %s.",zone,label,duration))
+    elseif kind=="saved" then
+        K.Say(K.T("In Rundenübersicht gespeichert: %s · %s · %s.",zone,label,duration))
+    elseif kind=="updated" then
+        K.Say(K.T("Run in Rundenübersicht aktualisiert: %s · %s · %s (Siegzeit %s).",zone,label,duration,K.Clock(open.winTime)))
+    elseif kind=="short" then
+        K.Say(K.T("Run nicht gespeichert: %s · %s · %s. Mindestdauer ohne Sieg: %s.",zone,label,duration,K.Clock(MIN_TIME)))
+    else
+        K.Say(K.T("Rundeneintrag konnte nicht bestätigt werden: %s · %s. Bitte /kui runs debug prüfen.",zone,label))
+    end
 end
 local function Finish(open)
     if not open.counted and K.Number(open.last) and open.last>=MIN_TIME then Count(open) end
-    Commit(open)
+    local committed=Commit(open)
+    K.pace.Record(open)
+    Trace("finish",open,open.won and "won" or "not won")
     Store().open=nil
+    if committed then
+        Feedback(open,"saved")
+    elseif not open.counted and not open.won and K.Number(open.last) and open.last<MIN_TIME then
+        Feedback(open,"short")
+    else Feedback(open,"failed") end
     if Render then Render() end
 end
 local function Start(z,key,name,t)
@@ -168,6 +228,8 @@ local function Start(z,key,name,t)
     if e then best,longest,done=e.bestWin,e.longest,e.runs end
     local n=(K.Number(done) and done or 0)+1
     runs.open={zone=zone,char=key,name=name,class=classKey,cname=cname,start=Now(),last=t or 0,won=false,counted=false}
+    runs.open.race,runs.open.rname=Race(z)
+    Trace("start",runs.open)
     local a=runs.announced
     runs.announced=nil
     local told=type(a)=="table" and a.zone==zone and a.char==key and a.at==ZoneStamp()
@@ -195,28 +257,41 @@ local function Announce(z,key,name)
     runs.announced={zone=zone,char=key,at=ZoneStamp()}
     K.Say(R.Message(R.ZoneName(zone),cname or "?",classKey,n,e.bestWin,e.longest))
 end
-local function Win(open,t)
+local function Win(open,t,packet)
+    if open.won then return end
     Count(open)
     local e=Entry(open.zone,open.char)
     open.won=true; open.winTime=t
     if not e then return end
     e.wins=(K.Number(e.wins) and e.wins or 0)+1
     if K.Number(t) and (not K.Number(e.bestWin) or t<e.bestWin) then e.bestWin=t end
+    K.runSnapshots.Capture(open,packet)
+    K.pace.Record(open)
+    local committed=Commit(open)
+    Trace("win",open)
+    if committed then Feedback(open,"win") end
     if Render then Render() end
 end
 
-local function Update()
+local function IsWin(run,phase)
+    local won=type(run)=="table" and run.won
+    return phase=="victory" or won==1 or won=="1" or won==true or won=="true"
+end
+local function Update(packet,zone)
     if zoneAt and not gotRun then
         if GetTime()-zoneAt<WAIT then return end
         zoneAt=nil
     end
-    local z=AZS_ZONE
+    local z=zone or pendingZone or AZS_ZONE
     if type(z)~="table" or type(z.zone)~="string" or z.zone=="" then return end
-    local phase=AZS_GetPhase and AZS_GetPhase()
+    local phase=packet and packet.ph or (AZS_GetPhase and AZS_GetPhase())
     if type(phase)~="string" then return end
-    local t=AZS_GetRunTime and AZS_GetRunTime()
+    -- Totals and restart detection use the reported clock. Interpolation is only for
+    -- visible clocks: a delayed packet after a long frame must not invent a restart.
+    local t=packet and packet.t or (type(AZS_RUN)=="table" and AZS_RUN.t)
+    if not K.Number(t) then t=AZS_GetRunTime and AZS_GetRunTime() end
     if not K.Number(t) then t=nil end
-    local key,name=CharKey()
+    local key,name=CharKey(z)
     if not key then return end
     local runs=Store()
     local open=runs.open
@@ -228,7 +303,10 @@ local function Update()
     end
     if phase=="dead" then
         if open then
-            if t and t>open.last then open.last=t end
+            local report=packet or AZS_RUN or {}
+            if open.won and report.endl==1 then open.endless=true end
+            if t and t>open.last and (not open.won or open.endless) then open.last=t end
+            if open.char==key and open.zone==z.zone and IsWin(report,phase) then Win(open,t or open.last,report) end
             Finish(open); needZone=true
         end
         return
@@ -240,23 +318,56 @@ local function Update()
         if needZone then return end
         open=Start(z,key,name,t)
     end
-    if t and t>open.last then open.last=t end
+    local report=packet or AZS_RUN or {}
+    K.pace.Observe(open,report,z)
+    if open.won and report.endl==1 then open.endless=true end
+    if t and t>open.last and (not open.won or open.endless) then open.last=t end
     if not open.counted and open.last>=MIN_TIME then Count(open) end
-    if type(AZS_RUN)=="table" and AZS_RUN.won==1 and not open.won then Win(open,t or open.last) end
+    if IsWin(report,phase) and not open.won then Win(open,t or open.last,report) end
+    if open.won and report.endl==1 then open.endless=true; if t and t>open.last then open.last=t end end
+    if open.won then Commit(open) end
 end
 R.Update=Update
 
-K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then needZone=false; zoneAt=GetTime(); gotRun=false; Update()
-    elseif prefix=="AZSRUN" then gotRun=true; Update() end
-end)
-local function Save()
+local lastSignal
+local function Receive(prefix,message)
+    if prefix=="AZSZONE" then
+        needZone=false; zoneAt=GetTime(); gotRun=false
+        pendingZone=type(AZS_Fields)=="function" and type(message)=="string" and AZS_Fields(message) or nil
+    elseif prefix=="AZSRUN" then
+        local packet=type(AZS_Fields)=="function" and type(message)=="string" and AZS_Fields(message)
+        if packet and type(packet.ph)=="string" then
+            local z=pendingZone or AZS_ZONE
+            local signature=tostring(z and z.zone)..":"..tostring(CharKey(z))..":"..packet.ph..":"..tostring(packet.won)
+            if signature~=lastSignal then
+                Trace("signal",{zone=z and z.zone,char=CharKey(z),last=packet.t},packet.ph.." won="..tostring(packet.won).." ("..type(packet.won)..")")
+                lastSignal=signature
+            end
+            gotRun=true; Update(packet,pendingZone)
+        end
+    end
+end
+local function Save(reason)
+    Update()
     local open=type(KeijinUIDB)=="table" and type(KeijinUIDB.runs)=="table" and KeijinUIDB.runs.open
     if type(open)=="table" then Commit(open) end
+    Trace("shutdown",open,reason)
 end
-K.On("PLAYER_LOGOUT",Save)
-K.On("PLAYER_LEAVING_WORLD",Save)
-table.insert(K.updates,Update)
+-- Recording is independent of HUD updates and their errors or visibility.
+local recorder=CreateFrame("Frame","KeijinUIRunRecorder",UIParent)
+R.recorder=recorder
+recorder:RegisterEvent("CHAT_MSG_ADDON"); recorder:RegisterEvent("PLAYER_LOGOUT"); recorder:RegisterEvent("PLAYER_LEAVING_WORLD")
+recorder:RegisterEvent("ADDON_LOADED")
+recorder:SetScript("OnEvent",function()
+    if event=="CHAT_MSG_ADDON" then Receive(arg1,arg2)
+    elseif event=="ADDON_LOADED" then if arg1=="KeijinUI" then K.runSnapshots.Loaded(); Trace("snapshots_loaded",nil,K.version) end
+    else Save(event) end
+end)
+local elapsed=0
+recorder:SetScript("OnUpdate",function()
+    elapsed=elapsed+(tonumber(arg1) or 0)
+    if elapsed>=.1 then elapsed=0; Update() end
+end)
 
 -- Window -----------------------------------------------------------------------------------------------
 local WIDTH=560
@@ -395,15 +506,22 @@ function R.Page() return page end
 function K.RunsCommand(arg)
     arg=arg or ""
     if arg=="" then R.Toggle(); return end
+    if arg=="check" then K.runSnapshots.Check(); return end
     if arg=="debug" then
         local z,runs=AZS_ZONE,Store()
         local open,a=runs.open,runs.announced
         local function S(v) return v==nil and "nil" or tostring(v) end
         K.Say("runs debug: phase="..S(AZS_GetPhase and AZS_GetPhase()).." t="..S(AZS_GetRunTime and AZS_GetRunTime())
+            .." won="..S(type(AZS_RUN)=="table" and AZS_RUN.won).." ("..type(type(AZS_RUN)=="table" and AZS_RUN.won)..")"
             .." zone="..(type(z)=="table" and S(z.zone).."/"..S(z.zname).."/"..S(z.class) or "nil")
             .." zoneUpdated="..S(AZS_ZONE_UPDATED).." runUpdated="..S(AZS_RUN_UPDATED).." now="..S(GetTime()))
         K.Say("runs debug: char="..S(CharKey()).." open="..(type(open)=="table" and S(open.zone).."/"..S(open.char).."/"..S(open.last) or "nil")
             .." announced="..(type(a)=="table" and S(a.zone).."/"..S(a.char) or "nil").." needZone="..S(needZone).." msg="..S(R.MessageOn()))
+        local trail=K.DB().runTrace or {}
+        for i=math.max(1,table.getn(trail)-7),table.getn(trail) do
+            local v=trail[i]
+            K.Say("runs trace: "..S(v.kind).." "..S(v.zone).."/"..S(v.char).." t="..S(v.t).." "..S(v.detail))
+        end
         return
     end
     local _,_,word=string.find(arg,"^msg%s*(%S*)$")

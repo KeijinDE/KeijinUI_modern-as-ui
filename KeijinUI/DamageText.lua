@@ -77,6 +77,23 @@ K.On("SPELLS_CHANGED",function() book=nil end)
 local function MeleeIcon()
     if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
 end
+-- Shared, side-effect-free presentation for live hits and the settings preview.
+-- The preview never spawns world hits or updates the running damage average.
+function K.damageText.Describe(mode,crit,school,periodic,spell,small)
+    if mode=="compact" then
+        local s=crit and CRIT or NORMAL
+        return s,s.r,s.g,s.b,nil,false,false
+    end
+    if mode~="scroll" then return end
+    local s=crit and SCROLL.crit or (periodic and SCROLL.periodic or SCROLL.normal)
+    local c=SCHOOL[school] or SCHOOL.Physical
+    local r,g,b=c[1],c[2],c[3]
+    if crit then r,g,b=r+(1-r)*.35,g+(1-g)*.35,b+(1-b)*.35 end
+    if small and not crit and not periodic then s=SCROLL.small; r,g,b=.62,.62,.62 end
+    local icon
+    if K.DB().combatTextIcons~=false then icon=spell and SpellIcon(spell) or (not spell and MeleeIcon()) end
+    return s,r,g,b,icon,true,crit and true or false
+end
 -- Font size and icon side always match.
 local function SetSize(item,size)
     item.size=size
@@ -165,6 +182,7 @@ local function PopFactor(age)
     local v=(age-0.12)/0.12
     return 2-v*v
 end
+K.damageText.PopFactor=PopFactor
 -- Common part: place, style and register one number (scroll: rising, otherwise compact).
 -- icon: texture path shown left of a scroll number (nil: none, the text stays centred).
 local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
@@ -219,30 +237,16 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
             end
         end
     end
-    if mode=="scroll" then
-        local style=crit and SCROLL.crit or (periodic and SCROLL.periodic or SCROLL.normal)
-        local c=SCHOOL[school] or SCHOOL.Physical
-        local r,g,b=c[1],c[2],c[3]
-        if crit then r,g,b=r+(1-r)*0.35,g+(1-g)*0.35,b+(1-b)*0.35 end
-        if not crit and not periodic then
-            -- Running average of the normal hits; a hit under half of it is grey and small.
-            if average and amount<average*0.5 then style=SCROLL.small; r,g,b=0.62,0.62,0.62 end
-            average=average and (average*0.9+amount*0.1) or amount
-        end
-        local icon
-        if K.DB().combatTextIcons~=false then
-            if spell then icon=SpellIcon(spell) else icon=MeleeIcon() end
-        end
-        local item=Add(text,style,r,g,b,targetName,true,crit and true or false,icon)
-        item.crit=crit and true or false; item.periodic=periodic and true or false
-        item.school=school; item.amount=amount
-        item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
-    else
-        local style=crit and CRIT or NORMAL
-        local item=Add(text,style,style.r,style.g,style.b,targetName,false,false)
-        item.crit=crit and true or false; item.amount=amount
-        item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
+    local small
+    if mode=="scroll" and not crit and not periodic then
+        small=average and amount<average*.5
+        average=average and (average*.9+amount*.1) or amount
     end
+    local style,r,g,b,icon,scroll,pop=K.damageText.Describe(mode,crit,school,periodic,spell,small)
+    local item=Add(text,style,r,g,b,targetName,scroll,pop,icon)
+    item.crit=crit and true or false; item.amount=amount
+    if scroll then item.periodic=periodic and true or false; item.school=school end
+    item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
 end
 -- A miss, dodge, parry ... of the player; only the scroll style shows these.
 function K.damageText.SpawnMiss(missType,targetName,spell)

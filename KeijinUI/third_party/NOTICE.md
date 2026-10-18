@@ -21,6 +21,10 @@ dienten als Inspiration und funktionale Vorbilder dafür, was eine Oberfläche
 für Azeroth Survivors anzeigen kann. Ihr Code und ihre Texturen sind nicht
 Teil dieses Pakets und werden nicht geladen.
 
+BossMods 1.0.2 (vom Nutzer bereitgestelltes Archiv) diente zusätzlich zur
+fachlichen Prüfung der Endloskennung und der Aussagekraft von Boss Timern.
+Die Snapshot und Pace Implementierungen in KeijinUI sind eigene Arbeit.
+
 Blizzard Texturen aus dem Spielclient (zum Beispiel Symbole, Statusleisten und
 Porträts) werden nur über ihren Clientpfad referenziert und nicht mitgeliefert.
 Blizzard behält die Rechte daran.

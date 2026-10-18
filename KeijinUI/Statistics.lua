@@ -54,7 +54,6 @@ crit:SetWidth(260)
 crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}
-local critNote=K.LText(crit,"Seit Laden der Oberfläche",9,"BOTTOMLEFT",13,9,270)
 for i=1,8 do critRows[i]=K.ListBarRow(crit,i,19) end
 -- Effective healing: sum of positive health gains of the player between two samples.
 local healed,lastHp,lastMax=0,nil,nil
@@ -208,7 +207,7 @@ local function Update()
     table.sort(crits,function(a,b) if a.best==b.best then return a.name<b.name end return a.best>b.best end)
     if valid and not K.DB().hidden.crits and table.getn(crits)>0 then
         local available=(meter:GetBottom() or 220)-190
-        local visible=math.max(1,math.min(8,math.floor((available-56)/21)))
+        local visible=math.max(1,math.min(8,math.floor((available-42)/21)))
         critOffset=math.min(critOffset,math.max(0,table.getn(crits)-visible))
         for i,row in ipairs(critRows) do
             local v=crits[i+critOffset]
@@ -221,10 +220,10 @@ local function Update()
                 row:Show()
             else row:Hide() end
         end
-        crit:SetHeight(56+math.min(visible,table.getn(crits))*21); crit:Show()
+        crit:SetHeight(42+math.min(visible,table.getn(crits))*21); crit:Show()
     else
         for _,row in ipairs(critRows) do row:Hide() end
-        if K.DB().hidden.crits then crit:Hide() else crit:SetHeight(77); crit:Show() end
+        if K.DB().hidden.crits then crit:Hide() else crit:SetHeight(63); crit:Show() end
     end
 end
 -- /kui heal debug: 60 seconds of buff chat events (all names are in the 1.12 event catalog).

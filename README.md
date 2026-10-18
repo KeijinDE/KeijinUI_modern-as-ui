@@ -14,16 +14,18 @@ English first, [Deutsch below](#deutsch).
 KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single visual style:
 
 * Run overview with zone, run clock, progress and boss schedule (boss time and run time), below it the guardian lairs of the map (asleep, fighting, back in, due)
-* Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned
+* Run statistics: elites, guardians and bosses defeated, damage taken, effective healing, gold earned; a counter row with the gold still missing for the next cache (green, yellow, red)
+* Pace: kill progress and recent DPS compared with your earlier matching runs at the same run time (green, yellow, red; on by default, switchable)
 * Damage meter with total and DPS per ability, list of the biggest critical hits
 * Player and target frames with round portrait and joined health bar, square minimap, action bar with ranks and cooldowns
 * Build overview with spells, jewelry and a build tip
 * Encounter bars for bosses, elites and rares, modern nameplates, scrolling combat text with spell icons
 * Loot notice, achievement popup and one chat window in the same frame style
-* Settings window with tabs, layout mode with grid and snapping, a ready made default layout
+* Settings window with a side navigation (Display, Combat, Units, Controls, Layout, General), checkboxes, a live combat text preview, layout mode with grid and snapping, a ready made default layout
+* Optional cursor ring and optional character attributes (both off by default)
 * Class resources: rogue combo points, warlock soul shards and warrior rage; attached to the player or movable with Alt
 * Caches on the minimap with a pointer to the nearest one, optional screen arrow
-* Run history per zone, class and race (`/kui runs`): runs, wins, last time, fastest win and longest survival, plus a start message in chat for every run
+* Run history per zone, class and race (`/kui runs`): runs, wins, last time, fastest win and longest survival, plus a start message in chat for every run; a win is saved as a fixed snapshot the moment it happens, also when you leave straight to the menu
 * Minimap button **Kui**: left click opens the settings, right click the run history, drag it along the minimap edge
 * Original chamfered frames with warm bronze unit borders
 * English and German interface
@@ -45,9 +47,9 @@ KeijinUI replaces the stock Azeroth Survivors HUD with one interface in a single
 * `/kui reset` restores the default layout.
 * The **Kui** button on the minimap opens the settings (left click) and the run history (right click).
 
-![Settings window](screenshots/settings.png)
+![Settings window, General page with the run overview](screenshots/settings.png)
 
-![Minimap button](screenshots/minimap-button.png) ![General settings with the run history](screenshots/settings-general.png)
+![Minimap button](screenshots/minimap-button.png)
 
 All commands and details are in [KeijinUI/README.md](KeijinUI/README.md). The full version history is in [CHANGELOG.md](KeijinUI/CHANGELOG.md).
 
@@ -68,16 +70,18 @@ Eine vollständige, einheitliche Oberfläche für **Azeroth Survivors** (WoW 1.1
 KeijinUI ersetzt die Standardanzeigen von Azeroth Survivors durch eine Oberfläche in einem Stil:
 
 * Runübersicht mit Zone, Runuhr, Fortschritt und Bossplan (Bosszeit und Runzeit), darunter die Wächterhorte der Karte (schläft, im Kampf, zurück in, fällig)
-* Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, effektive Heilung, Gold verdient
+* Runstatistiken: Eliten, Wächter und Bosse besiegt, Schaden erlitten, effektive Heilung, Gold verdient; eine Zählerzeile mit dem noch fehlenden Gold für den nächsten Cache (grün, gelb, rot)
+* Pace: Killfortschritt und aktuelle DPS im Vergleich mit deinen früheren passenden Runs zur selben Runzeit (grün, gelb, rot; standardmäßig an, abschaltbar)
 * Schadensanzeige mit Gesamtschaden und DPS je Fähigkeit, Liste der größten kritischen Treffer
 * Spieler und Zielframe mit rundem Porträt und angeschlossenem Lebensbalken, eckige Minimap, Aktionsleiste mit Rängen und Abklingzeiten
 * Buildübersicht mit Zaubern, Schmuck und Buildtipp
 * Begegnungsbalken für Bosse, Eliten und Rares, moderne Namensplaketten, scrollender Kampftext mit Zaubersymbolen
 * Beutemeldung, Erfolgsmeldung und ein Chatfenster im gleichen Rahmenstil
-* Optionsfenster mit Tabs, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
+* Optionsfenster mit Seitennavigation (Anzeige, Kampf, Einheiten, Bedienung, Layout, Allgemein), Checkboxen, Livevorschau des Kampftexts, Layoutmodus mit Raster und Einrasten, fertiges Standardlayout
+* Optionaler Cursorring und optionale Charakterwerte (beide standardmäßig aus)
 * Klassenressourcen: Combopunkte, Seelensplitter und Wut; am Spieler befestigt oder mit Alt frei beweglich
 * Caches auf der Minimap mit Hinweis auf die nächste, optionaler Bildschirmpfeil
-* Rundenübersicht je Zone, Klasse und Volk (`/kui runs`): Runs, Siege, letzte Zeit, schnellster Sieg und längstes Überleben, dazu eine Startmeldung im Chat zu jedem Run
+* Rundenübersicht je Zone, Klasse und Volk (`/kui runs`): Runs, Siege, letzte Zeit, schnellster Sieg und längstes Überleben, dazu eine Startmeldung im Chat zu jedem Run; ein Sieg wird sofort als fester Snapshot gesichert, auch wenn du direkt ins Menü gehst
 * Minimapknopf **Kui**: Linksklick öffnet die Optionen, Rechtsklick die Rundenübersicht, am Minimaprand verschiebbar
 * Eigene abgeschrägte Rahmen mit warmen bronzefarbenen Unitkanten
 * Oberfläche auf Englisch und Deutsch

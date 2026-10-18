@@ -127,15 +127,12 @@ local function Create(unit,mirror)
     K.units[unit]=f
 end
 Create("player",false); Create("target",true)
--- Health colour: class colour by default (RAID_CLASS_COLORS from FrameXML Fonts.xml, token
--- from the second UnitClass return); /kui switches back to green and red. The 1.12 table gives
--- shamans the paladin pink, so they get the later dark blue instead.
-local CLASS_OVERRIDE={SHAMAN={r=0.00,g=0.44,b=0.87}}
+-- Health colour: class colour by default (K.ClassColor); /kui switches back to green and red.
 local function HealthColor(unit)
     if K.DB().classHealth~=false and (unit=="player" or UnitIsPlayer(unit)) then
         local _,token=UnitClass(unit)
-        local c=token and (CLASS_OVERRIDE[token] or RAID_CLASS_COLORS and RAID_CLASS_COLORS[token])
-        if c then return c.r,c.g,c.b end
+        local r,g,b=K.ClassColor(token)
+        if r then return r,g,b end
     end
     if unit=="player" then return 0.12,0.88,0.08 end
     return 0.85,0.08,0.08

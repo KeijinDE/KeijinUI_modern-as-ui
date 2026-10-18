@@ -5,6 +5,71 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 2.0.0 (2026-10-18, release v2.0.0)
+
+The biggest update so far. Highlights:
+
+* **New settings window.** Clear pages on the left (Display, Combat, Units, Controls, Layout, General), real checkboxes and a live preview of the combat numbers.
+* **Your wins are safe.** A win is saved the moment it happens, even if you go straight back to the menu. Endless mode no longer touches your win time, and very short runs no longer count.
+* **Pace.** Shows during a run whether you are faster or slower than in your earlier runs with the same class and zone (green, yellow, red). Boss kill times get colors too.
+* **Caches.** Instead of an estimated time you now see how much gold you still need for the next cache: red, yellow, or green when you can open it.
+* **New optional displays.** A cursor ring and a compact panel with your character attributes (crit, haste, lifesteal and more). Both are off by default.
+* Shamans are shown in blue everywhere, and many small fixes.
+
+The detailed notes for the test builds 1.2.0 to 1.3.4 follow below.
+
+### 1.3.4 (2026-10-18)
+
+Shamans appear in dark blue in the run overview and the run start message instead of the paladin pink of the 1.12 class color table, matching the player and target frames. One shared class color function now serves all three places.
+
+### 1.3.3 (2026-10-18)
+
+The counter row no longer estimates the time until the next cache is affordable. It shows the gold still missing for the next cache instead (never below zero, "Ready" once enough gold is there), updated with gold and price. Color: green when affordable, yellow when at most 25% of the cache price is missing, red when more is missing. The 25% boundary is a starting value for in-game review.
+
+### 1.3.2 (2026-10-18)
+
+Pace is enabled by default when no preference has been saved. It can still be disabled in Display; an explicitly saved disabled preference survives updates and reloads. The comparison, weighting and neutral states are unchanged.
+
+### 1.3.1 (2026-10-18)
+
+Pace now combines kill progress (70%) with damage per second over the last 30 native run seconds (30%), comparing the same timestamp and window with the median of matching prior runs. Both components use the same reference runs; class, zone, difficulty and modifiers must match. The DPS contribution is capped at 150% of its reference to limit burst distortion. Existing green/yellow/red thresholds remain 90% / 70%.
+
+Samples now retain native cumulative damage alongside kills. Missing or reset damage, gaps and old kill-only history do not become fabricated DPS; the indicator explicitly falls back to kills only. Hover shows current/reference kills, current/reference recent DPS, sample count and weighting. Victory snapshots retain the new samples without changing their fixed result. Reference review confirms SurvivorUI uses rolling kill rate and boss stretches, not DPS; this calculation is original.
+
+### 1.3.0 (2026-10-18)
+
+Victory creates an immediate, separate snapshot with fixed win time, identity, progress samples and available run totals. Unsignaled post-win packets cannot extend the recorded result. Only the game's explicit endless flag permits a separate total-duration extension; victory time and victory totals stay fixed. Up to 40 snapshots are kept. `/kui runs check` distinguishes a newly captured receipt from one actually loaded back from saved data. A read-only checker and a menu/exit/restart test procedure accompany the change; there is no claim of an immediate disk flush through the addon API.
+
+Optional Pace in Display compares kill progress against the median of up to 30 matching previous runs at the same run time, with identical class, zone, difficulty and modifiers. Good is green from 90%, Slow yellow from 70%, Very slow red below 70%; absent references and endless mode stay neutral. Existing aggregate-only history is not turned into invented progress samples.
+
+Defeated bosses receive a subtle background behind their times: green below 1:30, yellow through 3:00, red above. Final bosses initially receive 50% more time (2:15 / 4:30). Missing historical death times remain neutral. Existing frame colors and thin/off headers are retained.
+
+### 1.2.4 (2026-10-18)
+
+Run messages confirm a win immediately after its overview entry is written and checked; other completed runs are confirmed at their end. Messages include zone, class, race and time. Runs shorter than 90 seconds without a win explicitly report that they were not counted. Repeated packets and reloads do not repeat the confirmation. Continuing after a win reports the final updated duration without counting another win. A missing or unconfirmed entry receives no success message. These messages follow the existing Run message setting.
+
+### 1.2.3 (2026-10-18)
+
+Settings always open on Display at the top of the page, including after using another category or reloading the interface.
+
+### 1.2.2 (2026-10-18)
+
+Run recording processes incoming run and zone messages directly, independently of HUD updates and native API listener order. Victory phase is recognized even without a numeric won flag; a win in the last death message is credited before closing the run. Win time and last-run values are stored immediately, including when returning directly to the menu. Repeated victory messages, reloads and endless continuation retain a single run and win.
+
+Character identity prefers the run's own class, race and hero metadata. Restart detection uses reported run time so delayed packets do not create extra runs through clock interpolation. A bounded diagnostic trail keeps recent recording transitions; `/kui runs debug` includes the win flag and recent decisions. Existing history is retained.
+
+### 1.2.1 (2026-10-18)
+
+Settings open at 80% size by default; Layout offers 70–100% menu scaling. Layout mode shows movement instructions and can be closed with its Done button or Escape. Attached class resources are centered below the entire player frame. The critical-hit panel no longer shows the interface-load caption and uses less vertical space.
+
+Combat preview now animates labeled normal hits, critical hits and two area hits using the live combat-text presentation rules. Style, spell icons and merging update immediately. Off and Game modes show their actual status; spell icons apply to Scrolling style. Sample hits stay inside settings and do not enter combat statistics.
+
+### 1.2.0 (2026-10-18)
+
+New settings based on the approved left navigation design: Display, Combat, Units, Controls, Layout and General. Explicit checkboxes and choice menus replace cycling text rows; only the content area scrolls. The window fits smaller viewports and keeps saved category and position. Character-attribute selection and local previews remain usable while the corresponding HUD display is off. Existing setting keys, frame layouts, commands and native auto-run bindings are retained.
+
+Optional cursor ring (off by default), with size and color selection, follows the native cursor without intercepting input. Optional character attributes (off by default) show selected native values; unknown or stale-after-new-run values are shown as unknown until a new report arrives. The pace indicator is labeled as a future feature, with no simulated rating.
+
 ### 1.1.1 (2026-10-17, release v1.1.1)
 
 Run timeline: border, fill and boss checkpoints now share the display pixel grid, including fractional UI scaling and moved panels. The top and bottom border use the same thickness, all checkpoints have equal widths and symmetric clearances. The fill follows the inner chamfer without crossing the border. Bronze coloring is retained.
@@ -182,6 +247,71 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 2.0.0 (2026-10-18, Release v2.0.0)
+
+Das bisher größte Update. Das Wichtigste:
+
+* **Neues Optionsfenster.** Übersichtliche Seiten links (Anzeige, Kampf, Einheiten, Bedienung, Layout, Allgemein), echte Checkboxen und eine Livevorschau der Kampfzahlen.
+* **Deine Siege sind sicher.** Ein Sieg wird sofort gespeichert, auch wenn du direkt ins Menü zurückgehst. Endlos verändert deine Siegzeit nicht mehr, und sehr kurze Runs zählen nicht mehr.
+* **Pace.** Zeigt während des Runs, ob du schneller oder langsamer bist als in deinen früheren Runs mit derselben Klasse und Zone (grün, gelb, rot). Auch die Bosszeiten bekommen Farben.
+* **Caches.** Statt einer geschätzten Zeit siehst du jetzt, wie viel Gold dir für den nächsten Cache noch fehlt: rot, gelb oder grün, sobald du ihn öffnen kannst.
+* **Neue optionale Anzeigen.** Ein Cursorring und eine kompakte Tafel mit deinen Charakterwerten (Krit, Tempo, Lebensraub und mehr). Beide sind standardmäßig aus.
+* Schamanen erscheinen überall blau, dazu viele kleine Korrekturen.
+
+Die ausführlichen Notizen der Teststände 1.2.0 bis 1.3.4 stehen darunter.
+
+### 1.3.4 (2026-10-18)
+
+Schamanen erscheinen in der Rundenübersicht und in der Startmeldung eines Laufs dunkelblau statt im Paladin Rosa der Klassenfarbtabelle von 1.12, passend zu Spieler und Zielrahmen. Eine gemeinsame Klassenfarbfunktion bedient jetzt alle drei Stellen.
+
+### 1.3.3 (2026-10-18)
+
+Die Zählerzeile schätzt nicht mehr die Zeit, bis der nächste Cache bezahlbar ist. Sie zeigt stattdessen das noch fehlende Gold für den nächsten Cache (nie unter null, „Bereit“, sobald genug Gold da ist) und aktualisiert sich mit Gold und Preis. Farbe: Grün, wenn bezahlbar, Gelb, wenn höchstens 25% des Cachepreises fehlen, Rot, wenn mehr fehlt. Die Grenze von 25% ist ein Startwert für die Prüfung im Spiel.
+
+### 1.3.2 (2026-10-18)
+
+Pace ist standardmäßig eingeschaltet, wenn noch keine Auswahl gespeichert wurde. Unter Anzeige bleibt es abschaltbar; eine ausdrücklich gespeicherte Deaktivierung bleibt bei Updates und Neuladen erhalten. Vergleich, Gewichtung und neutrale Zustände bleiben unverändert.
+
+### 1.3.1 (2026-10-18)
+
+Pace kombiniert jetzt Gegnerfortschritt (70%) mit Schaden pro Sekunde über die letzten 30 nativen Spielsekunden (30%). Verglichen werden derselbe Zeitpunkt und dasselbe Zeitfenster mit dem Median passender früherer Runden. Beide Anteile verwenden dieselben Vergleichsrunden; Klasse, Zone, Schwierigkeit und Modifikatoren müssen übereinstimmen. Der DPS Beitrag ist bei 150% seines Vergleichswerts begrenzt, damit einzelne Schadensspitzen weniger verzerren. Die Grenzen für Grün, Gelb und Rot bleiben bei 90% / 70%.
+
+Fortschrittsproben enthalten jetzt neben Kills auch den nativen Gesamtschaden. Fehlender oder zurückgesetzter Schaden, Datenlücken und alte reine Killdaten werden nicht zu erfundenen DPS; der Indikator kennzeichnet den Rückfall auf reine Gegnerdaten. Der Tooltip zeigt aktuelle und historische Kills, aktuelle und historische DPS, Anzahl der Vergleichsrunden und Gewichtung. Sieg Snapshots behalten die neuen Proben bei unverändert festem Ergebnis. Die Quellenprüfung bestätigt: SurvivorUI verwendet eine gleitende Killrate und Bossabschnitte, keine DPS. Unsere Berechnung ist eigenständig.
+
+### 1.3.0 (2026-10-18)
+
+Ein Sieg erzeugt sofort einen eigenen Snapshot mit fester Siegzeit, Identität, Fortschrittsproben und verfügbaren Rundensummen. Spätere Meldungen ohne Endlossignal verlängern das Ergebnis nicht. Erst das ausdrückliche Endlosfeld des Spiels erlaubt eine gesonderte Gesamtzeit; Siegzeit und Siegwerte bleiben unverändert. Bis zu 40 Snapshots bleiben erhalten. `/kui runs check` unterscheidet einen gerade erfassten Stand von einem tatsächlich wieder aus gespeicherten Daten geladenen Stand. Eine Dateiprüfung und ein Testablauf für Menü, Beenden und Neustart liegen bei. Ein sofortiges Schreiben auf den Datenträger durch die Addon API wird nicht behauptet.
+
+Der optionale Pace Indikator unter Anzeige vergleicht den Gegnerfortschritt zur gleichen Runzeit mit dem Median von bis zu 30 passenden vorherigen Runden derselben Klasse, Zone, Schwierigkeit und Modifikatoren. Gut ist ab 90% grün, Langsam ab 70% gelb und Sehr langsam darunter rot; fehlende Vergleichsdaten und Endlos bleiben neutral. Aus alten reinen Rundensummen werden keine Fortschrittsdaten erfunden.
+
+Besiegte Bosse bekommen einen dezenten Hintergrund hinter ihren Zeiten: grün unter 1:30, gelb bis einschließlich 3:00, darüber rot. Für Endbosse gelten zunächst 50% längere Grenzen (2:15 / 4:30). Unbekannte historische Todeszeiten bleiben neutral. Bestehende Rahmenfarben und schmale oder ausgeblendete Titel bleiben erhalten.
+
+### 1.2.4 (2026-10-18)
+
+Run Meldungen bestätigen einen Sieg sofort nach dem Schreiben und Prüfen des Eintrags in der Rundenübersicht; andere abgeschlossene Runden werden am Ende bestätigt. Die Nachricht nennt Zone, Klasse, Volk und Zeit. Runden unter 90 Sekunden ohne Sieg melden ausdrücklich, dass sie nicht gezählt wurden. Wiederholte Spielmeldungen und Neuladen erzeugen keine doppelte Bestätigung. Wird nach einem Sieg weitergespielt, meldet das Ende die aktualisierte Dauer, ohne einen zweiten Sieg zu zählen. Bei fehlendem oder nicht bestätigtem Eintrag erscheint keine Erfolgsmeldung. Die Nachrichten beachten die bestehende Einstellung Run Meldung.
+
+### 1.2.3 (2026-10-18)
+
+Die Einstellungen öffnen immer auf Anzeige am Seitenanfang, auch nach dem Besuch einer anderen Kategorie oder dem Neuladen der Oberfläche.
+
+### 1.2.2 (2026-10-18)
+
+Die Rundenerfassung verarbeitet eingehende Runden und Zonenmeldungen direkt, unabhängig von HUD Aktualisierungen und der Reihenfolge der nativen API Listener. Die Siegphase zählt auch ohne numerische Siegkennung; ein Sieg in der letzten Todesmeldung wird vor dem Abschließen verbucht. Siegzeit und letzte Rundenwerte werden sofort gespeichert, auch beim direkten Wechsel ins Menü. Wiederholte Siegmeldungen, Neuladen und anschließendes Endlosspiel bleiben eine Runde mit einem Sieg.
+
+Klasse, Volk und Held stammen bevorzugt aus den Daten der Runde. Die Neustarterkennung verwendet die gemeldete Rundenzeit, damit verspätete Meldungen durch eine weitergelaufene Anzeigeuhr keine zusätzlichen Runden erzeugen. Ein begrenztes Diagnoseprotokoll hält die letzten Übergänge fest; `/kui runs debug` zeigt auch die Siegkennung und die letzten Entscheidungen. Die bestehende Historie bleibt erhalten.
+
+### 1.2.1 (2026-10-18)
+
+Die Einstellungen öffnen standardmäßig mit 80% Größe; unter Layout lässt sich die Menügröße zwischen 70 und 100% wählen. Der Layoutmodus zeigt Bedienhinweise und lässt sich über Fertig oder Escape beenden. Angeheftete Klassenressourcen sitzen mittig unter dem gesamten Spielerrahmen. Im Kritfenster entfällt der Hinweis zum Laden der Oberfläche samt überflüssigem Platz.
+
+Die Kampfvorschau animiert beschriftete normale Treffer, kritische Treffer und zwei Flächentreffer mit denselben Darstellungsregeln wie der Kampftext. Stil, Zaubersymbole und Bündelung reagieren sofort. Aus und Spiel zeigen ihren tatsächlichen Status; Zaubersymbole gehören zum scrollenden Stil. Die Beispieltreffer bleiben innerhalb der Einstellungen und fließen nicht in die Kampfstatistik ein.
+
+### 1.2.0 (2026-10-18)
+
+Neue Einstellungen nach dem abgestimmten Entwurf mit linker Navigation: Anzeige, Kampf, Einheiten, Bedienung, Layout und Allgemein. Klare Checkboxen und Auswahlmenüs ersetzen durchschaltbare Textzeilen; nur der Inhaltsbereich scrollt. Das Fenster passt sich kleineren Auflösungen an und merkt Kategorie und Position. Werteauswahl und lokale Vorschauen bleiben auch bei ausgeschalteter HUD Anzeige nutzbar. Bestehende Einstellungsschlüssel, Rahmenpositionen, Befehle und native Laufbelegungen bleiben erhalten.
+
+Optionaler Cursorring (standardmäßig aus) mit Größenwahl und Farbe folgt dem nativen Cursor, ohne Eingaben abzufangen. Optionale Charakterwerte (standardmäßig aus) zeigen ausgewählte native Werte; fehlende oder nach einem Runwechsel veraltete Werte bleiben bis zur neuen Meldung unbekannt. Der Pace-Indikator ist als künftige Funktion gekennzeichnet, ohne vorgetäuschte Bewertung.
 
 ### 1.1.1 (2026-10-17, Release v1.1.1)
 

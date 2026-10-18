@@ -1,8 +1,15 @@
-KeijinUI = { version = "1.1.1", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "2.0.0", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end
+-- Class colour from RAID_CLASS_COLORS (token from the second UnitClass return). The 1.12 table gives shamans the
+-- paladin pink, so they get the later dark blue instead. Returns nil for unknown tokens.
+local CLASS_OVERRIDE = { SHAMAN = { r = 0.00, g = 0.44, b = 0.87 } }
+function K.ClassColor(token)
+    local c = token and (CLASS_OVERRIDE[token] or type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token])
+    if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
+end
 function K.DB()
     if type(KeijinUIDB) ~= "table" then KeijinUIDB = {} end
     local db = KeijinUIDB

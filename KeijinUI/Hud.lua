@@ -61,6 +61,30 @@ K.HeaderPoint(zone,tracker,"TOPLEFT",14,-35)
 K.HeaderPoint(time,tracker,"TOPLEFT",14,-55)
 K.HeaderPoint(progress,tracker,"TOPLEFT",14,-85)
 local schedules={}
+local paceRow=CreateFrame("Frame",nil,tracker)
+paceRow:SetWidth(272); paceRow:SetHeight(16); paceRow:EnableMouse(true)
+paceRow.text=K.Text(paceRow,"",11,"LEFT",0,0,272)
+paceRow:SetScript("OnEnter",function()
+    GameTooltip:SetOwner(this,"ANCHOR_LEFT"); GameTooltip:SetText(K.T("Pace-Indikator"),1,.82,.28)
+    GameTooltip:AddLine(K.T("Vergleicht dieselbe Klasse, Zone, Schwierigkeit und Modifikatoren zur gleichen Spielzeit. Grün ab 90%, Gelb ab 70%, sonst Rot."),.94,.91,.82,true)
+    local d=K.pace.Details()
+    if d.ratio then
+        GameTooltip:AddLine(K.T("Gegner: %s / %s · %s%%",K.Short(d.kills),K.Short(d.refKills),math.floor(d.killRatio*100+.5)),.94,.91,.82)
+        if d.dpsRatio then
+            GameTooltip:AddLine(K.T("DPS (30 s): %s / %s · %s%%",K.Short(d.dps),K.Short(d.refDps),math.floor(d.dpsRatio*100+.5)),.94,.91,.82)
+            GameTooltip:AddLine(K.T("70%% Gegnerfortschritt + 30%% DPS. DPS Beitrag bei 150%% begrenzt. Vergleich: Median aus %s Runden.",d.refs),.7,.7,.67,true)
+        else
+            GameTooltip:AddLine(K.T("Nur Gegnerdaten: Für den DPS Vergleich fehlen passende 30 Sekunden Schadensverlauf."),.7,.7,.67,true)
+        end
+    else GameTooltip:AddLine(K.T(d.status),.7,.7,.67) end
+    GameTooltip:Show()
+end)
+paceRow:SetScript("OnLeave",function() GameTooltip:Hide() end)
+local paceExtra=0
+local function TrackerPoint(child,point,x,y)
+    if tracker.headerPoints[child] then tracker.headerPoints[child][3]=y end
+    K.HeaderPoint(child,tracker,point,x,y)
+end
 local headBoss=K.LText(tracker,"Boss",9,"TOPLEFT",14,-105,130); headBoss:SetTextColor(0.65,0.63,0.58)
 K.HeaderPoint(headBoss,tracker,"TOPLEFT",14,-105)
 local head84=K.LText(tracker,"Bosszeit",9,"TOPRIGHT",-84,-105); head84:SetTextColor(0.65,0.63,0.58)
@@ -86,6 +110,7 @@ local tallyIcons={
 local tallyCells={}
 -- Five cells in 388 pixels: three symbol cells, "geöffnet" and the wait time (wider, it shows "~12:34").
 local tallyWidths={74,74,74,74,92}
+local CACHE_NEAR=0.25 -- share of the cache price below which missing gold counts as "little"
 local tallyLeft=6
 for i,label in ipairs({"Kills","Gold","Cache","Geöffnet","Bezahlbar"}) do
     local cell=CreateFrame("Frame",nil,tally)
@@ -122,7 +147,9 @@ local function Active(phase) return phase=="ready" or phase=="playing" or phase=
 local function ScheduleRow(i)
     if schedules[i] then return schedules[i] end
     local row=CreateFrame("Frame",nil,tracker)
-    row:SetWidth(272); row:SetHeight(17); K.HeaderPoint(row,tracker,"TOPLEFT",14,-123-(i-1)*18)
+    row:SetWidth(272); row:SetHeight(17); K.HeaderPoint(row,tracker,"TOPLEFT",14,-123-(i-1)*18-paceExtra)
+    row.tint=row:CreateTexture(nil,"BACKGROUND"); row.tint:SetTexture(K.flat)
+    row.tint:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0); row.tint:SetWidth(134); row.tint:SetHeight(17); row.tint:Hide()
     row.name=K.Text(row,"",10,"LEFT",0,0,130)
     row.boss=K.Text(row,"",10,"RIGHT",-70,0)
     row.boss:SetWidth(62); row.boss:SetHeight(15); row.boss:SetJustifyH("RIGHT")
@@ -272,6 +299,12 @@ local function DrawBosses(phase)
     bosses:SetHeight(20+visible*(height+2)); bosses:Show()
 end
 local function Update()
+    paceExtra=K.pace.On() and 18 or 0
+    TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra)
+    TrackerPoint(headBoss,"TOPLEFT",14,-105-paceExtra)
+    TrackerPoint(head84,"TOPRIGHT",-84,-105-paceExtra)
+    TrackerPoint(head14,"TOPRIGHT",-14,-105-paceExtra)
+    TrackerPoint(paceRow,"TOPLEFT",14,-83)
     local r=AZS_RUN
     local phase=AZS_GetPhase and AZS_GetPhase()
     local seconds=AZS_GetRunTime and AZS_GetRunTime()
@@ -279,6 +312,11 @@ local function Update()
     if not K.Number(duration) or duration<=0 then duration=type(r)=="table" and r.fin end
     local good=type(r)=="table" and phase and K.Number(seconds) and K.Number(duration) and duration>0
     if good and not K.DB().hidden.tracker then
+        if K.pace.On() then
+            local d=K.pace.Details()
+            paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%"..(d.mode=="kills" and (" · "..K.T("nur Gegner")) or "")) or ""))
+            paceRow.text:SetTextColor(K.pace.Color(d.status)); paceRow:Show()
+        else paceRow:Hide() end
         zone:SetText((AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
         time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
         progress:SetValue(math.min(1,seconds/duration))
@@ -286,6 +324,8 @@ local function Update()
         local count=math.min(8,table.getn(schedule))
         for i=1,count do
             local v=schedule[i]; local row=ScheduleRow(i)
+            TrackerPoint(row,"TOPLEFT",14,-123-(i-1)*18-paceExtra)
+            row.tint:Hide()
             row.name:SetText(v.name or "?")
             row.bossName=v.name
             local timing=K.BossTimes.Get(v)
@@ -293,7 +333,10 @@ local function Update()
                 row.boss:SetText(K.Clock(timing and timing.duration))
                 row.run:SetText(K.Clock(timing and timing.killedAt))
                 row.name:SetTextColor(0.5,1,0.55)
-                row.boss:SetTextColor(0.5,1,0.55); row.run:SetTextColor(0.5,1,0.55)
+                local grade=K.pace.BossGrade(timing and timing.duration,v.final==1)
+                local cr,cg,cb=K.pace.Color(grade)
+                row.boss:SetTextColor(cr,cg,cb); row.run:SetTextColor(cr,cg,cb)
+                if grade then row.tint:SetVertexColor(cr,cg,cb,.16); row.tint:Show() end
                 if timing and K.Number(timing.duration) then
                     row.detail=K.T("Runzeit beim Sieg: %s\nBosszeit: %s\nErschienen bei: %s\nAktive Runzeit ohne Pausen. Erfasst beim Zustandswechsel des Spiels.",K.Clock(timing.killedAt),K.Clock(timing.duration),K.Clock(v.at))
                 else row.detail=K.T("Bereits besiegt. Der Todeszeitpunkt wurde nicht erfasst.\nDie Spielschnittstelle liefert keine vergangenen Todeszeitpunkte.") end
@@ -314,11 +357,12 @@ local function Update()
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
         DrawMarks(schedule,count,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
-        local guardians=K.guardians.Draw(tracker,-127-count*18+K.HeaderOffset(tracker))
-        tracker:SetHeight(136+count*18+guardians)
+        local guardians=K.guardians.Draw(tracker,-127-count*18-paceExtra+K.HeaderOffset(tracker))
+        tracker:SetHeight(136+count*18+guardians+paceExtra)
         level:SetText("")
         tracker:Show(); K.Native("clock",true)
     else
+        paceRow:Hide()
         K.Native("clock",not K.DB().hidden.tracker)
         if K.DB().hidden.tracker then tracker:Hide()
         else
@@ -334,19 +378,23 @@ local function Update()
     local tallyGood=Active(phase) and type(r)=="table" and K.Number(r.kills) and K.Number(r.gold) and K.Number(r.chest)
     if tallyGood and not K.DB().hidden.tally then
         tallyValues[1]:SetText(K.Short(r.kills)); tallyValues[2]:SetText(K.Short(r.gold)); tallyValues[3]:SetText(K.Short(r.chest))
-        local wait="?"
-        if r.gold>=r.chest then wait=K.T("Bereit")
-        elseif K.Number(seconds) and seconds>0 and K.Number(r.ge) and r.ge>0 then wait="~"..K.Clock((r.chest-r.gold)/(r.ge/seconds)) end
+        -- Missing gold for the next cache: green when affordable, yellow when at most a quarter of the price is
+        -- missing, red above.
+        local missing=math.max(0,r.chest-r.gold)
+        local wait=missing<=0 and K.T("Bereit") or K.T("fehlt %s",K.Short(missing))
         tallyValues[4]:SetText(K.Number(r.ck) and K.T("geöffnet %s",K.Short(r.ck)) or K.T("geöffnet ?"))
-        tallyValues[5]:SetText(wait); tallyValues[5]:SetTextColor(r.gold>=r.chest and 0.45 or 1,0.82,0.28)
+        tallyValues[5]:SetText(wait)
+        if missing<=0 then tallyValues[5]:SetTextColor(0.3,0.9,0.3)
+        elseif missing<=r.chest*CACHE_NEAR then tallyValues[5]:SetTextColor(1,0.85,0.2)
+        else tallyValues[5]:SetTextColor(1,0.3,0.25) end
         for i,key in ipairs({"kills","gold","chest"}) do tallyCells[i].tip=string.format("%.0f",r[key]) end
         tallyCells[1].detail=K.T("Besiegte Gegner in diesem Run")
         tallyCells[2].detail=K.T("Aktueller Goldbestand")
         tallyCells[3].detail=K.T("Preis des nächsten Caches")
         tallyCells[4].tip=K.Number(r.ck) and string.format("%.0f",r.ck) or "?"
         tallyCells[4].detail=K.T("Geöffnete Caches in diesem Run")
-        tallyCells[5].tip=wait
-        tallyCells[5].detail=K.T("Geschätzte Zeit, bis der nächste Cache bezahlbar ist. Grundlage: Goldverdienst geteilt durch aktive Runzeit. Kein Timer für das Erscheinen einer Kiste.")
+        tallyCells[5].tip=string.format("%.0f",missing)
+        tallyCells[5].detail=K.T("Fehlendes Gold bis zum nächsten Cache. Grün: bezahlbar, Gelb: höchstens ein Viertel des Preises fehlt, Rot: mehr.")
         tally:Show(); K.Native("tally",true)
     else
         K.Native("tally",not K.DB().hidden.tally)

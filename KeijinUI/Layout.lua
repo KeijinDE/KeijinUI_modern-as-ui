@@ -4,6 +4,8 @@ local L=K.layout
 local editing,active,lastWidth,lastHeight
 local function Scale(f) return f:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
+-- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
+local function Up(entry) return entry.options.grow and entry.options.grow() and true or false end
 local function Clamp(entry)
     local f=entry.frame
     local w,h=UIParent:GetWidth(),UIParent:GetHeight()
@@ -22,15 +24,20 @@ local function Clamp(entry)
     local left=math.max(8,math.min(w-width-8,x))
     local bottom=math.max(8,math.min(h-height-8,y))
     if math.abs(left-x)>0.1 or math.abs(bottom-y)>0.1 then
-        f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/ratio,(bottom+height)/ratio)
+        f:ClearAllPoints()
+        if Up(entry) then f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",left/ratio,bottom/ratio)
+        else f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/ratio,(bottom+height)/ratio) end
         return true
     end
 end
 local function Save(entry)
     Clamp(entry)
     local f,ratio=entry.frame,Scale(entry.frame)/Scale(UIParent)
-    local x,y=f:GetLeft(),f:GetTop()
+    local up=Up(entry)
+    local x,y=f:GetLeft(),up and f:GetBottom() or f:GetTop()
     if not Finite(x) or not Finite(y) then return end
+    -- Keep the bottom edge as the anchor, so a later change of the height does not move it.
+    if up and f:GetPoint()~="BOTTOMLEFT" then f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x,y) end
     K.DB().layout[entry.key]={x=x*ratio/UIParent:GetWidth(),y=y*ratio/UIParent:GetHeight(),scale=f:GetScale()/entry.baseScale}
 end
 -- Standard layout (version 0.5.1, statistics taller since 0.7.4): same format as the saved layout, never written to the DB by Apply.
@@ -61,7 +68,9 @@ local function Apply(entry)
     if Valid(p) then
         f:SetScale(entry.baseScale*math.max(0.5,math.min(1.8,p.scale)))
         local ratio=Scale(UIParent)/Scale(f)
-        f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",p.x*UIParent:GetWidth()*ratio,p.y*UIParent:GetHeight()*ratio)
+        f:ClearAllPoints()
+        -- For a frame growing upwards p.y is the bottom edge (also in the standard layout).
+        f:SetPoint(Up(entry) and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*UIParent:GetWidth()*ratio,p.y*UIParent:GetHeight()*ratio)
     else f:SetScale(entry.baseScale); entry.anchor(f) end
     if Clamp(entry) and saved then Save(entry) end
 end
@@ -184,6 +193,7 @@ function L.Register(key,frame,name,anchor,options)
     return e
 end
 function L.Save(key) local e=L.entries[key]; if e then Save(e) end end
+function L.IsMoving(key) return active and active.key==key and true or false end
 function L.SyncFollowers()
     for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end

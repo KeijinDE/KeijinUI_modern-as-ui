@@ -5,6 +5,15 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 2.2.0 (2026-10-18, release v2.2.0)
+
+* **Loot list.** New choice in Settings, Display, Loot: "Notice" (default, as before), "List", "Small list" or "Icons only". The list collects the items of the current run in the loot panel, newest first, with symbol, name in quality color, slot and run time when you got it, and a grey "Collected" or green "New" hint. Up to 8 rows are visible, the mouse wheel scrolls, hovering shows the item tooltip. The small list is a compact line list (small symbol, small name, status, 12 lines). "Icons only" shows symbols in a grid with a quality frame, a green check mark for new and a red cross for already collected items, and a tooltip with name and status. A reload keeps the list of the same run, a new run empties it.
+* **New loot only.** New switch: show only items that are new to your collection. KeijinUI reads this from the game's own loot line, which marks known items as "(already collected)". It applies to all four displays.
+* **Loot switches.** New switches "Icons" (hides the symbols in the list and the small list, the text moves left) and "Show collection status" (hides New/Collected and the check mark/cross). Both are on by default and greyed out where they do nothing. The help text of the loot section is shorter and no longer cut off.
+* **Grow upwards.** New choice in Settings, Display, Loot: "Growth", "Downwards" (default, as before) or "Upwards". Upwards puts the title at the bottom of the loot window and the newest loot directly above it; older entries move up and the icon view fills from the bottom. The bottom edge stays fixed while the window grows, so it can be attached to the bottom edge of the screen. The mouse wheel scrolls towards older entries upwards, and the thin or hidden headers work there too. Switching keeps the window where it is on screen.
+* **Commands.** `/kui loot clear` empties the list, `/kui loot debug` shows mode and entries.
+* **Loot follows the section headers.** The section header setting normal, thin or off now also applies to the loot window; list and icons move up with it.
+
 ### 2.1.0 (2026-10-18, release v2.1.0)
 
 * **Movable combat text.** The floating damage numbers start in an invisible anchor. Hold Alt to show and move it, Alt and mouse wheel change the number size. New choice in Settings, Combat: Position "At the enemy" (default, unchanged: numbers rise above the nameplate) or "Fixed spot" (all numbers start in the anchor and follow no nameplate). Without a nameplate the numbers now start in the anchor instead of the screen center; the anchor sits at the old spot until you move it.
@@ -260,6 +269,15 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 2.2.0 (2026-10-18, Release v2.2.0)
+
+* **Beuteliste.** Neue Auswahl unter Einstellungen, Anzeige, Beute: "Meldung" (Standard, wie bisher), "Liste", "Liste klein" oder "Nur Symbole". Die Liste sammelt die Gegenstände des laufenden Runs im Beute-Panel, neueste oben, mit Symbol, Name in Qualitätsfarbe, Platz und Runzeit beim Erhalt sowie dem Hinweis "Neu" (grün) oder "Gesammelt" (grau). Bis zu 8 Zeilen sind sichtbar, das Mausrad blättert, der Mauszeiger zeigt den Gegenstands-Tooltip. Die kleine Liste ist eine kompakte Zeilenliste (kleines Symbol, kleine Schrift, Status, 12 Zeilen). "Nur Symbole" zeigt Symbole in einem Raster mit Qualitätsrahmen, einem grünen Haken für neue und einem roten X für bereits gesammelte Gegenstände sowie einem Tooltip mit Name und Status. Ein Neuladen behält die Liste desselben Runs, ein neuer Run leert sie.
+* **Nur neuer Loot.** Neuer Schalter: nur Gegenstände anzeigen, die neu in deiner Sammlung sind. KeijinUI liest das aus der Beutezeile des Spiels, die bekannte Gegenstände mit "(bereits gesammelt)" kennzeichnet. Er gilt für alle vier Anzeigen.
+* **Beute-Schalter.** Neue Schalter "Symbole" (blendet die Symbole in Liste und Liste klein aus, der Text rückt nach links) und "Sammelstatus anzeigen" (blendet Neu/Gesammelt bzw. Haken/X aus). Beide sind standardmäßig an und ausgegraut, wo sie nichts bewirken. Der Hilfetext im Abschnitt Beute ist kürzer und wird nicht mehr abgeschnitten.
+* **Nach oben wachsen.** Neue Auswahl unter Einstellungen, Anzeige, Beute: "Wachstum", "Nach unten" (Standard, wie bisher) oder "Nach oben". Nach oben setzt den Titel des Beutefensters nach unten und die neueste Beute direkt darüber; ältere Einträge wandern nach oben und die Symbolansicht füllt sich von unten. Der untere Rand bleibt beim Wachsen fest, das Fenster lässt sich also am unteren Bildschirmrand anheften. Das Mausrad blättert nach oben zu älteren Einträgen, schmale oder ausgeblendete Titel funktionieren auch dort. Beim Umschalten bleibt das Fenster an seiner Stelle auf dem Bildschirm.
+* **Befehle.** `/kui loot clear` leert die Liste, `/kui loot debug` zeigt Modus und Einträge.
+* **Beute folgt den Abschnittstiteln.** Die Einstellung Abschnittstitel normal, schmal oder aus gilt jetzt auch für das Beutefenster; Liste und Symbole rücken mit nach oben.
 
 ### 2.1.0 (2026-10-18, Release v2.1.0)
 

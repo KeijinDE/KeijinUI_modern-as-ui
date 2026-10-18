@@ -39,6 +39,10 @@ SlashCmdList.KEIJINUI=function(message)
         local _,_,rest=string.find(command,"^runs%s+(.-)$")
         K.RunsCommand(rest or "")
         RefreshAll()
+    elseif command=="loot" or string.find(command,"^loot%s") then
+        local _,_,rest=string.find(command,"^loot%s+(.-)$")
+        K.loot.Command(rest or "")
+        RefreshAll()
     elseif command=="guardians" or string.find(command,"^guardians%s") then
         local _,_,rest=string.find(command,"^guardians%s+(.-)$")
         K.guardians.Command(rest or "")
@@ -80,5 +84,5 @@ SlashCmdList.KEIJINUI=function(message)
         else
             K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

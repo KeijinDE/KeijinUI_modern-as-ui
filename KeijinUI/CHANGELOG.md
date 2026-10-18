@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 2.0.1 (2026-10-18, release v2.0.1)
+
+* A lag no longer wipes boss times, healing and critical hits. Restart detection now uses the run time reported by the game and allows 3 seconds of fall back, as the run history already did.
+* Pace keeps its comparison after a reload during a run, when the game does not resend the zone data.
+* `/kui pace debug` shows the comparison key of the current run and the stored runs.
+
 ### 2.0.0 (2026-10-18, release v2.0.0)
 
 The biggest update so far. Highlights:
@@ -247,6 +253,12 @@ Action bar, build overview, class colored health bars, nameplates.
 ## Deutsch
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
+
+### 2.0.1 (2026-10-18, Release v2.0.1)
+
+* Ein Lag löscht keine Bosszeiten, Heilung und kritischen Treffer mehr. Die Erkennung eines neuen Runs nutzt jetzt die vom Spiel gemeldete Runzeit und erlaubt 3 Sekunden Rücksprung, wie es die Rundenübersicht bereits tat.
+* Pace behält den Vergleich nach einem Reload mitten im Run, wenn das Spiel die Zonendaten nicht erneut sendet.
+* `/kui pace debug` zeigt den Vergleichsschlüssel des laufenden Runs und der gespeicherten Runs.
 
 ### 2.0.0 (2026-10-18, Release v2.0.0)
 

@@ -1,4 +1,4 @@
-KeijinUI = { version = "2.0.0", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "2.0.1", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -6,6 +6,14 @@ function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e
 -- Class colour from RAID_CLASS_COLORS (token from the second UnitClass return). The 1.12 table gives shamans the
 -- paladin pink, so they get the later dark blue instead. Returns nil for unknown tokens.
 local CLASS_OVERRIDE = { SHAMAN = { r = 0.00, g = 0.44, b = 0.87 } }
+-- Run time as last reported by the game, without the API's interpolation. AZS_GetRunTime() adds GetTime() since
+-- the last report; when the game lags its clock falls behind and the next report jumps back. Restart checks
+-- therefore compare reported times and allow K.RUN_BACK seconds of fall back (as the run history does).
+K.RUN_BACK = 3
+function K.ReportedRunTime()
+    local t = type(AZS_RUN) == "table" and AZS_RUN.t
+    if K.Number(t) then return t end
+end
 function K.ClassColor(token)
     local c = token and (CLASS_OVERRIDE[token] or type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token])
     if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end

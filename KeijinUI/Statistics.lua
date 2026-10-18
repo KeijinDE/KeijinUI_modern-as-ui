@@ -128,14 +128,15 @@ combat:SetScript("OnEvent",function()
     v.best=math.max(v.best,hit.amount); v.min=math.min(v.min,hit.amount)
     v.last=hit.amount; v.sum=v.sum+hit.amount; v.count=v.count+1; critData[name]=v
 end)
-local previousTime
+local previousReported
 local function Update()
     local phase=AZS_GetPhase and AZS_GetPhase()
     local r=AZS_RUN
     local seconds=AZS_GetRunTime and AZS_GetRunTime()
     local valid=type(r)=="table" and phase and K.Number(seconds)
-    if valid and previousTime and seconds<previousTime-1 then ResetRun() end
-    if K.Number(seconds) then previousTime=seconds end
+    local reported=K.ReportedRunTime()
+    if valid and reported and previousReported and reported<previousReported-K.RUN_BACK then ResetRun() end
+    if reported then previousReported=reported end
     SampleHealth()
     if valid then Integrate(seconds,r,AZS_GetMeter and AZS_GetMeter()) end
     if not K.DB().hidden.statistics then

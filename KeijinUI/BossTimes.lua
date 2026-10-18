@@ -1,12 +1,12 @@
 -- The schedule supplies spawn times and states, but no historical death times.
 -- Capture live state transitions using the game's pause-aware run clock.
 local K=KeijinUI
-local times,lastTime={},nil
+local times,lastTime,lastReported={},nil,nil
 K.BossTimes={}
 local function Key(boss)
     return tostring(boss.index or "").."\031"..tostring(boss.name or "").."\031"..tostring(boss.at or "")
 end
-local function Reset() times={}; lastTime=nil end
+local function Reset() times={}; lastTime=nil; lastReported=nil end
 local function RunLength()
     local length=AZS_GetRunLength and AZS_GetRunLength()
     if not K.Number(length) or length<=0 then length=type(AZS_RUN)=="table" and AZS_RUN.fin end
@@ -34,12 +34,14 @@ local function Observe()
     local phase=AZS_GetPhase and AZS_GetPhase()
     local now=AZS_GetRunTime and AZS_GetRunTime()
     if not phase or not K.Number(now) then return end
-    if lastTime and now<lastTime-1 then Reset() end
+    local reported=K.ReportedRunTime()
+    if reported and lastReported and reported<lastReported-K.RUN_BACK then Reset() end
     if not lastTime then
         local s=Snapshot()
         if s and type(s.times)=="table" then times=s.times end
     end
     lastTime=now
+    if reported then lastReported=reported end
     for _,boss in ipairs(K.Schedule()) do
         local key=Key(boss)
         local entry=times[key]
@@ -63,8 +65,8 @@ function K.Fresh(updated)
 end
 local function WatchStart()
     local phase=AZS_GetPhase and AZS_GetPhase()
-    local now=AZS_GetRunTime and AZS_GetRunTime()
-    if (phase=="ready" and lastPhase and lastPhase~="ready") or (K.Number(now) and K.Number(lastClock) and now<lastClock-1) then MarkStart() end
+    local now=K.ReportedRunTime()
+    if (phase=="ready" and lastPhase and lastPhase~="ready") or (K.Number(now) and K.Number(lastClock) and now<lastClock-K.RUN_BACK) then MarkStart() end
     lastPhase=phase
     if K.Number(now) then lastClock=now end
 end

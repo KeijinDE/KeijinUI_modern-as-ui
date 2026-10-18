@@ -30,6 +30,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="bosses debug" then K.BossDebug()
     elseif command=="heal debug" then K.HealDebug()
     elseif command=="resources debug" then K.ResourceDebug()
+    elseif command=="pace debug" then K.pace.Debug()
     elseif command=="caches" or string.find(command,"^caches%s") then
         local _,_,rest=string.find(command,"^caches%s+(.-)$")
         K.CachesCommand(rest or "")

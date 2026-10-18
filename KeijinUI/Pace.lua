@@ -62,6 +62,9 @@ function P.Details()
     if not class and UnitClass then local _,token=UnitClass("player"); class=token end
     local key=Key(z,class); local values,paired,damage={},{},{}
     local open=type(K.DB().runs)=="table" and K.DB().runs.open
+    -- The game sends AZS_ZONE once per run, so after a reload it can be empty; the open run keeps its key.
+    if type(z.zone)~="string" and type(open)=="table" and type(open.paceKey)=="string" then key=open.paceKey end
+    out.key=key
     -- Never use the open run of another hero or stale damage-meter totals.
     if type(open)=="table" and open.paceKey==key and K.Number(r.dealt) then out.dps=DamageRate(open.paceSamples,r.t,r.dealt) end
     for _,entry in ipairs(K.DB().paceHistory or {}) do
@@ -85,6 +88,19 @@ function P.Details()
     end
     out.status=out.ratio>=.9 and "Gut" or (out.ratio>=.7 and "Langsam" or "Sehr langsam")
     return out
+end
+-- /kui pace debug: the key of this run, the stored keys and the result.
+function P.Debug()
+    local d=P.Details()
+    local open=type(K.DB().runs)=="table" and K.DB().runs.open
+    K.Say("Pace: "..tostring(d.status)..", key "..tostring(d.key or "n/a")..", references "..tostring(d.refs)..", mode "..tostring(d.mode))
+    K.Say("Pace open run key: "..tostring(type(open)=="table" and open.paceKey or "n/a"))
+    local count={}
+    for _,entry in ipairs(K.DB().paceHistory or {}) do
+        local n,last=0,0
+        for _,s in pairs(entry.samples or {}) do n=n+1; if K.Number(s.t) and s.t>last then last=s.t end end
+        K.Say(string.format("Pace history: %s, %d samples up to %s%s",tostring(entry.key),n,K.Clock(last),entry.won and ", won" or ""))
+    end
 end
 function P.Status()
     local d=P.Details()

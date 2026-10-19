@@ -5,7 +5,7 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
-### 3.1.2 (2026-10-19, release v3.1.2)
+### 3.2.0 (2026-10-19, release v3.2.0)
 
 * **Settings search:** live search across all settings, in English and German whatever your UI language (player/Spieler, target/Ziel and so on). Results are the real switches and sliders. Clear with the x or Escape.
 * **Guardian skulls** (game 0.102+): every lair shows a skull on the minimap from the start of the run: gold while a guardian holds it, orange with ! in combat, grey with x when empty. The game's red flag stays hidden while the skulls are on.
@@ -418,7 +418,7 @@ Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
 
-### 3.1.2 (2026-10-19, Release v3.1.2)
+### 3.2.0 (2026-10-19, Release v3.2.0)
 
 * **Suche in den Einstellungen:** Livesuche über alle Einstellungen, auf Deutsch und Englisch unabhängig von der UI Sprache (Spieler/player, Ziel/target usw.). Treffer sind direkt die echten Schalter und Regler. Leeren mit x oder Escape.
 * **Wächtertotenköpfe** (ab Spiel 0.102): Jeder Hort zeigt ab Runbeginn einen Totenkopf auf der Minimap, gold bei besetztem Hort, orange mit ! im Kampf, grau mit x bei leerem Hort. Die rote Flagge des Spiels bleibt ausgeblendet, solange die Totenköpfe an sind.

@@ -148,7 +148,7 @@ local function NativeBonus(row)
 	tip:SetSpell(row.book, "spell")
 	local lines = {}
 	for index = 1, math.min(40, tip:NumLines()) do
-		local region = _G["KeijinBuildAdvisorTooltipTextLeft"..index]
+		local region = getglobal("KeijinBuildAdvisorTooltipTextLeft"..index)
 		if region and type(region.GetText) == "function" then table.insert(lines, region:GetText() or "") end
 	end
 	tip:Hide()

@@ -60,7 +60,8 @@ local active,pool,iconPool={}, {}, {}
 K.damageText={active=active}
 local function Take()
     local fs=table.remove(pool)
-    if not fs then fs=host:CreateFontString(nil,"OVERLAY") end
+    -- Game 0.101 refuses SetText before a font is set; SetSize sets the real size afterwards.
+    if not fs then fs=host:CreateFontString(nil,"OVERLAY"); fs:SetFont(K.font,14,"OUTLINE") end
     return fs
 end
 local function Give(item)

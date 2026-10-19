@@ -77,5 +77,10 @@ function N.Debug()
     if guide then
         local current=guide.current
         K.Say("Guardian guide: target="..tostring(current and current.key)..", distance="..tostring(current and current.dist)..", source="..tostring(current and current.source)..", pins="..tostring(guide.shownPins or 0))
+        local cvars=type(AZS_HUD_CVARS)=="table" and AZS_HUD_CVARS or nil
+        local flagged=type(AZS_GetFlaggedLair)=="function" and AZS_GetFlaggedLair() or nil
+        K.Say("Guardian flag: supported="..tostring(guide.FlagSupported and guide.FlagSupported())..", skulls="..tostring(guide.PinsOn and guide.PinsOn())
+            ..", cvar="..tostring(cvars and cvars.flag)..", nativeShown="..tostring(type(AZS_IsHudShown)=="function" and AZS_IsHudShown("flag"))
+            ..", flagged="..tostring(flagged and flagged.state)..", saved="..tostring(K.DB().nativeFlagShown))
     end
 end

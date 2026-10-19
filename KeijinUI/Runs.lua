@@ -401,7 +401,8 @@ local head=K.ValueRow(panel,2,19)
 for _,c in ipairs(COLUMNS) do
     local fs=K.Text(head,"",10,"LEFT",c[3],0,c[4])
     fs:SetJustifyH(c[5]); fs:SetTextColor(1,0.82,0.28)
-    K.Live(fs,function() return K.T(c[2]) end)
+    local key=c[2]   -- body local for the closure (see Statistics.lua)
+    K.Live(fs,function() return K.T(key) end)
 end
 local rows={}
 for i=1,MAX_ROWS do

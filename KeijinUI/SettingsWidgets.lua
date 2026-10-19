@@ -288,7 +288,8 @@ function O.Choice(page,key,label,get,set,items)
     local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(170); menu:SetHeight(8+table.getn(items)*27); Skin(menu)
     menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",0,-3)
     for i,item in ipairs(items) do
-        local option=O.Button(menu,item[2],4,-4-(i-1)*27,162,function() set(item[1]); O.CloseChoice(); O.Refresh() end)
+        local value=item[1]   -- body local for the closure (see Statistics.lua)
+        local option=O.Button(menu,item[2],4,-4-(i-1)*27,162,function() set(value); O.CloseChoice(); O.Refresh() end)
         option:SetHeight(25)
     end
     local function Open()

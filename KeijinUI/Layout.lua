@@ -92,9 +92,10 @@ local function Best(best,edges,targets)
     end end
     return best
 end
-local function GridTargets(edges,size)
+-- Grid lines are counted from the screen centre (UIParent:GetCenter), the same origin the overlay uses.
+local function GridTargets(edges,middle)
     local list={}
-    for _,a in ipairs(edges) do table.insert(list,size/2+math.floor((a-size/2)/STEP+0.5)*STEP) end
+    for _,a in ipairs(edges) do table.insert(list,middle+math.floor((a-middle)/STEP+0.5)*STEP) end
     return list
 end
 local function Snap(entry)
@@ -103,7 +104,9 @@ local function Snap(entry)
     local w,h=UIParent:GetWidth(),UIParent:GetHeight()
     local l,b,r,t=Rect(f)
     if not l or not w or not h or w<40 or h<40 then return end
-    local xs,ys={w/2},{h/2}
+    local cx,cy=UIParent:GetCenter()
+    if not Finite(cx) or not Finite(cy) then cx,cy=w/2,h/2 end
+    local xs,ys={cx},{cy}
     for _,e in pairs(L.entries) do
         if e~=entry and e.frame:IsShown() then
             local el,eb,er,et=Rect(e.frame)
@@ -112,8 +115,8 @@ local function Snap(entry)
     end
     local dx=Best(nil,{l,r,(l+r)/2},xs)
     local dy=Best(nil,{b,t,(b+t)/2},ys)
-    if not dx then dx=Best(nil,{l,r},GridTargets({l,r},w)) end
-    if not dy then dy=Best(nil,{b,t},GridTargets({b,t},h)) end
+    if not dx then dx=Best(nil,{l,r},GridTargets({l,r},cx)) end
+    if not dy then dy=Best(nil,{b,t},GridTargets({b,t},cy)) end
     if not dx and not dy then return end
     local ratio=Scale(f)/Scale(UIParent)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",(l+(dx or 0))/ratio,(t+(dy or 0))/ratio)
@@ -124,33 +127,35 @@ local function Stop()
     if L.SyncFollowers then L.SyncFollowers() end
 end
 -- Grid overlay: thin textures every STEP units from the screen centre, shown only while editing.
+-- Lines hang from the centre and run edge to edge with two anchors, so the middle line stays in the screen
+-- centre even if the reported UIParent size and the drawn area differ (game 0.101).
 local grid=CreateFrame("Frame",nil,UIParent)
 grid:SetFrameStrata("TOOLTIP"); grid:SetFrameLevel(170); grid:EnableMouse(false)
-grid:SetWidth(UIParent:GetWidth()); grid:SetHeight(UIParent:GetHeight()); grid:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",0,0)
+grid:SetAllPoints(UIParent)
 grid:Hide(); L.grid=grid
 local lines,gridW,gridH={}
-local function Line(i,vertical,pos,size,center)
+local function Line(i,vertical,offset,center)
     local t=lines[i]
     if not t then t=grid:CreateTexture(nil,"BACKGROUND"); t:SetTexture(K.flat); lines[i]=t end
     t:ClearAllPoints()
-    if vertical then t:SetWidth(1); t:SetHeight(size); t:SetPoint("BOTTOMLEFT",grid,"BOTTOMLEFT",pos,0)
-    else t:SetHeight(1); t:SetWidth(size); t:SetPoint("BOTTOMLEFT",grid,"BOTTOMLEFT",0,pos) end
+    if vertical then t:SetWidth(1); t:SetPoint("TOP",grid,"TOP",offset,0); t:SetPoint("BOTTOM",grid,"BOTTOM",offset,0)
+    else t:SetHeight(1); t:SetPoint("LEFT",grid,"LEFT",0,offset); t:SetPoint("RIGHT",grid,"RIGHT",0,offset) end
     if center then t:SetVertexColor(1,0.9,0.4,0.35) else t:SetVertexColor(1,1,1,0.12) end
     t:Show()
 end
 local function BuildGrid(w,h)
-    grid:SetWidth(w); grid:SetHeight(h)
     local n=0
-    local function Add(vertical,size,span)
-        n=n+1; Line(n,vertical,size/2,span,true)
+    local function Add(vertical,size)
+        n=n+1; Line(n,vertical,0,true)
         local k=1
-        while k*STEP<size/2 do
-            n=n+1; Line(n,vertical,size/2-k*STEP,span,false)
-            n=n+1; Line(n,vertical,size/2+k*STEP,span,false)
+        -- Two extra steps cover a drawn area slightly larger than the reported size.
+        while k*STEP<size/2+2*STEP do
+            n=n+1; Line(n,vertical,-k*STEP,false)
+            n=n+1; Line(n,vertical,k*STEP,false)
             k=k+1
         end
     end
-    Add(true,w,h); Add(false,h,w)
+    Add(true,w); Add(false,h)
     for i=n+1,table.getn(lines) do lines[i]:Hide() end
     gridW,gridH=w,h
 end
@@ -220,6 +225,15 @@ end
 function L.Toggle() L.SetEditing(not editing) end
 done:SetScript("OnClick",function() L.SetEditing(false) end)
 hint:SetScript("OnHide",function() if editing then L.SetEditing(false) end end)
+-- /kui grid debug: reported sizes and centres, to compare the grid with the real screen.
+function L.GridDebug()
+    local function N(v) return v and string.format("%.1f",v) or "nil" end
+    local cx,cy=UIParent:GetCenter()
+    local gx,gy=grid:GetCenter()
+    K.Say("Grid: UIParent "..N(UIParent:GetWidth()).." x "..N(UIParent:GetHeight()).." centre "..N(cx)..","..N(cy)
+        ..", grid centre "..N(gx)..","..N(gy)..", scale "..N(UIParent:GetEffectiveScale())
+        ..", screen "..N(GetScreenWidth and GetScreenWidth()).." x "..N(GetScreenHeight and GetScreenHeight()))
+end
 function L.ToggleGrid()
     K.DB().snap=(K.DB().snap==false)
     K.Say(K.T("Raster und Einrasten")..": "..(K.DB().snap and K.T("An (Shift beim Loslassen: ohne Einrasten)") or K.T("Aus")))

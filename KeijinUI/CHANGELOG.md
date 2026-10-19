@@ -5,6 +5,18 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.1.0 (2026-10-19, release v3.1.0)
+
+* Fixed for game version 0.101: "DamageText.lua:281: SetText(): Font not set" after the first hit. New floating numbers get their font before their text.
+* Layout grid: the lines now hang from the screen centre and run edge to edge, so the middle line stays centred. Snapping uses the same centre, so frames now line up with the visible grid. /kui grid debug reports the sizes the game gives the addon.
+* Guardians: the minimap skulls with three states are back and replace the game's red guardian flag (game version 0.102 or newer): gold while a guardian holds its lair, orange with "!" in combat, grey with "x" once the lair is empty. Empty lairs only get a skull after their guardian was seen alive in this run. Status, return time and distance on hover. The game's flag is hidden only while the skulls are drawn and comes back when the option is off, data is missing, during loading screens and at logout. The option is now called "Guardian skulls instead of game flag". On older game versions only defeated guardians get a grey skull and the game's flag stays.
+
+### 3.0.1 (2026-10-19)
+
+* Fixed for game version 0.101 (Lua 5.0): the error "UIPanelTemplates.lua:245: attempt to concatenate a nil value" at login. The chat copy window's scroll frame now has a name. The build tip tooltip no longer uses _G, which the new client no longer provides.
+* Fixed for game version 0.101: "Statistics.lua: attempt to index a nil value" and settings or panel titles staying partly in English. The new game Lua loses loop variables used inside later called functions; the affected labels, tooltips and choice menus now keep their own copy.
+* New diagnostic command /kui menu: for 60 seconds, reports in the chat whether ESC opens the game menu (GameMenuFrame) and whether the options window (BenillaOptionsFrame) is shown.
+
 ### 3.0.0 (2026-10-19, release v3.0.0)
 
 * Settings: Display and Layout are now one category, "Layout & Display". The active category shows its sections as links in the sidebar. New sliders for menu size and the whole UI.
@@ -391,6 +403,18 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.1.0 (2026-10-19, Release v3.1.0)
+
+* Behoben für Spielversion 0.101: „DamageText.lua:281: SetText(): Font not set“ nach dem ersten Treffer. Neue Schadenszahlen bekommen ihre Schrift vor dem Text.
+* Layoutraster: Die Linien gehen jetzt von der Bildschirmmitte aus und laufen von Rand zu Rand, die Mittellinie bleibt mittig. Das Einrasten nutzt dieselbe Mitte, Fenster richten sich jetzt am sichtbaren Raster aus. /kui grid debug meldet die Größen, die das Spiel dem Addon liefert.
+* Wächter: Die Minimap Totenköpfe mit drei Zuständen sind zurück und ersetzen die rote Wächterflagge des Spiels (ab Spielversion 0.102): gold, solange ein Wächter seinen Hort hält, orange mit „!“ im Kampf, grau mit „x“ bei leerem Hort. Leere Horte bekommen erst einen Totenkopf, wenn ihr Wächter in diesem Run lebend gesehen wurde. Status, Rückkehrzeit und Entfernung beim Überfahren. Die Flagge des Spiels ist nur ausgeblendet, solange die Totenköpfe gezeichnet werden, und kehrt zurück bei ausgeschalteter Option, fehlenden Daten, im Ladebildschirm und beim Ausloggen. Die Option heißt jetzt „Wächtertotenköpfe statt Spielflagge“. Auf älteren Spielversionen bekommen nur besiegte Wächter einen grauen Totenkopf und die Flagge des Spiels bleibt.
+
+### 3.0.1 (2026-10-19)
+
+* Behoben für Spielversion 0.101 (Lua 5.0): der Fehler „UIPanelTemplates.lua:245: attempt to concatenate a nil value“ beim Einloggen. Das Scrollfenster der Chatkopie hat jetzt einen Namen. Der Buildtipp Tooltip nutzt kein _G mehr, das der neue Client nicht mehr bereitstellt.
+* Behoben für Spielversion 0.101: „Statistics.lua: attempt to index a nil value“ und teilweise englisch bleibende Einstellungen und Fenstertitel. Das neue Spiel Lua verliert Schleifenvariablen in später aufgerufenen Funktionen; die betroffenen Beschriftungen, Tooltips und Auswahlmenüs halten jetzt eine eigene Kopie.
+* Neuer Diagnosebefehl /kui menu: meldet 60 Sekunden lang im Chat, ob ESC das Spielmenü (GameMenuFrame) öffnet und ob das Optionsfenster (BenillaOptionsFrame) sichtbar ist.
 
 ### 3.0.0 (2026-10-19, Release v3.0.0)
 

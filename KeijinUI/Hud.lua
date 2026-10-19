@@ -131,6 +131,7 @@ local tallyWidths={74,74,74,74,92}
 local CACHE_NEAR=0.25 -- share of the cache price below which missing gold counts as "little"
 local tallyLeft=6
 for i,label in ipairs({"Kills","Gold","Cache","Geöffnet","Bezahlbar"}) do
+    local name=label   -- body local for the tooltip closure (see Statistics.lua)
     local cell=CreateFrame("Frame",nil,tally)
     cell:SetWidth(tallyWidths[i]); cell:SetHeight(32); cell:SetPoint("TOPLEFT",tally,"TOPLEFT",tallyLeft,-1)
     tallyLeft=tallyLeft+tallyWidths[i]
@@ -146,7 +147,7 @@ for i,label in ipairs({"Kills","Gold","Cache","Geöffnet","Bezahlbar"}) do
     end
     cell:EnableMouse(true)
     cell:SetScript("OnEnter",function()
-        GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(this.tip or K.T(label),1,0.82,0.28)
+        GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(this.tip or K.T(name),1,0.82,0.28)
         if this.detail then GameTooltip:AddLine(this.detail,0.9,0.88,0.8,true) end
         GameTooltip:Show()
     end)
@@ -166,6 +167,7 @@ for i,def in ipairs({
     local cell=CreateFrame("Frame",nil,extras)
     cell:SetWidth(194); cell:SetHeight(24); cell:SetPoint("TOPLEFT",extras,"TOPLEFT",(i-1)*194,0)
     cell.key=def.key
+    local title=def.label   -- body local for the tooltip closure
     cell.icon=cell:CreateTexture(nil,"ARTWORK"); cell.icon:SetTexture(def.icon)
     cell.icon:SetWidth(16); cell.icon:SetHeight(16); cell.icon:SetPoint("LEFT",cell,"LEFT",5,0)
     cell.label=K.LText(cell,def.label,10,"LEFT",29,0,110)
@@ -173,7 +175,7 @@ for i,def in ipairs({
     if def.key=="rr" then cell.label:SetWidth(70) end
     cell:EnableMouse(true)
     cell:SetScript("OnEnter",function()
-        GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(K.T(def.label),1,.82,.28)
+        GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(K.T(title),1,.82,.28)
         if this.detail then GameTooltip:AddLine(this.detail,.9,.88,.8,true) end
         GameTooltip:Show()
     end)

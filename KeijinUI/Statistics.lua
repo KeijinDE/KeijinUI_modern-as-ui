@@ -9,7 +9,8 @@ local definitions={
 }
 local function HealingSupported() return type(AZS_GetHealing)=="function" end
 local rows={}
-for i,v in ipairs(definitions) do rows[i]=K.ValueRow(stats,i,19); K.Live(rows[i].label,function() return K.T(v[2]) end) end
+-- Closures get a body local: the game's Lua (0.101) loses for loop variables captured by closures.
+for i,v in ipairs(definitions) do local text=v[2]; rows[i]=K.ValueRow(stats,i,19); K.Live(rows[i].label,function() return K.T(text) end) end
 -- The panel border closes the list, so the last row needs no line of its own.
 rows[table.getn(rows)].line:Hide()
 local meter=K.Panel("KeijinUIDamage","Schaden",260,235)

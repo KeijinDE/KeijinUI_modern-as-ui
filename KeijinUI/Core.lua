@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.0.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.1.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"

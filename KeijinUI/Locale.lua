@@ -448,7 +448,7 @@ K.EN["Levelaufstiege"]="Level-ups"
 K.EN["Levelaufstiege speichern"]="Store level-ups"
 K.EN["Der Kampf läuft weiter. Gespeicherte Auswahlen per Button öffnen. Ausschalten bietet wartende Auswahlen sofort an."]="The fight continues. Open stored choices with the button. Turning this off offers waiting choices immediately."
 K.EN["Wächternavigation"]="Guardian navigation"
-K.EN["Besiegte Wächter auf der Minimap"]="Defeated guardians on the minimap"
+K.EN["Wächtertotenköpfe statt Spielflagge"]="Guardian skulls instead of game flag"
 K.EN["Position unbekannt"]="Position unknown"
 K.EN["Kleine Richtungspfeile rechts neben den Wächternamen. Entfernung zum festen Hort im Tooltip. Mit der Runübersicht verschiebbar."]="Small direction arrows to the right of guardian names. Hover for distance to the fixed lair. Moves with the run overview."
 K.EN["Richtung und Entfernung zeigen zum Hort, nicht zum bewegten Wächter."]="Direction and distance lead to the lair, not to the moving guardian."
@@ -471,7 +471,7 @@ K.EN["UI Größen zurücksetzen"]="Reset UI sizes"
 K.EN["Noch keine aktuellen Heilungsdaten"]="No current healing data yet"
 K.EN["Heilung nativ: %s · %s HPS · Quellen: %d"]="Native healing: %s · %s HPS · Sources: %d"
 
-K.EN["Totenkopf nur bei besiegten Minibossen (leerer Hort). Lebende und kämpfende Wächter behalten die native Flagge, bis das Spiel diese gezielt ausblenden kann. Rückkehrzeit im Tooltip."]="Skulls only for defeated minibosses (empty lairs). Living and fighting guardians keep the native flag until the game can hide it selectively. Hover for return time."
+K.EN["Totenkopf an jedem Hort: gold besetzt, orange mit ! im Kampf, grau mit x leer. Ersetzt die rote Flagge des Spiels (ab 0.102), davor nur graue Totenköpfe. Tooltip mit Rückkehrzeit."]="A skull on every lair: gold while held, orange with ! in combat, grey with x when empty. Replaces the game's red flag (0.102 or newer), before that only grey skulls. Hover for return time."
 
 -- Unified UI category; old translations remain for slash/help compatibility.
 K.EN["Layout & Anzeige"]="Layout & Display"

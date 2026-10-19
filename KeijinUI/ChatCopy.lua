@@ -30,7 +30,8 @@ end
 local panel=K.Panel("KeijinUIChatCopy","Chat kopieren",640,440); C.panel=panel
 panel:SetPoint("CENTER",UIParent,"CENTER",0,0); panel:SetFrameStrata("DIALOG"); panel:Hide()
 table.insert(UISpecialFrames,"KeijinUIChatCopy")
-local scroll=CreateFrame("ScrollFrame",nil,panel,"UIPanelScrollFrameTemplate")
+-- Named: the template's OnLoad builds its child names from GetName().
+local scroll=CreateFrame("ScrollFrame","KeijinUIChatCopyScroll",panel,"UIPanelScrollFrameTemplate")
 scroll:SetPoint("TOPLEFT",panel,"TOPLEFT",14,-38); scroll:SetWidth(585); scroll:SetHeight(350)
 local edit=CreateFrame("EditBox",nil,scroll); edit:SetWidth(580); edit:SetHeight(350)
 edit:SetFont(K.font,11,"OUTLINE"); edit:SetAutoFocus(false)

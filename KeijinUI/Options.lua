@@ -13,6 +13,39 @@ local function Announce()
 end
 K.On("PLAYER_ENTERING_WORLD",Announce)
 if UnitExists("player") then Announce() end
+
+-- /kui menu: for 60 seconds, reports whether ESC opens the Lua GameMenuFrame, BenillaOptionsFrame or neither.
+-- ToggleGameMenu is wrapped only during the watch and restored afterwards if nobody replaced it meanwhile.
+local menuWatch
+local function MenuState(frame) if not frame then return "missing" end; return frame:IsShown() and "shown" or "hidden" end
+local function MenuStates() return MenuState(GameMenuFrame),MenuState(BenillaOptionsFrame) end
+local function MenuDebug()
+    if menuWatch then menuWatch.left=60; K.Say("Menu debug: watching 60 more seconds."); return end
+    local watch=CreateFrame("Frame")
+    menuWatch=watch
+    watch.left=60
+    watch.game,watch.options=MenuStates()
+    K.Say("Menu debug: GameMenuFrame="..watch.game..", BenillaOptionsFrame="..watch.options..". Press ESC within 60 seconds.")
+    local original=ToggleGameMenu
+    if original then
+        watch.wrapper=function(a1,a2) watch.toggled=true; return original(a1,a2) end
+        ToggleGameMenu=watch.wrapper
+    end
+    watch:SetScript("OnUpdate",function()
+        local game,options=MenuStates()
+        if watch.toggled or game~=watch.game or options~=watch.options then
+            K.Say("Menu debug: "..(watch.toggled and "ToggleGameMenu called, " or "")
+                .."GameMenuFrame="..game..", BenillaOptionsFrame="..options)
+            watch.toggled,watch.game,watch.options=nil,game,options
+        end
+        watch.left=watch.left-(arg1 or 0)
+        if watch.left<=0 then
+            if watch.wrapper and ToggleGameMenu==watch.wrapper then ToggleGameMenu=original end
+            watch:SetScript("OnUpdate",nil); watch:Hide(); menuWatch=nil
+            K.Say("Menu debug: finished.")
+        end
+    end)
+end
 SLASH_KEIJINUI1="/kui"
 SlashCmdList.KEIJINUI=function(message)
     local command=string.lower(string.gsub(message or "","^%s*(.-)%s*$","%1"))
@@ -20,6 +53,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="edit" then K.layout.Toggle()
     elseif command=="reset" then K.layout.Reset()
     elseif command=="grid" then K.layout.ToggleGrid()
+    elseif command=="grid debug" then K.layout.GridDebug()
     elseif command=="meter reset" then K.ResetMeter()
     elseif command=="crits reset" then K.ResetCrits()
     elseif command=="tooltip reset" then K.ResetTooltip()
@@ -33,6 +67,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="pace debug" then K.pace.Debug()
     elseif command=="navigation debug" then K.navigation.Debug()
     elseif command=="levels debug" then K.storedLevels.Debug()
+    elseif command=="menu" or command=="menu debug" then MenuDebug()
     elseif command=="collection" then K.collection.Toggle()
     elseif command=="chat copy" then K.chatCopy.Open()
     elseif command=="caches" or string.find(command,"^caches%s") then

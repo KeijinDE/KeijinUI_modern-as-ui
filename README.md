@@ -1,4 +1,4 @@
-# Modern AS UI (KeijinUI)
+# KeijinUI
 
 Many thanks to [SurvivorsDragonUi](https://github.com/migwynkriid13/SurvivorsDragonUi) and [Survivor UI](https://github.com/morderous/survivor-ui), the two projects that inspired this interface.
 

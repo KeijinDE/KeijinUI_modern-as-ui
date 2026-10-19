@@ -1,9 +1,14 @@
 -- The native boss loot notice is drawn outside the Lua frame layout.
 -- Replace it from the game's localized self-loot chat, retaining the chat itself.
 -- Four displays in the same panel: the 8 second notice (default), a list of the run's drops,
--- a compact list (small symbol, small name) and an icon grid with a check mark (new) or a cross (collected).
+-- a compact list and an icon grid with a check mark (new) or a cross (collected).
 local K=KeijinUI
-local notice=K.Panel("KeijinUILoot","Beute",300,76)
+-- Resolve the real width before registration or a later saved-layout application clamps it.
+local function Width()
+    local mode=K.DB().lootMode
+    return mode=="small" and 184 or (mode=="icons" and 188 or 300)
+end
+local notice=K.Panel("KeijinUILoot","Beute",Width(),76)
 -- "Grow upwards": the header sits at the bottom edge and the bottom edge stays put while the list grows.
 local function Grow() return K.DB().lootGrow=="up" end
 K.layout.Register("loot",notice,"Beutemeldung",function(f)
@@ -14,7 +19,7 @@ K.layout.Register("loot",notice,"Beutemeldung",function(f)
         if Grow() then f:SetPoint("BOTTOMRIGHT",relative,"BOTTOMRIGHT",0,-86)
         else f:SetPoint("TOPRIGHT",relative,"BOTTOMRIGHT",0,-10) end
     else f:SetPoint("BOTTOMRIGHT",UIParent,"BOTTOMRIGHT",-24,40) end
-end,{hidden=true,grow=Grow})
+end,{hidden=true,grow=Grow,width=Width})
 local loot={}
 K.loot=loot
 local rows,lines,cells,icon,label,detail,empty
@@ -178,6 +183,12 @@ local function StatusText(entry)
     if entry.new==true then return K.T("Neu"),0.45,1,0.35 end
     if entry.new==false then return K.T("Gesammelt"),0.62,0.62,0.62 end
 end
+-- Reuse the same collection symbols in the compact list and icon grid.
+local function StatusMark(mark,entry,enabled)
+    if enabled and entry.new==true then mark:SetTexture(MARK_NEW); mark:SetVertexColor(0.45,1,0.35,1); mark:Show()
+    elseif enabled and entry.new==false then mark:SetTexture(MARK_OLD); mark:SetVertexColor(1,1,1,1); mark:Show()
+    else mark:Hide() end
+end
 local function Tooltip(frame,entry,withStatus)
     if not entry then return end
     GameTooltip:SetOwner(frame,"ANCHOR_LEFT")
@@ -199,7 +210,7 @@ local function Wheel()
     offset=offset+(older and step or -step)
     if offset<0 then offset=0 end
 end
--- List rows (symbol, name in quality colour, status, slot, run time) and compact lines (small symbol, small name, status).
+-- List rows (symbol, name in quality colour, status, slot, run time) and compact lines (small symbol, small name, status mark).
 -- Positions inside a row depend on the switches and are set in Layout.
 local function MakeRow(compact,i)
     local row=CreateFrame("Button",nil,notice)
@@ -213,7 +224,12 @@ local function MakeRow(compact,i)
     if not compact then
         row.slot=K.Text(row,"",9,"LEFT",196,0,48); row.slot:SetTextColor(0.72,0.7,0.64)
         row.time=K.Text(row,"",9,"LEFT",246,0,36); row.time:SetTextColor(0.72,0.7,0.64); row.time:SetJustifyH("RIGHT")
-    else row.tag:SetJustifyH("RIGHT") end
+    else
+        row.tag:Hide()
+        row.mark=row:CreateTexture(nil,"OVERLAY")
+        row.mark:SetWidth(12); row.mark:SetHeight(12); row.mark:SetPoint("RIGHT",row,"RIGHT",-3,0)
+        row.mark:Hide()
+    end
     row.compact=compact
     row:EnableMouse(true); row:EnableMouseWheel(true)
     row:SetScript("OnEnter",function() Tooltip(row,row.entry,compact) end)
@@ -235,11 +251,11 @@ local function Layout(mode)
         local compact=row.compact
         local x=icons and (compact and 21 or 30) or (compact and 5 or 8)
         local stop
-        if compact then stop=status and 120 or 164 else stop=status and 148 or 194 end
+        if compact then stop=status and 149 or 164 else stop=status and 148 or 194 end
         row.name:ClearAllPoints(); row.name:SetPoint("LEFT",row,"LEFT",x,0); row.name:SetWidth(stop-x)
-        row.tag:ClearAllPoints()
-        if compact then row.tag:SetPoint("RIGHT",row,"RIGHT",-3,0); row.tag:SetWidth(42)
-        else row.tag:SetPoint("LEFT",row,"LEFT",150,0); row.tag:SetWidth(44) end
+        if not compact then
+            row.tag:ClearAllPoints(); row.tag:SetPoint("LEFT",row,"LEFT",150,0); row.tag:SetWidth(44)
+        end
         if icons then row.icon:Show() else row.icon:Hide() end
     end
 end
@@ -316,6 +332,9 @@ local function Receive(_,message)
     local _,_,id=string.find(item or "","^item:(%d+)")
     id=tonumber(id)
     if id then Seen()[id]=true end
+    if K.collection and K.DB().collectionRecord~=false and (item or plainName) then
+        K.collection.Observe({item=item,name=plainName or string.gsub(name or "?","^%[(.*)%]$","%1")},true)
+    end
     if not Enabled() then return end
     if item or plainName then
         local entry={item=item,name=plainName or (string.gsub(name or "?","^%[(.*)%]$","%1")),color=foundColor,new=isNew and true or false}
@@ -390,9 +409,7 @@ local function RenderList(mode)
                 Fill(entry)
                 cell.border:SetVertexColor(EntryColor(entry))
                 cell.icon:SetTexture(entry.icon or "Interface\\Icons\\INV_Box_01")
-                if status and entry.new==true then cell.mark:SetTexture(MARK_NEW); cell.mark:SetVertexColor(0.45,1,0.35,1); cell.mark:Show()
-                elseif status and entry.new==false then cell.mark:SetTexture(MARK_OLD); cell.mark:SetVertexColor(1,1,1,1); cell.mark:Show()
-                else cell.mark:Hide() end
+                StatusMark(cell.mark,entry,status)
                 cell:Show()
             else cell:Hide() end
         end
@@ -411,7 +428,10 @@ local function RenderList(mode)
                 row.icon:SetTexture(entry.icon or "Interface\\Icons\\INV_Box_01")
                 row.name:SetText(ColoredName(entry))
                 local text,r,g,b=StatusText(entry)
-                if status and text then row.tag:SetText(text); row.tag:SetTextColor(r,g,b) else row.tag:SetText("") end
+                if compact then
+                    row.tag:SetText(""); StatusMark(row.mark,entry,status)
+                elseif status and text then row.tag:SetText(text); row.tag:SetTextColor(r,g,b)
+                else row.tag:SetText("") end
                 if not compact then
                     row.slot:SetText(SlotName(entry) or "")
                     row.time:SetText(K.Number(entry.time) and K.Clock(entry.time) or "")

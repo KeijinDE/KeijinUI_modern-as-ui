@@ -4,7 +4,7 @@ local FONT = "Fonts\\FRIZQT__.TTF"
 local DEFAULT_ICON = "Interface\\Icons\\INV_Jewelry_Talisman_07"
 local DURATION, FADE_IN, FADE_OUT = 6, 0.3, 0.7
 local queue, seen = {}, {}
-local current, age, moving, dragging, announced = nil, 0, false, false, false
+local current, age, moving, dragging = nil, 0, false, false
 
 -- Exact translations embedded in the installed client. The server formats:
 -- |cffffd100Achievement earned:|r |cffffff00[Name]|r |cff9d9d9d(10 points)|r
@@ -217,17 +217,12 @@ end
 
 local driver = CreateFrame("Frame", "KeijinAchievementsEvents")
 driver:RegisterEvent("CHAT_MSG_SYSTEM")
-driver:RegisterEvent("ADDON_LOADED")
 driver:RegisterEvent("PLAYER_ENTERING_WORLD")
 driver:SetScript("OnEvent", function()
     if event == "CHAT_MSG_SYSTEM" then
         Receive(arg1)
-    elseif event == "ADDON_LOADED" and arg1 == "KeijinAchievements"
-        or event == "PLAYER_ENTERING_WORLD" then
+    elseif event == "PLAYER_ENTERING_WORLD" then
         Position()
-        if not announced then
-            announced = true
-        end
     end
 end)
 driver:SetScript("OnUpdate", function()

@@ -1,12 +1,13 @@
 local K=KeijinUI
-local stats=K.Panel("KeijinUIStatistics","Dieser Run",260,204)
+local stats=K.Panel("KeijinUIStatistics","Dieser Run",260,185)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end)
 -- Level and experience of the current level only: the game hands out no run total of experience.
 local definitions={
     {"lvl","Level"},{"xp","Erfahrung"},
     {"ek","Eliten besiegt"},{"gk","Wächter besiegt"},{"bk","Bosse besiegt"},
-    {"taken","Schaden erlitten"},{"heal","Heilung (effektiv)"},{"ge","Gold verdient"}
+    {"taken","Schaden erlitten"},{"ge","Gold verdient"}
 }
+local function HealingSupported() return type(AZS_GetHealing)=="function" end
 local rows={}
 for i,v in ipairs(definitions) do rows[i]=K.ValueRow(stats,i,19); K.Live(rows[i].label,function() return K.T(v[2]) end) end
 -- The panel border closes the list, so the last row needs no line of its own.
@@ -35,49 +36,61 @@ meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -
 local reset=CreateFrame("Button",nil,meter)
 reset:SetWidth(44); reset:SetHeight(20); reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6)
 reset.text=K.Text(reset,"Reset",9,"CENTER",0,0)
--- Two tabs in the header: Run (everything since the run start or the last Reset) and Boss (the damage
--- dealt to bosses in the last boss fight, AZS_GetBossMeter). The choice is stored in KeijinUIDB.meterView.
--- The optional automatic switch (meterAutoBoss) only sets autoView for the time a boss lives.
-local autoView,autoApplied,bossWasAlive
+-- Run/Boss/Healing share one meter. Automatic Boss is temporary; Run and Healing choices stay explicit.
+local autoView,bossWasAlive,autoWasOn,awaitingBossRun
 local tabRun=CreateFrame("Button","KeijinUIMeterTabRun",meter)
 local tabBoss=CreateFrame("Button","KeijinUIMeterTabBoss",meter)
+local tabHeal=CreateFrame("Button","KeijinUIMeterTabHeal",meter)
 for _,tab in ipairs({tabRun,tabBoss}) do tab:SetWidth(34); tab:SetHeight(20) end
 tabRun.text=K.Text(tabRun,"Run",9,"CENTER",0,0)
 tabBoss.text=K.Text(tabBoss,"Boss",9,"CENTER",0,0)
+tabHeal:SetWidth(44); tabHeal:SetHeight(20); tabHeal.text=K.LText(tabHeal,"Heilung",9,"CENTER",0,0)
 function K.MeterView()
     if autoView then return autoView end
-    return K.DB().meterView=="boss" and "boss" or "run"
+    local view=K.DB().meterView
+    return (view=="boss" or view=="healing") and view or "run"
 end
 local function PaintTabs()
     local view=K.MeterView()
     local function Paint(tab,on) if on then tab.text:SetTextColor(1,0.82,0.28) else tab.text:SetTextColor(0.62,0.6,0.54) end end
-    Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss")
+    Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss"); Paint(tabHeal,view=="healing")
 end
 function K.SetMeterView(view)
-    K.DB().meterView=view=="boss" and "boss" or nil
-    autoView=nil; autoApplied=nil   -- a manual choice wins over the automatic switch
+    if autoView and view==autoView then offset=0; PaintTabs(); return end
+    K.DB().meterView=(view=="boss" or view=="healing") and view or nil
+    autoView=nil   -- Manual Run/Healing choices remain until the next fight.
     offset=0; PaintTabs()
 end
 function K.SetMeterAuto(on) K.DB().meterAutoBoss=on and true or nil end
 tabRun:SetScript("OnClick",function() K.SetMeterView("run") end)
 tabBoss:SetScript("OnClick",function() K.SetMeterView("boss") end)
+tabHeal:SetScript("OnClick",function() K.SetMeterView("healing") end)
 meter.headerExtra=function(mode)
     reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 16 or 20)
-    tabRun:ClearAllPoints(); tabBoss:ClearAllPoints()
-    tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20)
+    tabRun:ClearAllPoints(); tabBoss:ClearAllPoints(); tabHeal:ClearAllPoints()
+    tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20); tabHeal:SetHeight(mode=="thin" and 16 or 20)
+    tabRun:SetWidth(mode=="off" and 24 or 34); tabBoss:SetWidth(mode=="off" and 28 or 34); tabHeal:SetWidth(mode=="off" and 38 or 44)
+    reset:SetWidth(mode=="off" and 28 or 44); reset.text:SetFont(K.font,mode=="off" and 8 or 9,"OUTLINE")
+    summary:SetFont(K.font,mode=="off" and 9 or 10,"OUTLINE")
     if mode=="off" then
         -- No title strip: tabs and Reset share the bottom row with the summary.
-        tabBoss:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4)
+        reset:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4)
+        tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
+        tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
-        reset:SetPoint("RIGHT",tabRun,"LEFT",-4,0)
-        summary:SetWidth(120)
+        summary:SetWidth(100)
     else
-        reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,mode=="thin" and -2 or -6)
-        tabBoss:SetPoint("RIGHT",reset,"LEFT",-4,0)
+        if mode=="thin" then reset:SetPoint("RIGHT",meter.strip,"RIGHT",-3,0)
+        else reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6) end
+        tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
+        tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
         summary:SetWidth(236)
     end
     PaintTabs()
+end
+local function Summary(full,total,rate)
+    summary:SetText(K.headers.Mode()=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
 end
 local function ResetMeter()
     baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0
@@ -94,65 +107,33 @@ crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}
 for i=1,8 do critRows[i]=K.ListBarRow(crit,i,19) end
--- Effective healing: sum of positive health gains of the player between two samples.
-local healed,lastHp,lastMax=0,nil,nil
--- Estimated gross healing by source, integrated at every sample with the value valid at that moment:
--- leech (lch, a fraction) times own damage dealt, kill heal (heal) times kills, regeneration (reg,
--- health per second) times run seconds. "last" holds what was already credited; a component whose
--- stat is missing is not advanced, so it is credited later with the first value that arrives.
--- Loaded in the middle of a run, the first sample credits everything since run start with the
--- current values (the best available estimate).
-local estimate,credited={leech=0,kill=0,regen=0},nil
-local function ResetRun()
+-- Validated native sources for the Healing meter and diagnostic command.
+local awaitingHealing=false
+local function ReadHealing(valid)
+    local supported=HealingSupported()
+    if not supported then return nil,nil,nil,false end
+    if not valid or awaitingHealing or not K.Number(AZS_HEALING_UPDATED) or not K.Fresh(AZS_HEALING_UPDATED) then return nil,nil,nil,true end
+    local ok,lines,total,hps=pcall(AZS_GetHealing)
+    if not ok or type(lines)~="table" then return nil,nil,nil,true end
+    local sorted,sum,rate={},0,0
+    for _,line in ipairs(lines) do
+        if type(line)~="table" or type(line.name)~="string" or line.name=="" or not K.Number(line.dmg) or not K.Number(line.dps) then return nil,nil,nil,true end
+        table.insert(sorted,line); sum=sum+line.dmg; rate=rate+line.dps
+    end
+    if not K.Number(sum) or not K.Number(rate) then return nil,nil,nil,true end
+    if not K.Number(total) then total=sum end
+    if not K.Number(hps) then hps=rate end
+    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    return sorted,total,hps,true
+end
+local function ResetRun(waitForRun)
     baseline={}; meterStart=0; offset=0; critData={}; critOffset=0
-    healed=0; lastHp=nil; lastMax=nil
-    estimate={leech=0,kill=0,regen=0}; credited=nil
+    if K.DB().meterAutoBoss==true and K.DB().meterView=="boss" then K.DB().meterView=nil end
+    autoView=nil; bossWasAlive=nil; autoWasOn=nil; awaitingBossRun=waitForRun==true
 end
-local function Integrate(seconds,r,lines)
-    local stats=AZS_STATS
-    if type(stats)~="table" or not K.Number(seconds) then return end
-    local last=credited or {time=0,dmg=0,kills=0}; credited=last
-    if K.Number(stats.reg) then
-        if seconds>last.time then estimate.regen=estimate.regen+stats.reg*(seconds-last.time) end
-        last.time=seconds
-    end
-    if type(lines)=="table" and K.Number(stats.lch) then
-        local dmg=0
-        for _,v in ipairs(lines) do if K.Number(v.dmg) then dmg=dmg+v.dmg end end
-        if dmg>last.dmg then estimate.leech=estimate.leech+stats.lch*(dmg-last.dmg) end
-        last.dmg=dmg
-    end
-    if type(r)=="table" and K.Number(r.kills) and K.Number(stats.heal) then
-        if r.kills>last.kills then estimate.kill=estimate.kill+stats.heal*(r.kills-last.kills) end
-        last.kills=r.kills
-    end
-end
--- Tooltip text of the healing row: effective total first, then the gross estimate by source.
-local function HealDetail(value)
-    local text=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten")
-    local stats=AZS_STATS
-    if type(stats)~="table" or not credited then return text end
-    local total=estimate.leech+estimate.kill+estimate.regen
-    text=text..K.T("\n\nGeschätzt, brutto inkl. Überheilung (nicht die effektive Heilung):")
-    text=text..K.T("\nLebensraub: %s (%.1f%% des Schadens)",K.Short(estimate.leech),(K.Number(stats.lch) and stats.lch or 0)*100)
-    text=text..K.T("\nKill-Heilung: %s (%s pro Kill)",K.Short(estimate.kill),K.Short(K.Number(stats.heal) and stats.heal or 0))
-    text=text..K.T("\nRegeneration: %s (%.1f pro Sekunde)",K.Short(estimate.regen),K.Number(stats.reg) and stats.reg or 0)
-    return text..K.T("\nSumme: %s",K.Short(total))
-end
-local function SampleHealth()
-    local hp,max=UnitHealth("player"),UnitHealthMax("player")
-    local r=AZS_RUN
-    if (not K.Number(hp) or not K.Number(max) or max<=0)
-        and type(r)=="table" and K.Number(r.hp) and K.Number(r.hpm) and r.hpm>0 then hp,max=r.hp,r.hpm end
-    if not K.Number(hp) or not K.Number(max) or max<=0 then lastHp=nil; lastMax=nil; return end
-    -- Counting only while the run is official "playing": pause, card choice and no run just follow the value.
-    if AZS_GetPhase and AZS_GetPhase()=="playing" and lastHp and lastHp>0 and lastMax==max and hp>lastHp then
-        healed=healed+(hp-lastHp)
-    end
-    lastHp,lastMax=hp,max
-end
-K.On("UNIT_HEALTH",function(_,unit) if unit=="player" then SampleHealth() end end)
-K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSZONE" then ResetRun() end end)
+K.On("CHAT_MSG_ADDON",function(_,prefix)
+    if prefix=="AZSZONE" then ResetRun(true) elseif prefix=="AZSRUN" then awaitingBossRun=false end
+end)
 local combat=CreateFrame("Frame",nil,UIParent)
 for ev in pairs(K.tools.CombatEvents) do combat:RegisterEvent(ev) end
 combat:SetScript("OnEvent",function()
@@ -168,17 +149,28 @@ combat:SetScript("OnEvent",function()
     v.last=hit.amount; v.sum=v.sum+hit.amount; v.count=v.count+1; critData[name]=v
 end)
 -- Boss view: lines, total and dps of the last boss fight as the game reports them (empty before the first one).
-local function BossAlive() return type(AZS_RUN)=="table" and K.Number(AZS_RUN.bu) and AZS_RUN.bu>0 end
+local function BossAlive()
+    local phase=AZS_GetPhase and AZS_GetPhase()
+    if awaitingBossRun or (phase~="playing" and phase~="paused" and phase~="choosing") or not K.Fresh(AZS_RUN_UPDATED) then return false end
+    return type(AZS_RUN)=="table" and K.Number(AZS_RUN.bu) and AZS_RUN.bu>0
+end
 local function AutoSwitch()
     local alive=BossAlive() and true or false
-    if alive==bossWasAlive then return end
-    bossWasAlive=alive
-    if not K.DB().meterAutoBoss then autoView=nil; autoApplied=nil; return end
-    if alive then
-        if K.MeterView()=="run" then autoView="boss"; autoApplied=true; offset=0 end
-    elseif autoApplied then
-        autoView=nil; autoApplied=nil; offset=0
+    local enabled=K.DB().meterAutoBoss==true
+    local ended=bossWasAlive==true and not alive
+    local began=alive~=bossWasAlive or not autoWasOn
+    bossWasAlive=alive; autoWasOn=enabled
+    -- Process setting changes even when the boss count has not changed.
+    if not enabled then
+        if autoView then offset=0 end
+        autoView=nil; return
     end
+    if not alive then
+        if autoView or (ended and K.MeterView()=="boss") then
+            if K.DB().meterView=="boss" then K.DB().meterView=nil end
+            autoView=nil; offset=0
+        end
+    elseif began and K.MeterView()=="run" then autoView="boss"; offset=0 end
 end
 local function UpdateBoss()
     local lines,total,dps
@@ -214,8 +206,38 @@ local function UpdateBoss()
             row:Show()
         else row:Hide() end
     end
-    summary:SetText(K.T(BossAlive() and "Bosskampf: %s gesamt   ·   %s / s   (läuft)" or "Bosskampf: %s gesamt   ·   %s / s",
-        K.Short(total),K.Short(K.Number(dps) and dps or 0)))
+    Summary(K.T(BossAlive() and "Bosskampf: %s gesamt   ·   %s / s   (läuft)" or "Bosskampf: %s gesamt   ·   %s / s",
+        K.Short(total),K.Short(K.Number(dps) and dps or 0)),total,K.Number(dps) and dps or 0)
+    meter:Show()
+end
+-- Native effective healing by source. Reset and boss automation never replace a manual healing choice.
+K.On("CHAT_MSG_ADDON",function(_,prefix)
+    if prefix=="AZSZONE" then awaitingHealing=true elseif prefix=="AZSHEAL" then awaitingHealing=false end
+end)
+local function UpdateHealing(lines,total,hps,supported)
+    local sorted=lines or {}; total=total or 0; hps=hps or 0
+    if table.getn(sorted)==0 then
+        for _,row in ipairs(meterRows) do row:Hide() end
+        meter:SetHeight(100)
+        summary:SetText(K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); meter:Show(); return
+    end
+    meter:SetHeight(K.MeterMaxHeight())
+    local visible=(meter.headerHeight-56)/22
+    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    for i,row in ipairs(meterRows) do
+        local value=sorted[i+offset]
+        if value and i<=visible then
+            row.label:SetText(K.DisplayName(value.name)); row.value:SetText(K.Short(value.dmg))
+            row.dps:SetText(K.Short(K.Number(value.dps) and value.dps or 0).." HPS")
+            row.bar:SetValue(sorted[1].dmg>0 and value.dmg/sorted[1].dmg or 0)
+            local red,green,blue=K.SourceColor(value.name); row.bar:SetStatusBarColor(red,green,blue,.85)
+            row.tip=K.DisplayName(value.name)
+            row.detail=K.T("%.0f Heilung\n%s HPS\n%.1f%% Anteil\nNative Heilungsdaten, ohne Überheilung.",value.dmg,
+                K.Short(K.Number(value.dps) and value.dps or 0),total>0 and value.dmg/total*100 or 0)
+            row:Show()
+        else row:Hide() end
+    end
+    Summary(K.T("Heilung: %s gesamt   ·   %s HPS",K.Short(total),K.Short(hps)),total,hps)
     meter:Show()
 end
 local previousReported
@@ -227,14 +249,12 @@ local function Update()
     local reported=K.ReportedRunTime()
     if valid and reported and previousReported and reported<previousReported-K.RUN_BACK then ResetRun() end
     if reported then previousReported=reported end
-    SampleHealth()
-    if valid then Integrate(seconds,r,AZS_GetMeter and AZS_GetMeter()) end
+    local healing,healTotal,healRate,healSupported=ReadHealing(valid)
     if not K.DB().hidden.statistics then
         r=valid and r or {}
         for i,def in ipairs(definitions) do
             local key=def[1]; local value=r[key]
-            if key=="heal" then value=valid and healed or nil end
-            rows[i].tip=K.T(def[2])
+            rows[i].tip=K.T(def[2]); rows[i].label:SetText(K.T(def[2]))
             if key=="xp" then
                 local need=r.xpn
                 if K.Number(value) and K.Number(need) and need>0 then
@@ -245,7 +265,8 @@ local function Update()
                 end
             else
                 rows[i].value:SetText(K.Short(value))
-                rows[i].detail=key=="heal" and HealDetail(value) or (K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten"))
+                if key=="taken" then rows[i].detail=K.combatDetails.Taken()
+                else rows[i].detail=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten") end
             end
         end
         stats:Show()
@@ -254,16 +275,19 @@ local function Update()
     local lines=AZS_GetMeter and AZS_GetMeter()
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
     local bossView=K.MeterView()=="boss"
-    if bossView then reset:Hide() else reset:Show() end
+    local healingView=K.MeterView()=="healing"
+    if bossView or healingView then reset:Hide() else reset:Show() end
     local sorted,total={},0
-    if meterValid and not bossView then
+    if meterValid and not bossView and not healingView then
         for _,v in ipairs(lines) do
             if type(v.name)~="string" or not K.Number(v.dmg) then meterValid=false; break end
             local value=math.max(0,v.dmg-(baseline[v.name] or 0))
             table.insert(sorted,{name=v.name,dmg=value,proc=v.proc}); total=total+value
         end
     end
-    if bossView and not K.DB().hidden.meter then
+    if healingView and not K.DB().hidden.meter then
+        UpdateHealing(healing,healTotal,healRate,healSupported); K.Native("meter",true)
+    elseif bossView and not K.DB().hidden.meter then
         UpdateBoss(); K.Native("meter",true)
     elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
@@ -285,10 +309,11 @@ local function Update()
                 row.tip=K.DisplayName(v.name)
                 row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
                     K.Short(dps),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+                row.detail=row.detail..K.combatDetails.Detail(v.name)
                 row:Show()
             else row:Hide() end
         end
-        summary:SetText(K.T("%s gesamt   ·   %s / s",K.Short(total),K.Short(duration>0 and total/duration or 0)))
+        Summary(K.T("%s gesamt   ·   %s / s",K.Short(total),K.Short(duration>0 and total/duration or 0)),total,duration>0 and total/duration or 0)
         meter:Show(); K.Native("meter",true)
     else
         K.Native("meter",not K.DB().hidden.meter)
@@ -346,6 +371,18 @@ debugFrame:SetScript("OnEvent",function()
     end
 end)
 function K.HealDebug()
+    if HealingSupported() then
+        local lines,total,hps=ReadHealing(AZS_GetPhase and AZS_GetPhase() and K.Number(AZS_GetRunTime and AZS_GetRunTime()))
+        if not lines then K.Say(K.T("Noch keine aktuellen Heilungsdaten")); return end
+        local shock=false
+        for _,line in ipairs(lines) do
+            K.Say(K.T("Heilquelle: %s [%s] · %s Heilung · %s HPS",K.DisplayName(line.name),line.name,tostring(line.dmg),tostring(line.dps)))
+            if K.SourceKey(line.name)=="holy_shock" then shock=true end
+        end
+        K.Say(K.T(shock and "Holy Shock: als eigene Heilquelle vom Spiel gemeldet." or "Holy Shock: keine eigene Heilquelle vom Spiel gemeldet. Ursache noch offen."))
+        K.Say(K.T("Heilung nativ: %s · %s HPS · Quellen: %d",K.Short(total),K.Short(hps),lines and table.getn(lines) or 0))
+        return
+    end
     if debugUntil then K.Say("Heilmitschnitt läuft bereits."); return end
     debugUntil=GetTime()+60; debugLines=0; debugCounts={}
     for _,ev in ipairs(HEAL_EVENTS) do debugFrame:RegisterEvent(ev) end

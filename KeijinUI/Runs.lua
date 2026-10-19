@@ -123,6 +123,9 @@ end
 local function Hex(r,g,b) return string.format("|cff%02x%02x%02x",math.floor(r*255+0.5),math.floor(g*255+0.5),math.floor(b*255+0.5)) end
 -- n: number of this run, best and longest: values before this run (or nil).
 function R.Message(zname,cname,class,n,best,longest)
+    if K.DB().compactMessages==true then
+        return K.T("%s · %s · Runde %s",zname,cname,n)..(K.Number(best) and best>0 and (" · "..K.T("Bestzeit %s",K.Clock(best))) or "")
+    end
     local red,green,blue=ClassColor(class)
     local colored=Hex(red,green,blue)..cname.."|r"
     if n<=1 then return K.T("%s, %s: Das ist dein erster Lauf hier.",zname,colored) end

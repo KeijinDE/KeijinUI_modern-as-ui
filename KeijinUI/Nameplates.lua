@@ -78,6 +78,8 @@ local function Click(p,blocked)
 end
 function K.ReleaseNameplates()
     K.targetPlateShown=false
+    if K.RefreshTargetDebuffs then K.RefreshTargetDebuffs() end
+    K.targetPlateShown=false
     for _,p in ipairs(plates) do Mask(p,false); Click(p,false); p.frame:Hide() end
 end
 local function Norm(path)
@@ -154,16 +156,31 @@ local function Run()
             if show then
                 local low,high=p.health:GetMinMaxValues(); local value=p.health:GetValue()
                 local share=high>low and math.max(0,math.min(1,(value-low)/(high-low))) or 0
-                p.bar:SetWidth(kind=="boss" and 154 or ((kind=="elite" or kind=="rare") and 124 or 100))
-                p.bar:SetHeight(kind=="boss" and 14 or 10)
-                p.bar:SetValue(share)
-                if kind=="boss" then p.bar:SetStatusBarColor(0.65,0.3,0.72)
-                elseif kind=="elite" then p.bar:SetStatusBarColor(0.85,0.45,0.13)
-                elseif kind=="rare" then p.bar:SetStatusBarColor(0.62,0.72,0.86)
-                else p.bar:SetStatusBarColor(0.7,0.15,0.13) end
-                p.label:SetText(name); p.label:SetTextColor(target and 1 or 0.9,target and 0.82 or 0.88,target and 0.28 or 0.8)
+                -- Values are remembered per plate; the client is only asked when one changed.
+                local width=kind=="boss" and 154 or ((kind=="elite" or kind=="rare") and 124 or 100)
+                local height=kind=="boss" and 14 or 10
+                if p.cWidth~=width then p.cWidth=width; p.bar:SetWidth(width) end
+                if p.cHeight~=height then p.cHeight=height; p.bar:SetHeight(height) end
+                if p.cShare~=share then
+                    p.cShare=share; p.bar:SetValue(share)
+                    p.value:SetText(string.format("%.0f%%",share*100))
+                end
+                K.combatDetails.Execute(p.frame,p.bar,share,false)
+                if p.cKind~=kind then
+                    p.cKind=kind
+                    if kind=="boss" then p.bar:SetStatusBarColor(0.65,0.3,0.72)
+                    elseif kind=="elite" then p.bar:SetStatusBarColor(0.85,0.45,0.13)
+                    elseif kind=="rare" then p.bar:SetStatusBarColor(0.62,0.72,0.86)
+                    else p.bar:SetStatusBarColor(0.7,0.15,0.13) end
+                end
+                if p.cName~=name then p.cName=name; p.label:SetText(name) end
+                local isTarget=target and true or false
+                if p.cTarget~=isTarget then
+                    p.cTarget=isTarget
+                    p.label:SetTextColor(target and 1 or 0.9,target and 0.82 or 0.88,target and 0.28 or 0.8)
+                end
                 if kind=="normal" and not target then p.label:Hide() else p.label:Show() end
-                p.value:SetText(string.format("%.0f%%",share*100)); p.frame:Show()
+                p.frame:Show()
                 Click(p,false)
                 if target then targetShown=true; K.UpdateDebuffRow(p.debuffs,"target")
                 elseif p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
@@ -227,7 +244,7 @@ end
 -- update, so the stock plate does not flash and reused plates do not show the old unit.
 local driver=CreateFrame("Frame","KeijinUIPlates")
 driver:SetScript("OnUpdate",Update)
-K.On("PLAYER_ENTERING_WORLD",function() K.SetNameplates(Mode()); Update() end)
-K.On("PLAYER_LEAVING_WORLD",function() K.ReleaseNameplates() end)
-K.On("PLAYER_LOGOUT",function() K.ReleaseNameplates() end)
+K.On("PLAYER_ENTERING_WORLD",function() K.SetNameplates(Mode()); Update() end,"nameplates")
+K.On("PLAYER_LEAVING_WORLD",function() K.ReleaseNameplates() end,"nameplates")
+K.On("PLAYER_LOGOUT",function() K.ReleaseNameplates() end,"nameplates")
 K.SetNameplates(Mode())

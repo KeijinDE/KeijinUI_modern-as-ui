@@ -13,7 +13,7 @@ local PHASES = { ready = true, playing = true, choosing = true, paused = true }
 local QUALITY = { [0] = {0.62,0.62,0.62}, [1] = {0.85,0.85,0.85},
 	[2] = {0.12,1,0}, [3] = {0,0.44,0.87}, [4] = {0.64,0.21,0.93},
 	[5] = {1,0.5,0} }
-local owned, previousShown, announced = false, nil, false
+local owned, previousShown = false, nil
 local function T(text, a1, a2) return KeijinUI.T(text, a1, a2) end
 -- Ability name in the interface language (German or English), falling back to the spell book name.
 local function Display(row)
@@ -273,6 +273,12 @@ local function Paint(pool, rows, top)
 		local start = ROWSTART
 		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*PITCH)
 		cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+        if row.kind=="item" and KeijinUI.collection and KeijinUI.ModuleOn("jewelry") then
+            if not cell.nativeCooldown then cell.nativeCooldown=KeijinUI.Text(cell,"",9,"BOTTOM",0,1) end
+            local left=KeijinUI.collection.Cooldown(row.slot)
+            cell.nativeCooldown:SetText(left and left>0 and KeijinUI.Clock(math.ceil(left)) or "")
+            cell.nativeCooldown:Show()
+        elseif cell.nativeCooldown then cell.nativeCooldown:Hide() end
 		if row.kind == "spell" then
 			cell.rank:SetText(string.format("%.0f", row.rank))
 			cell.rank:Show(); cell.rankBackground:Show()
@@ -429,6 +435,11 @@ local function Update()
 	skills:Show()
 end
 
+-- One setting shared by the menu and /kbb; restore the native HUD on disable.
+KeijinUI.buildBar={}
+function KeijinUI.buildBar.On() return Settings().enabled end
+function KeijinUI.buildBar.Set(on) Settings().enabled=on and true or false; Update() end
+
 SLASH_KEIJINBUILDBAR1 = "/kbb"
 SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 	local command = string.gsub(string.lower(msg or ""), "^%s*(.-)%s*$", "%1")
@@ -446,8 +457,7 @@ SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 		Update()
 		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Buildtipps").." "..(Settings().advisor and T("an.") or T("aus.")))
 	elseif command == "" or command == "toggle" then
-		Settings().enabled = not Settings().enabled
-		Update()
+		KeijinUI.buildBar.Set(not Settings().enabled)
 		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..(Settings().enabled and T("Leiste eingeschaltet.") or T("Leiste ausgeschaltet.")))
 	elseif command == "reset" then
 		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills")
@@ -465,9 +475,6 @@ watcher:SetScript("OnEvent", function()
 	if event == "PLAYER_LOGOUT" then Release()
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		ApplyPosition()
-		if not announced then
-			announced = true
-		end
 		Update()
 	elseif arg1 == "AZSSPELLS" or arg1 == "AZSRUN" then elapsed = 0.2 end
 end)

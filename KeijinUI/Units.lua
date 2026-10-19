@@ -166,7 +166,8 @@ local function Update()
                 f.bar:SetValue(pct); f.health:SetText(K.Short(hp))
                 f.percent:SetText(string.format("%.0f%%",math.floor(pct*100)))
                 f.exact=string.format("%.0f / %.0f",hp,max)
-            else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil end
+                if unit=="target" then K.combatDetails.Execute(f,f.bar,pct,true) end
+            else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
             SetPortraitTexture(f.portrait,unit)
             f.portrait:Show()
@@ -183,6 +184,7 @@ local function Update()
             if IsAltKeyDown() or (K.layout.IsEditing and K.layout.IsEditing()) then f:SetAlpha(0); f:Show()
             else f:SetAlpha(1); f:Hide() end
         else f:SetAlpha(1); f:Show() end
+        if unit=="target" and not UnitExists(unit) then K.combatDetails.Execute(f,f.bar,nil,true) end
         if f.debuffs then K.RefreshTargetDebuffs() end
     end
 end

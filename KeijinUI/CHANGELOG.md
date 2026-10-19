@@ -5,6 +5,130 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.0.0 (2026-10-19, release v3.0.0)
+
+* Final V3 settings layout. The addon list and settings header read KeijinUI. The four categories remain, and all run displays are one Run displays section under Layout & Display. Section titles sit under Size & Position, character values have their own small section, and XP estimates, lives/rerolls, execute marker, interval combat text and run messages sit in their existing sections. Native jewelry cooldowns on icons are always shown; the checkbox is removed and a previously saved Off value is ignored. The temporary SettingsV3.lua layer is gone. Existing settings and positions remain.
+
+* Minimap: the skull appears only for a guardian lair that was seen alive earlier in this run and is now empty, and disappears on respawn. Lairs that are still empty at the start of a run show no skull. Living and fighting guardians keep their native flag.
+
+* Combat settings: the interval number options are labelled Healing numbers on the player and Incoming damage on the player, with a note that they belong to your character.
+
+* Boss meter automation: when the last boss ends, an automatic Boss view returns to Run, including manual or repeated Boss selection during the fight. Switching the option on or off works during a fight. Run end, zone change and restart clear the temporary state. Manual Run/Healing and a persistent manual Boss view with automation off remain possible.
+
+* Run statistics panel without healing and one row shorter. The Healing meter tab, native source validation, /kui heal and optional healing numbers remain.
+
+* Rerolls show the remaining free count, then the next native purchase price with a G suffix when free rerolls reach zero. Prices update after purchases, missing prices stay unknown, and the exact price remains in the tooltip. No new option or window.
+
+* Fixed the collection-recording switch so it also stops loot observations. Removed unused XP counters and record identifiers of the retired boss history. Retired features and archived layout tools stay outside the runtime.
+
+* Internal performance and cleanup work, behaviour unchanged: less per-frame work and fewer temporary tables in damage text, nameplates, chat and the combat line reader; two dead code branches removed from the achievements and build bar modules; the settings window position is applied again after the saved variables are loaded.
+
+### 2.4.9 (2026-10-19)
+
+* Minimap skulls now appear only for defeated minibosses, using the native empty-lair state, and disappear on respawn. Living and fighting guardians keep their native flags until a proven selective hide function exists. Removed occupied/fighting skull styles and status badges. Existing independent switches, guardian-row arrows, tooltips and map-edge handling remain; settings and documentation explain the policy.
+
+### 2.4.8 (2026-10-19)
+
+* Removed precise frame placement, numeric inputs and layout profiles from the active addon, including their settings page, helper functions and translations. The code is archived separately for possible future reuse. Normal dragging, mouse-wheel resizing, saved positions, grid and reset remain. Native font selection now lives in the smaller Fonts.lua module; the installer backs up and removes LayoutTools.lua.
+
+### 2.4.7 (2026-10-19)
+
+* Removed historical boss sections from tooltips, their setting and their data collection. New Pace records and victory snapshots no longer copy boss sections. Current-run boss timings and the existing Pace comparison remain. The installer backs up and removes the retired BossHistory.lua module.
+
+### 2.4.6 (2026-10-19)
+
+* Removed the unframed floating jewelry effect list, its separate layout handle and its redundant setting. Effects remain available in the existing native tooltips on the item icons. Native cooldowns and their switches remain. The installer backs up and removes the retired GearDetails.lua module.
+
+### 2.4.5 (2026-10-19)
+
+* Removed the world-map pin option, its optional-module entry and its runtime projection/pins. Old saved toggles no longer activate it. The installer removes the retired module file after backing up the previous installation. Cache and guardian minimap navigation remains available.
+
+### 2.4.4 (2026-10-19)
+
+* The XP bar now shares the bronze panel housing, dark background and chamfered edges of the other windows, with a padded violet progress track. Optional XP/min and next-level estimates are centered inside the track instead of floating above it. The panel stays 400 points wide and fits below the default build bar. Existing custom top positions, visibility and estimation rules remain supported.
+
+### 2.4.3 (2026-10-19)
+
+* Lives and rerolls now form an optional second row inside the existing kills, gold and cache panel, sharing its bronze housing, fonts and movement. Removed the separate floating resources strip. Zero remains visible; unavailable fields and disabled rows collapse. The next reroll price is explicitly named only on hover, not displayed as an ambiguous next purchase.
+* The combined panel grows upward from its bottom edge to keep space above the build bar. Existing saved panel positions and layout profiles are converted once to preserve that edge. Existing visibility and module switches remain effective.
+
+### 2.4.2 (2026-10-19)
+
+* Added the short /kui heal diagnostic command; /kui heal debug remains supported. Lists every validated native healing source with its original name, exact healing and HPS, and states whether Holy Shock is reported separately. Unknown or previous-run data is explicitly unavailable. This diagnoses the missing source; it does not invent healing or claim the gameplay issue is fixed.
+
+### 2.4.1 (2026-10-19)
+
+* Guardian minimap skulls now have transparent backgrounds without bronze boxes. Fighting and empty status symbols sit centered beside the complete skull instead of covering its lower corner. Increased edge clearance keeps the wider markers inside the minimap.
+
+### 2.4.0 (2026-10-19)
+
+* Added optional XP/min and next-level estimates from received native run time. Require multiple gains and enough history, bridge one level transition, and reset on gaps or unknown intermediate level requirements. Added optional native lives and rerolls.
+* Expanded selectable character attributes to 29 verified native values with their actual units; arrows reorder selected values. Added native damage-taken sources and observed per-source hit counts, normal average/min/max and critical rate on hover. Optional 30 percent markers preserve health colors.
+* Added a searchable persistent jewelry diary of observed finds and native tooltip ranges, native inventory cooldowns and optional compact effect text. Unknown items and unobserved values remain unknown. Added native world-map cache/lair pins that select guidance without changing the browsed map; unsupported projection stays hidden.
+* Added precise frame position/scale controls, eight layout profiles, native font selection, chat copy and optional compact run introductions. Eleven optional engines can suspend their callbacks and subscriptions while shared run storage and diagnostics remain active. Extra settings remain within the four existing categories.
+* Added optional historical boss-section comparisons and separate healing/incoming text using native interval totals. The existing Pace calculation remains unchanged. Native guardian minimap flags remain unresolved; in-game visual verification is pending.
+
+### 2.3.11 (2026-10-19)
+
+* Boss and guardian encounter bars now show native debuffs by spawn ID, including icons, stacks, known remaining times and details on hover. Identical names stay separate. Unknown timing is marked with a question mark; permanent effects have no countdown. Timers follow the native run clock through pauses and card choices.
+* Eight icons per bar and an overflow tooltip keep the group compact. Its existing screen height limit and mouse wheel navigation remain; missing native debuff support hides only the added effects. Target and nameplate debuff presentation stays unchanged.
+
+### 2.3.10 (2026-10-18)
+
+* In Fixed position only, ordinary floating damage fades earlier, lasts about 0.55 to 0.65 seconds and travels a shorter distance. Periodic and small hits also clear quickly. Critical hits keep their existing longer lifetime and fade.
+* In Fixed position only, bounded the starting offset of consecutive Rising hits so bursts cannot push a growing column of numbers toward the screen edge. The settings preview and live text share the same fade curve; icons fade with their number. Nameplate presentation remains unchanged.
+
+### 2.3.9 (2026-10-18)
+
+* Fixed compact loot lists and icon grids moving left after repeated reloads. Their actual display width is now set before applying and clamping saved positions, including late saved-variable loading. Existing freely placed frames stay where they are.
+* A position already shifted and saved by an older version needs to be moved back once. The addon does not guess or overwrite a previous intended position.
+
+### 2.3.8 (2026-10-18)
+
+* Display and Layout are now one Layout & Display category. It also contains unit frame appearance, nameplates, minimap, caches and guardian navigation, with direct section links. Spells, jewelry and the action bar now have a shared display switch.
+* Both stored level options move to General. Main categories have persistent bronze borders, brighter gold labels and explicit left alignment, clearly separated from smaller section links. Existing preferences and commands remain.
+
+### 2.3.7 (2026-10-18)
+
+* Completed boss row backgrounds now span the entire row, including the name and both time columns. Existing pace colors and timings remain.
+* Small guardian direction arrows now sit directly to the right of each name, with room reserved before the status column.
+
+### 2.3.6 (2026-10-18)
+
+* Lair pins now remain visible when empty. Unified bronze frames contain gold skulls for occupied lairs, orange skulls with ! while fighting, or grey skulls with X when empty. Hover for the shared guardian status, return countdown and distance. Direction arrows still lead only to occupied lairs.
+* Known limitation: native game flags have not been disabled. The current client exposes no documented control to hide them individually. Native flag overlap remains unresolved.
+
+### 2.3.5 (2026-10-18)
+
+* Run statistics now use the same native effective healing total as the Healing meter. The tooltip shows run HPS and up to six strongest sources with shares, excluding overhealing. HP sampling and gross estimates no longer replace native data. The panel keeps its size.
+* Missing, invalid or previous run healing stays unknown instead of falling back to an unrelated estimate. Valid empty data means zero. Older clients without the API retain an explicitly labeled observed healing fallback. /kui heal debug reports native totals where supported.
+
+### 2.3.4 (2026-10-18)
+
+* Small loot list now uses the existing green check mark for new items and red cross for collected items instead of truncated status text. Item names gain space, while localized status text remains in the tooltip. The collection status toggle also controls these symbols. Unknown status stays unmarked.
+
+### 2.3.3 (2026-10-18)
+
+* The active settings category expands its section headings as smaller links in the left sidebar. Click a heading to jump directly to that section on the right. Other categories stay collapsed. The selected section is highlighted and follows manual scrolling.
+* Links use the existing headings and translations, retain the category while choosing character attributes, and keep all categories above the footer.
+
+### 2.3.2 (2026-10-18)
+
+* Layout now has percentage sliders for Menu size (70 to 100%) and Entire UI (64 to 150%). Entire UI uses the native uiScale setting, scaling game windows and KeijinUI together while preserving individual frame scale settings. Nothing changes automatically at startup.
+* Percentages preview while dragging and apply on release. The settings window fits the screen after scale or resolution changes. Reset UI sizes restores menu size to 80% and native UI scale to 90%.
+
+### 2.3.1 (2026-10-18)
+
+* Guardian navigation now uses a small gold direction arrow before each occupied guardian name in the existing run overview. The separate large guide and its layout handle have been removed. Distance and lair guidance remain available on hover; the overview keeps its size and status column.
+* Arrows disappear for empty lairs, unknown positions and on leaving the run. They move and scale with the overview. The arrow and minimap pin settings remain independent and retain saved preferences.
+
+### 2.3.0 (2026-10-18)
+
+* Cache guidance prefers native world position and facing, including instance maps and valid zero/negative coordinates. Older builds retain the measured map fallback.
+* New movable guardian guide: distance and direction to an occupied lair, stable target selection, click/wheel cycling and nearest selection by right-click. Minimap skulls select a lair; empty lairs disappear. Guide and pins can be toggled independently.
+* New movable stored level-up button shows waiting native choices. Click while playing to open them. Controls offers the game's Store Level-Ups setting; startup never changes that preference or spends choices. Unsupported clients keep their native HUD.
+* Healing is a third meter tab with native effective healing by source, HPS, shares and the existing source colors. Manual selection wins over boss automation. Reset remains limited to the Run tab. Tabs and summary also fit thin and hidden headers.
+
 ### 2.2.0 (2026-10-18, release v2.2.0)
 
 * **Loot list.** New choice in Settings, Display, Loot: "Notice" (default, as before), "List", "Small list" or "Icons only". The list collects the items of the current run in the loot panel, newest first, with symbol, name in quality color, slot and run time when you got it, and a grey "Collected" or green "New" hint. Up to 8 rows are visible, the mouse wheel scrolls, hovering shows the item tooltip. The small list is a compact line list (small symbol, small name, status, 12 lines). "Icons only" shows symbols in a grid with a quality frame, a green check mark for new and a red cross for already collected items, and a tooltip with name and status. A reload keeps the list of the same run, a new run empties it.
@@ -267,6 +391,130 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.0.0 (2026-10-19, Release v3.0.0)
+
+* Endgültiges V3 Einstellungslayout. Addonliste und Einstellungskopf heißen KeijinUI. Die vier Kategorien bleiben, alle Runanzeigen stehen in einem Abschnitt Runanzeigen unter Layout & Anzeige. Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eigenen kleinen Abschnitt; EP Schätzung, Leben/Rerolls, Execute Markierung, zusätzlicher Kampftext und Run Meldungen stehen in ihren bestehenden Abschnitten. Native Abklingzeiten auf Schmucksymbolen werden immer angezeigt; der Schalter entfällt, ein früher gespeichertes Aus wird ignoriert. Die temporäre SettingsV3.lua Schicht ist entfernt. Bestehende Einstellungen und Positionen bleiben.
+
+* Minimap: Der Totenkopf erscheint nur bei einem Wächterhort, der in diesem Run schon lebend gesehen wurde und jetzt leer ist, und verschwindet beim Wiedererscheinen. Noch leere Horte am Runbeginn zeigen keinen Totenkopf. Lebende und kämpfende Wächter behalten ihre native Flagge.
+
+* Kampf Einstellungen: Die Intervallzahlen heißen Heilzahlen am Spieler und Eingehender Schaden am Spieler, mit Hinweis, dass sie zu deinem Charakter gehören.
+
+* Bossautomatik im Meter: Nach dem letzten Boss kehrt eine automatische Bossansicht zu Run zurück, auch nach manueller oder erneuter Bosswahl im Kampf. Ein-/Ausschalten greift auch während eines Kampfes. Runende, Zonenwechsel und Neustart lösen den temporären Zustand. Manuelle Run-/Heilungswahl und eine dauerhafte manuelle Bosswahl bei ausgeschalteter Automatik bleiben möglich.
+
+* Statistikfenster ohne Heilung und eine Zeile kürzer. Reiter Heilung, Prüfung nativer Quellen, /kui heal und optionale Heilzahlen bleiben erhalten.
+
+* Rerolls zeigen erst die freie Anzahl und bei null den nächsten nativen Kaufpreis mit G. Der Preis aktualisiert sich nach Käufen, fehlende Preise bleiben unbekannt, der exakte Preis steht im Tooltip. Keine neue Option oder weiteres Fenster.
+
+* Schalter zur Sammlungsaufzeichnung korrigiert: Er stoppt jetzt auch die Beobachtung von Beutemeldungen. Ungenutzte EP Zähler und Kennungen der entfernten Bosshistorie entfernt. Ausgebaute Funktionen und archivierte Rahmenwerkzeuge bleiben außerhalb der Laufzeit.
+
+* Interne Leistungs- und Aufräumarbeiten, Verhalten unverändert: weniger Arbeit pro Frame und weniger temporäre Tabellen bei Schadenszahlen, Plaketten, Chat und Kampfzeilenleser; zwei tote Codezweige in den Modulen Erfolge und Buildleiste entfernt; die Position des Einstellungsfensters wird nach dem Laden der gespeicherten Variablen erneut angewendet.
+
+### 2.4.9 (2026-10-19)
+
+* Totenköpfe auf der Minimap erscheinen nur noch für besiegte Minibosse gemäß nativem Zustand leerer Hort und verschwinden beim Wiedererscheinen. Lebende und kämpfende Wächter behalten die native Flagge, bis eine nachgewiesene gezielte Abschaltfunktion verfügbar ist. Lebende Totenkopfvarianten und Statuszusätze entfernt. Getrennte Schalter, Richtungspfeile in der Wächterliste, Tooltips und Kartenrandbegrenzung bleiben erhalten; Einstellungen und Dokumentation erklären die Regel.
+
+### 2.4.8 (2026-10-19)
+
+* Rahmen genau einstellen, Zahlenfelder und Layoutprofile aus dem aktiven Addon entfernt, einschließlich Einstellungsseite, Hilfsfunktionen und Übersetzungen. Der Code liegt separat für eine mögliche spätere Verwendung. Normales Ziehen, Größenänderung per Mausrad, gespeicherte Positionen, Raster und Zurücksetzen bleiben erhalten. Die native Schriftwahl liegt im kleineren Modul Fonts.lua; der Installer sichert und entfernt LayoutTools.lua.
+
+### 2.4.7 (2026-10-19)
+
+* Historische Bossabschnitte aus Tooltips, Einstellung und Datenerfassung entfernt. Neue Pace Einträge und Sieg Snapshots übernehmen keine Bossabschnitte mehr. Bosszeiten des aktuellen Runs und der bestehende Pace Vergleich bleiben erhalten. Der Installer sichert und entfernt das ausgediente Modul BossHistory.lua.
+
+### 2.4.6 (2026-10-19)
+
+* Frei schwebende Schmuckeffektliste ohne Rahmen, ihren eigenen Layoutgriff und den zusätzlichen Schalter entfernt. Die Effekte bleiben in den vorhandenen nativen Tooltips der Gegenstandssymbole erreichbar. Native Cooldowns und ihre Schalter bleiben erhalten. Die Installation sichert und entfernt die ausgediente Datei GearDetails.lua.
+
+### 2.4.5 (2026-10-19)
+
+* Weltkartenoption, zugehörigen Moduleintrag und die Funktion für Projektion und Pins entfernt. Alte gespeicherte Schalter aktivieren die Funktion nicht mehr. Die Installation entfernt die ausgediente Moduldatei nach Sicherung des vorherigen Stands. Cache und Wächternavigation auf der Minimap bleiben verfügbar.
+
+### 2.4.4 (2026-10-19)
+
+* Der EP Balken hat jetzt dasselbe Bronzegehäuse, den dunklen Hintergrund und die abgeschrägten Ecken wie die anderen Fenster, mit einer eingerückten violetten Fortschrittsleiste. Optionale XP Rate und Levelschätzung stehen zentriert innerhalb der Leiste, statt darüber zu schweben. Der Rahmen bleibt 400 Punkte breit und passt unter die normale Buildleiste. Bestehende eigene obere Positionen, Sichtbarkeit und Schätzregeln bleiben unterstützt.
+
+### 2.4.3 (2026-10-19)
+
+* Zusatzleben und Rerolls bilden eine optionale zweite Reihe im bestehenden Rahmen für Kills, Gold und Caches, mit gemeinsamer Bronzeoptik, Schrift und Positionierung. Die separate schwebende Ressourcenzeile entfällt. Null bleibt sichtbar; unbekannte Werte und ausgeschaltete Reihen werden ausgeblendet. Der Preis eines weiteren Rerolls steht eindeutig benannt nur im Tooltip, statt als missverständlicher nächster Kauf.
+* Die gemeinsame Anzeige wächst von ihrer Unterkante nach oben und hält Abstand zur Buildleiste. Gespeicherte Positionen und Layoutprofile werden einmalig auf diesen Anker umgestellt. Bestehende Anzeigeoptionen und Modulschalter bleiben wirksam.
+
+### 2.4.2 (2026-10-19)
+
+* Kurzen Diagnosebefehl /kui heal ergänzt; /kui heal debug bleibt erhalten. Zeigt jede geprüfte native Heilquelle mit Originalname, genauer Heilung und HPS sowie ausdrücklich, ob Holy Shock separat gemeldet wird. Fehlende oder alte Daten werden als nicht verfügbar benannt. Die Diagnose erfindet keine Heilwerte und behauptet keine Behebung der fehlenden Heilquelle.
+
+### 2.4.1 (2026-10-19)
+
+* Wächter auf der Minimap erscheinen mit transparentem Hintergrund ohne schwarze Kästchen und Bronzerahmen. Kampfstatus und leere Horte stehen zentriert neben dem vollständigen Totenkopf, statt dessen untere Ecke zu verdecken. Mehr Abstand zum Kartenrand hält die breiteren Symbole innerhalb der Minimap.
+
+### 2.4.0 (2026-10-19)
+
+* Optionale XP pro Minute und Levelschätzung aus empfangener nativer Runzeit. Die Schätzung benötigt mehrere Zuwächse und ausreichend Verlauf, überbrückt einen Levelwechsel und beginnt bei Messlücken oder unbekannten Zwischenleveln neu. Optionale native Zusatzleben und Rerolls ergänzt.
+* Charakterauswahl auf 29 belegte native Werte mit ihren tatsächlichen Einheiten erweitert; Pfeile sortieren ausgewählte Werte. Native Quellen erlittenen Schadens sowie beobachtete Trefferanzahl, normaler Mittelwert/Min/Max und Kritquote pro Quelle im Tooltip ergänzt. Optionale 30 Prozent Markierungen erhalten die Lebensfarben.
+* Durchsuchbare dauerhafte Schmucksammlung beobachteter Funde und nativer Tooltipbereiche, native Inventarcooldowns und optionale kompakte Effekttexte ergänzt. Unbekannte Gegenstände und nicht beobachtete Werte bleiben unbekannt. Native Weltkartenpins für Caches und Horte wählen die Navigation ohne Kartenwechsel; nicht unterstützte Projektionen bleiben unsichtbar.
+* Genaue Rahmenpositionen und Größen, acht Layoutprofile, native Schriftauswahl, Chatkopie und optional kurze Run Einleitungen ergänzt. Elf optionale Module können ihre Aufrufe und Ereignisabonnements aussetzen, während gemeinsame Rundenspeicherung und Diagnose aktiv bleiben. Die zusätzlichen Einstellungen bleiben in den vier vorhandenen Kategorien.
+* Optionale historische Bossabschnitte und getrennte Heilzahlen/eingehende Zahlen aus nativen Intervallsummen ergänzt. Die vorhandene Pace Berechnung bleibt unverändert. Native Wächterfähnchen bleiben offen; ein Sichttest im Spiel steht aus.
+
+### 2.3.11 (2026-10-19)
+
+* Boss und Wächter zeigen an ihren Begegnungsbalken native Debuffs nach Spawn ID: Symbole, Stapel, bekannte Restzeiten und Details beim Darüberfahren. Gleichnamige Gegner bleiben getrennt. Unbekannte Zeiten erhalten ein Fragezeichen; dauerhafte Effekte keinen Countdown. Zeiten folgen der nativen Runzeit auch in Pausen und Kartenauswahl.
+* Acht Symbole pro Balken und ein Tooltip für weitere Effekte halten die Gruppe kompakt. Die bisherige Höhenbegrenzung und Mausradnavigation bleiben erhalten; ohne native Debuffschnittstelle entfallen nur die zusätzlichen Effekte. Ziel und Namensplaketten zeigen ihre Debuffs wie bisher.
+
+### 2.3.10 (2026-10-18)
+
+* Nur bei Feste Stelle blenden normale Schadenszahlen früher aus, bleiben etwa 0,55 bis 0,65 Sekunden und bewegen sich kürzer. Auch periodische und kleine Treffer verschwinden zügig. Kritische Treffer behalten ihre bisherige längere Dauer und Ausblendung.
+* Nur bei Feste Stelle ist der Startversatz aufeinanderfolgender aufsteigender Treffer begrenzt, damit Flächentreffer keine immer höhere Zahlensäule bilden. Vorschau und Spiel verwenden dieselbe Ausblendung; Symbole blenden mit ihrer Zahl aus. Die Darstellung an Namensplaketten bleibt unverändert.
+
+### 2.3.9 (2026-10-18)
+
+* Kleine Lootlisten und Symbolraster wandern nach dem Neuladen nicht mehr nach links. Die tatsächliche Anzeigebreite wird vor dem Anwenden und Begrenzen gespeicherter Positionen gesetzt, auch bei später geladenen Spielerdaten. Frei platzierte Rahmen behalten ihre Position.
+* Eine von einer älteren Version bereits verschobene und gespeicherte Position muss einmal zurückgezogen werden. Das Addon errät und überschreibt keine frühere Wunschposition.
+
+### 2.3.8 (2026-10-18)
+
+* Anzeige und Layout sind jetzt gemeinsam unter Layout & Anzeige zu finden. Auch Einheitenrahmen, Namensplaketten, Minimap, Caches und Wächternavigation sind dort mit direkten Abschnittslinks erreichbar. Zauber, Schmuck und Aktionsleiste haben einen gemeinsamen Anzeigeschalter.
+* Beide Optionen für gespeicherte Level liegen unter Allgemein. Hauptmenüpunkte bleiben bronzeumrandet, heller goldfarben und ausdrücklich linksbündig, deutlich getrennt von den kleinen Abschnittslinks. Vorhandene Einstellungen und Befehle bleiben erhalten.
+
+### 2.3.7 (2026-10-18)
+
+* Der Hintergrund besiegter Bosse reicht jetzt über die gesamte Zeile einschließlich Name und beider Zeitspalten. Die bisherigen Pacefarben und Zeiten bleiben erhalten.
+* Kleine Richtungspfeile für Wächter stehen jetzt direkt rechts neben dem jeweiligen Namen. Die Statusspalte behält ihren Platz.
+
+### 2.3.6 (2026-10-18)
+
+* Hortmarkierungen bleiben auch leer sichtbar. Einheitliche bronzefarbene Rahmen enthalten goldene Totenköpfe für besetzte Horte, orange mit ! für kämpfende Wächter oder graue mit X für leere Horte. Status, Rückkehrzeit und Entfernung stehen im Tooltip. Richtungspfeile führen weiterhin nur zu besetzten Horten.
+* Offener Punkt: Die Standardfähnchen des Spiels wurden nicht abgeschaltet. Im aktuellen Client fehlt eine dokumentierte gezielte Steuerung. Mögliche Überlappungen mit diesen Fähnchen sind noch nicht gelöst.
+
+### 2.3.5 (2026-10-18)
+
+* Die Runstatistik verwendet dieselbe native effektive Heilungssumme wie der Heilungsreiter. Der Tooltip zeigt HPS des Runs und bis zu sechs stärkste Quellen mit Anteilen, ohne Überheilung. Lebensabtastung und Bruttoschätzung ersetzen keine nativen Daten mehr. Die Anzeige behält ihre Größe.
+* Fehlende, ungültige oder alte Heilungsdaten bleiben unbekannt; es wird keine andere Schätzung eingesetzt. Eine gültige leere Liste bedeutet null. Ältere Clients ohne API behalten einen ausdrücklich als beobachtet bezeichneten Ersatz. /kui heal debug zeigt bei unterstützten Clients die nativen Summen.
+
+### 2.3.4 (2026-10-18)
+
+* Liste klein verwendet den vorhandenen grünen Haken für neue und das rote X für gesammelte Gegenstände statt abgeschnittenem Statustext. Gegenstandsnamen erhalten mehr Platz; der ausgeschriebene Status bleibt im Tooltip. Sammelstatus anzeigen steuert auch diese Symbole. Unbekannter Status bleibt ohne Markierung.
+
+### 2.3.3 (2026-10-18)
+
+* Der aktive Einstellungstab zeigt seine Abschnittstitel als kleine Unterpunkte links. Ein Klick springt direkt zur entsprechenden Stelle rechts. Die anderen Tabs bleiben eingeklappt. Der gewählte Abschnitt wird hervorgehoben und folgt beim manuellen Scrollen.
+* Die Sprunglinks verwenden die vorhandenen Titel und Übersetzungen. Die Charakterwerte Unterseite bleibt der Anzeige zugeordnet; alle Tabs bleiben oberhalb der Fußleiste erreichbar.
+
+### 2.3.2 (2026-10-18)
+
+* Unter Layout gibt es Prozentregler für Menügröße (70 bis 100%) und Gesamte UI (64 bis 150%). Gesamte UI verwendet die native Spielskalierung uiScale; Spielfenster und KeijinUI wachsen gemeinsam, individuelle Rahmengrößen bleiben erhalten. Beim Laden wird keine Größe verändert.
+* Beim Ziehen wird der Prozentwert angezeigt, beim Loslassen übernommen. Das Einstellungsfenster passt sich an Skalierung und Auflösung an. UI Größen zurücksetzen stellt Menügröße auf 80% und die Spielskalierung auf 90%.
+
+### 2.3.1 (2026-10-18)
+
+* Die Wächternavigation zeigt einen kleinen goldenen Richtungspfeil vor jedem belegten Wächternamen in der bestehenden Runübersicht. Die große Zusatzanzeige und ihr Layoutanker entfallen. Entfernung und Hinweise zum Hort stehen im Tooltip; Größe und Statusspalte der Übersicht bleiben erhalten.
+* Leere Horte, unbekannte Positionen und das Verlassen des Runs blenden die Pfeile aus. Sie folgen Position und Skalierung der Übersicht. Pfeile und Minimap Symbole bleiben unabhängig schaltbar; gespeicherte Einstellungen gelten weiter.
+
+### 2.3.0 (2026-10-18)
+
+* Cachehilfe verwendet bevorzugt native Weltposition und Blickrichtung, auch in Instanzen sowie bei null und negativen Koordinaten. Ältere Spielversionen behalten den vermessenen Kartenfallback.
+* Neue verschiebbare Wächterhilfe: Entfernung und Richtung zum belegten Hort, feste Zielauswahl, Wechsel per Klick/Mausrad und nächster Hort per Rechtsklick. Totenköpfe auf der Minimap wählen einen Hort; leere Horte verschwinden. Hilfe und Symbole sind getrennt abschaltbar.
+* Neuer verschiebbarer Levelaufstieg Button zeigt wartende native Auswahlen. Im laufenden Kampf öffnet ein Klick die Auswahl. Unter Bedienung lässt sich die Spieloption zum Speichern umschalten; Laden verändert sie nicht und gibt keine Level aus. Ohne passende Schnittstelle bleibt die native Anzeige erhalten.
+* Heilung als dritter Meterreiter mit nativer effektiver Heilung je Quelle, HPS, Anteilen und den bisherigen Quellenfarben. Eigene Auswahl hat Vorrang vor Bossautomatik. Reset gilt weiter nur für Run. Reiter und Summe passen auch bei schmalen und ausgeblendeten Titeln.
 
 Änderungen an KeijinUI (Modern AS UI), neueste zuerst. Jede Version, die auf GitHub hochgeladen wird, bekommt vorher hier ihren Eintrag.
 

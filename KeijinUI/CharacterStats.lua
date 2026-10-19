@@ -18,9 +18,47 @@ S.definitions={
     {key="dmg",label="Schadensbonus",format=Bonus},
     {key="arm",label="Rüstung",format=WholePercent},
     {key="area",label="Flächenbonus",format=Bonus},
-    {key="hp",label="Maximales Leben",format=K.Short}
+    {key="hp",label="Maximales Leben",format=K.Short},
+    {key="echo",label="Echochance",format=Percent},
+    {key="cnt",label="Zusätzliche Ziele",format=function(v) return string.format("+%.0f",v) end},
+    {key="pick",label="Sammelreichweite",format=function(v) return string.format("%.0f yd",v) end},
+    {key="xp",label="XP Bonus",format=Bonus},
+    {key="gold",label="Goldbonus",format=Bonus},
+    {key="thn",label="Dornen",format=Percent},
+    {key="liv",label="Zusatzleben",format=K.Short},
+    {key="bp",label="Buffstärke",format=Percent},
+    {key="dots",label="DoT Stapel pro Gegner",format=K.Short},
+    {key="doth",label="DoT Tempo",format=Percent},
+    {key="big",label="Schaden gegen Eliten",format=Percent},
+    {key="exe",label="Execute Schaden",format=Percent},
+    {key="cc",label="Gegen kontrollierte Gegner",format=Percent},
+    {key="dotd",label="Gegen Gegner mit DoTs",format=Percent},
+    {key="shd",label="Schaden mit Schild",format=Percent},
+    {key="auto",label="Nahkampfschaden",format=Percent},
+    {key="pet",label="Begleiterschaden",format=Percent}
 }
-function S.On() return K.DB().characterStats==true end
+function S.On() return K.ModuleOn("attributes") and K.DB().characterStats==true end
+function S.Ordered()
+    local byKey,out,used={},{},{}
+    for _,def in ipairs(S.definitions) do byKey[def.key]=def end
+    local saved=K.DB().characterStatOrder
+    for _,key in ipairs(type(saved)=="table" and saved or {}) do
+        if byKey[key] and not used[key] then table.insert(out,byKey[key]); used[key]=true end
+    end
+    for _,def in ipairs(S.definitions) do if not used[def.key] then table.insert(out,def) end end
+    return out
+end
+function S.Move(key,step)
+    local list=S.Ordered(); local at
+    for i,v in ipairs(list) do if v.key==key then at=i end end
+    if not at then return false end
+    local target=at+(step<0 and -1 or 1)
+    while target>=1 and target<=table.getn(list) and not S.Selected(list[target].key) do target=target+(step<0 and -1 or 1) end
+    if target<1 or target>table.getn(list) then return false end
+    list[at],list[target]=list[target],list[at]
+    local order={}; for _,def in ipairs(list) do table.insert(order,def.key) end
+    K.DB().characterStatOrder=order; S.Update(); return true
+end
 function S.Selected(key)
     local values=K.DB().characterStatSelection
     if type(values)=="table" and values[key]~=nil then return values[key]==true end
@@ -42,7 +80,7 @@ local fresh=type(AZS_STATS)=="table"
 function S.Update()
     if not S.On() then frame:Hide(); return end
     local n=0
-    for _,def in ipairs(S.definitions) do
+    for _,def in ipairs(S.Ordered()) do
         if S.Selected(def.key) then
             n=n+1; local row=rows[n]
             row.label:SetText(K.T(def.label)); row.label:SetWidth(136)
@@ -66,5 +104,5 @@ K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then fresh=false
     elseif prefix=="AZS" then fresh=true end
 end)
-table.insert(K.updates,S.Update)
+K.Update("attributes",S.Update)
 S.Update()

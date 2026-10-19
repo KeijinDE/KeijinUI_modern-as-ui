@@ -100,7 +100,25 @@ bosses:EnableMouseWheel(true)
 bosses:SetScript("OnMouseWheel",function() bossOffset=math.max(0,bossOffset+(arg1>0 and -1 or 1)) end)
 local tally=K.Panel("KeijinUITally","",400,34)
 tally.title:Hide()
-K.layout.Register("tally",tally,"Kills, Gold, Cache",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",KeijinBuildBarFrame or UIParent,KeijinBuildBarFrame and "TOP" or "BOTTOM",0,KeijinBuildBarFrame and 6 or 102) end)
+local T={frame=tally}
+K.tally=T
+-- Bottom anchors let the optional second row grow away from the build bar.
+-- Convert the previous 34-point panel's top coordinates once.
+local function MigrateTally()
+    local db=K.DB()
+    if db.tallyBottomAnchor then return end
+    local function Convert(layout)
+        local p=type(layout)=="table" and layout.tally
+        if type(p)=="table" and K.Number(p.y) and K.Number(p.scale) and p.scale>0 then
+            p.y=p.y-34*math.max(.5,math.min(1.8,p.scale))/UIParent:GetHeight()
+        end
+    end
+    Convert(db.layout)
+    db.tallyBottomAnchor=true
+end
+MigrateTally()
+K.layout.Register("tally",tally,"Kills, Gold, Cache",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",KeijinBuildBarFrame or UIParent,KeijinBuildBarFrame and "TOP" or "BOTTOM",0,KeijinBuildBarFrame and 6 or 102) end,{grow=function() return true end})
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then MigrateTally(); K.layout.Place("tally") end end)
 local tallyValues={}
 local tallyIcons={
     "Interface\\TargetingFrame\\UI-TargetingFrame-Skull",
@@ -135,12 +153,77 @@ for i,label in ipairs({"Kills","Gold","Cache","Geöffnet","Bezahlbar"}) do
     cell:SetScript("OnLeave",function() GameTooltip:Hide() end)
     tallyCells[i]=cell
 end
-local xp=CreateFrame("StatusBar","KeijinUIXP",UIParent)
-xp:SetWidth(400); xp:SetHeight(9); xp:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-xp:SetStatusBarColor(0.57,0.28,0.83); xp:SetMinMaxValues(0,1)
-K.MetalBar(xp,xp)
-xp:SetStatusBarColor(0.57,0.28,0.83)
-K.layout.Register("xp",xp,"Erfahrung",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,26) end)
+local extras=CreateFrame("Frame","KeijinUITallyExtras",tally)
+extras:SetWidth(388); extras:SetHeight(24); extras:SetPoint("TOPLEFT",tally,"TOPLEFT",6,-33); extras:Hide()
+T.extras=extras; T.cells={}
+local divider=extras:CreateTexture(nil,"BACKGROUND")
+divider:SetTexture(K.flat); divider:SetVertexColor(.62,.57,.43,.28)
+divider:SetPoint("TOPLEFT",extras,"TOPLEFT",3,0); divider:SetPoint("TOPRIGHT",extras,"TOPRIGHT",-3,0); divider:SetHeight(1)
+for i,def in ipairs({
+    {key="lives",label="Zusatzleben",icon="Interface\\Icons\\Spell_Holy_Resurrection"},
+    {key="rr",label="Rerolls",icon="Interface\\Buttons\\UI-RotationRight-Button-Up"}
+}) do
+    local cell=CreateFrame("Frame",nil,extras)
+    cell:SetWidth(194); cell:SetHeight(24); cell:SetPoint("TOPLEFT",extras,"TOPLEFT",(i-1)*194,0)
+    cell.key=def.key
+    cell.icon=cell:CreateTexture(nil,"ARTWORK"); cell.icon:SetTexture(def.icon)
+    cell.icon:SetWidth(16); cell.icon:SetHeight(16); cell.icon:SetPoint("LEFT",cell,"LEFT",5,0)
+    cell.label=K.LText(cell,def.label,10,"LEFT",29,0,110)
+    cell.value=K.Text(cell,"",11,"RIGHT",-8,0,def.key=="rr" and 80 or 40); cell.value:SetJustifyH("RIGHT")
+    if def.key=="rr" then cell.label:SetWidth(70) end
+    cell:EnableMouse(true)
+    cell:SetScript("OnEnter",function()
+        GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(K.T(def.label),1,.82,.28)
+        if this.detail then GameTooltip:AddLine(this.detail,.9,.88,.8,true) end
+        GameTooltip:Show()
+    end)
+    cell:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    T.cells[i]=cell
+end
+function T.UpdateExtras()
+    local phase=AZS_GetPhase and AZS_GetPhase()
+    local active=phase=="playing" or phase=="paused" or phase=="choosing"
+    local enabled=K.DB().runResources==true and K.ModuleOn("insights") and not K.DB().hidden.tally
+        and active and K.Fresh(AZS_RUN_UPDATED) and type(AZS_RUN)=="table"
+    local count=0
+    for _,cell in ipairs(T.cells) do
+        local value=enabled and AZS_RUN[cell.key]
+        if K.Number(value) then
+            cell.value:SetText(string.format("%.0f",value))
+            cell.detail=K.T(cell.key=="lives" and "Verbleibende Zusatzleben in diesem Run." or "Verbleibende freie Rerolls in diesem Run.")
+            if cell.key=="rr" then
+                local price=AZS_RUN.rrc
+                if value==0 then
+                    cell.value:SetText(K.Number(price) and (K.Short(price).." G") or "?")
+                    cell.detail=K.T("Keine freien Rerolls mehr.")
+                end
+                if K.Number(price) then
+                    cell.detail=cell.detail.."\n"..K.T("Preis eines weiteren Rerolls: %s Gold",string.format("%.0f",price))
+                elseif value==0 then cell.detail=cell.detail.."\n"..K.T("Preis des nächsten Rerolls noch unbekannt.") end
+            end
+            cell:ClearAllPoints(); cell:SetPoint("TOPLEFT",extras,"TOPLEFT",count*194,0)
+            cell:Show(); count=count+1
+        else
+            if GameTooltip.GetOwner and GameTooltip:GetOwner()==cell then GameTooltip:Hide() end
+            cell.value:SetText(""); cell.detail=nil; cell:Hide()
+        end
+    end
+    local height=count>0 and 58 or 34
+    if tally:GetHeight()~=height then tally:SetHeight(height) end
+    if count>0 then extras:Show() else extras:Hide() end
+end
+local xp=K.Panel("KeijinUIXP","",400,28)
+xp.title:Hide(); xp.strip:Hide()
+local xpBar=CreateFrame("StatusBar",nil,xp)
+xpBar:SetWidth(386); xpBar:SetHeight(16); xpBar:SetPoint("CENTER",xp,"CENTER",0,0)
+xpBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+xpBar:SetStatusBarColor(.48,.30,.66); xpBar:SetMinMaxValues(0,1)
+K.MetalBar(xpBar,xpBar)
+local xpRate=K.Text(xpBar,"",10,"CENTER",0,0,378)
+xpRate:SetHeight(14); xpRate:SetJustifyH("CENTER"); xpRate:SetJustifyV("MIDDLE"); xpRate:Hide()
+K.xpDisplay={frame=xp,bar=xpBar,rateLabel=xpRate}
+-- Keep the panel below the default build bar; saved custom positions retain their top anchor.
+K.layout.Register("xp",xp,"Erfahrung",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,8) end)
 xp:Hide()
 local level=K.Text(tracker,"",10,"BOTTOMLEFT",14,9,272)
 local function Active(phase) return phase=="ready" or phase=="playing" or phase=="paused" or phase=="choosing" end
@@ -149,7 +232,7 @@ local function ScheduleRow(i)
     local row=CreateFrame("Frame",nil,tracker)
     row:SetWidth(272); row:SetHeight(17); K.HeaderPoint(row,tracker,"TOPLEFT",14,-123-(i-1)*18-paceExtra)
     row.tint=row:CreateTexture(nil,"BACKGROUND"); row.tint:SetTexture(K.flat)
-    row.tint:SetPoint("TOPRIGHT",row,"TOPRIGHT",0,0); row.tint:SetWidth(134); row.tint:SetHeight(17); row.tint:Hide()
+    row.tint:SetAllPoints(row); row.tint:Hide()
     row.name=K.Text(row,"",10,"LEFT",0,0,130)
     row.boss=K.Text(row,"",10,"RIGHT",-70,0)
     row.boss:SetWidth(62); row.boss:SetHeight(15); row.boss:SetJustifyH("RIGHT")
@@ -171,6 +254,7 @@ end
 -- or the schedule marks its boss as "up". AZS_UNITS lists final/boss/guardian/elite only; a rare is
 -- known solely through UnitClassification of the target. Elites and rares are not in AZS_SCHEDULE.
 local engaged={}
+local engagedRunStart
 local KIND_ORDER={final=1,boss=2,guardian=3,elite=4,rare=5}
 local function Flag(v) return v and v~=0 end
 local function TargetEntry()
@@ -179,7 +263,7 @@ local function TargetEntry()
     if UnitCanAttack and not Flag(UnitCanAttack("player","target")) then return nil,nil,"Ziel nicht angreifbar" end
     local name=UnitName("target")
     local t=type(AZS_TARGET)=="table" and AZS_TARGET or {}
-    local same=t.name==name
+    local same=t.name==name and K.Fresh(AZS_TARGET_UPDATED)
     local key=(same and K.Number(t.id)) and ("id"..t.id) or ("t:"..tostring(name))
     if UnitIsDead and Flag(UnitIsDead("target")) then return nil,nil,"Ziel tot",key end
     if same and t.kind=="dead" then return nil,nil,"Ziel tot",key end
@@ -194,10 +278,12 @@ local function TargetEntry()
     local hp,hpm=UnitHealth("target"),UnitHealthMax("target")
     -- Other units report health as percent (maximum 100): prefer the exact values of AZS_TARGET.
     if (not K.Number(hpm) or hpm<=100) and same and K.Number(t.hp) and K.Number(t.hpm) and t.hpm>0 then hp,hpm=t.hp,t.hpm end
-    return key,{name=name or "?",kind=kind,hp=hp,hpm=hpm,class=class},"Ziel"
+    local id=same and K.Number(t.id) and t.id or nil
+    return key,{id=id,name=name or "?",kind=kind,hp=hp,hpm=hpm,class=class},"Ziel"
 end
 -- diag (optional) collects one line per unit for /kui bosses debug.
 local function EngagedList(diag)
+    if engagedRunStart~=K.runStart then engaged={}; bossOffset=0; engagedRunStart=K.runStart end
     local now=GetTime()
     local up={}
     for _,s in ipairs(K.Schedule()) do if s.state=="up" and s.name then up[s.name]=true end end
@@ -220,7 +306,7 @@ local function EngagedList(diag)
                 if not e then e={}; engaged[key]=e end
                 e.seen=now
             end
-            if e then e.name,e.kind,e.hp,e.hpm,e.listed=u.name or "?",kind,u.hp,u.hpm,true end
+            if e then e.id,e.name,e.kind,e.hp,e.hpm,e.listed=u.id,u.name or "?",kind,u.hp,u.hpm,true end
             why=reason and ("ANZEIGE: "..reason) or (e and "Nachlauf" or "kein Kampfnachweis (volles Leben, nicht Ziel)")
         end
         if diag then
@@ -236,7 +322,7 @@ local function EngagedList(diag)
     if key then
         local e=engaged[key]
         if not e then e={}; engaged[key]=e end
-        e.name,e.kind,e.seen=entry.name,entry.kind,now
+        e.id,e.name,e.kind,e.seen=entry.id,entry.name,entry.kind,now
         if K.Number(entry.hp) and K.Number(entry.hpm) and entry.hpm>0 then e.hp,e.hpm=entry.hp,entry.hpm end
         if listed[key] then e.listed=true end
     end
@@ -247,7 +333,7 @@ local function EngagedList(diag)
     local list={}
     for k,e in pairs(engaged) do
         if (e.listed and not listed[k]) or (e.listed and now-e.seen>3) or (not e.listed and now-e.seen>5) then engaged[k]=nil
-        elseif K.Number(e.hp) and K.Number(e.hpm) and e.hpm>0 then table.insert(list,{key=k,name=e.name,kind=e.kind,hp=e.hp,hpm=e.hpm}) end
+        elseif K.Number(e.hp) and K.Number(e.hpm) and e.hpm>0 then table.insert(list,{id=e.id,key=k,name=e.name,kind=e.kind,hp=e.hp,hpm=e.hpm}) end
     end
     table.sort(list,function(a,b)
         local ra,rb=KIND_ORDER[a.kind] or 9,KIND_ORDER[b.kind] or 9
@@ -277,26 +363,50 @@ local function DrawBosses(phase)
     -- Our group replaces the native boss bars as long as it is switched on, data or not; it is merely empty outside fights.
     K.Native("bosses",not K.DB().hidden.bosses)
     local list=replace and EngagedList() or {}
-    if table.getn(list)==0 then bosses:Hide(); return end
+    if table.getn(list)==0 then
+        for _,row in ipairs(bossRows) do K.encounterDebuffs.Clear(row); row:Hide() end
+        bosses:Hide(); return
+    end
     -- Native banners sit at about 38% of the screen height from the top: stay above 30%.
     local ratio=bosses:GetEffectiveScale()/UIParent:GetEffectiveScale()
     local available=(UIParent:GetHeight()*0.30-14)/ratio
-    local visible=math.min(table.getn(list),12,math.max(1,math.floor((available-20)/14)))
-    local height=math.min(25,math.max(12,math.floor((available-20)/visible)-2))
-    bossOffset=math.min(bossOffset,math.max(0,table.getn(list)-visible))
+    local limit=math.min(table.getn(list),12,math.max(1,math.floor((available-20)/14)))
+    for _,v in ipairs(list) do
+        v.debuffs=K.encounterDebuffs.Read(v.id,v.kind)
+        v.extra=table.getn(v.debuffs)>0 and K.encounterDebuffs.height or 0
+    end
+    -- Work out the last full page as well, so scrolling can reach every enemy with effects.
+    local lastCount,lastExtra=0,0
+    for i=table.getn(list),math.max(1,table.getn(list)-limit+1),-1 do
+        local addition=list[i].extra
+        if lastCount>0 and 20+(lastCount+1)*14+lastExtra+addition>available then break end
+        lastCount=lastCount+1; lastExtra=lastExtra+addition
+    end
+    bossOffset=math.min(bossOffset,math.max(0,table.getn(list)-lastCount))
+    local visible,extra=0,0
+    for i=1,math.min(limit,table.getn(list)-bossOffset) do
+        local v=list[i+bossOffset]
+        if visible>0 and 20+(visible+1)*14+extra+v.extra>available then break end
+        visible=visible+1; extra=extra+v.extra
+    end
+    -- Fewer visible rows, rather than effects extending into the native banner area.
+    local height=math.min(25,math.max(12,math.floor((available-20-extra)/visible)-2))
+    local top=10
     for i=1,visible do
         local v=list[i+bossOffset]
         if not bossRows[i] then bossRows[i]=K.Row(bosses,i,height) end
         local row=bossRows[i]
         row:SetHeight(height)
-        row:ClearAllPoints(); row:SetPoint("TOPLEFT",bosses,"TOPLEFT",10,-10-(i-1)*(height+2))
+        row:ClearAllPoints(); row:SetPoint("TOPLEFT",bosses,"TOPLEFT",10,-top)
+        row.spawnId=v.id
         row.label:SetText(v.name); row.value:SetText(string.format("%.0f%%",100*v.hp/v.hpm))
         row.bar:SetValue(math.min(1,v.hp/v.hpm)); row.bar:SetStatusBarColor(0.62,0.08,0.08,0.85)
         row.tip=v.name; row.detail=K.Short(v.hp).." / "..K.Short(v.hpm)
-        row:Show()
+        K.encounterDebuffs.Draw(row,v)
+        row:Show(); top=top+height+2+v.extra
     end
-    for i=visible+1,table.getn(bossRows) do bossRows[i]:Hide() end
-    bosses:SetHeight(20+visible*(height+2)); bosses:Show()
+    for i=visible+1,table.getn(bossRows) do K.encounterDebuffs.Clear(bossRows[i]); bossRows[i]:Hide() end
+    bosses:SetHeight(top+10); bosses:Show()
 end
 local function Update()
     paceExtra=K.pace.On() and 18 or 0
@@ -375,6 +485,7 @@ local function Update()
         end
     end
     DrawBosses(phase)
+    T.UpdateExtras()
     local tallyGood=Active(phase) and type(r)=="table" and K.Number(r.kills) and K.Number(r.gold) and K.Number(r.chest)
     if tallyGood and not K.DB().hidden.tally then
         tallyValues[1]:SetText(K.Short(r.kills)); tallyValues[2]:SetText(K.Short(r.gold)); tallyValues[3]:SetText(K.Short(r.chest))
@@ -401,8 +512,8 @@ local function Update()
         if K.DB().hidden.tally then tally:Hide() else for _,value in ipairs(tallyValues) do value:SetText("?") end; tally:Show() end
     end
     if Active(phase) and type(r)=="table" and K.Number(r.xp) and K.Number(r.xpn) and r.xpn>0 and not K.DB().hidden.xp then
-        xp:SetValue(math.min(1,r.xp/r.xpn)); xp:Show()
-    else xp:SetValue(0); if K.DB().hidden.xp then xp:Hide() else xp:Show() end end
+        xpBar:SetValue(math.min(1,r.xp/r.xpn)); xp:Show()
+    else xpBar:SetValue(0); if K.DB().hidden.xp then xp:Hide() else xp:Show() end end
 end
 table.insert(K.updates,Update)
 local function MoveStock()

@@ -64,6 +64,7 @@ local function Row(parent,i)
         GameTooltip:SetOwner(this,"ANCHOR_LEFT"); GameTooltip:SetText(lair.name or "?",1,0.82,0.28)
         local text=G.Status(lair)
         GameTooltip:AddLine(text,0.94,0.91,0.82)
+        if K.guardianNav then K.guardianNav.AddTooltip(lair) end
         if K.Number(lair.mx) and lair.mx>=0 and K.Number(lair.my) and lair.my>=0 then
             GameTooltip:AddLine(K.T("Hort auf der Karte bei %s, %s",string.format("%.0f",lair.mx*100),string.format("%.0f",lair.my*100)),0.7,0.7,0.7)
         end
@@ -71,6 +72,9 @@ local function Row(parent,i)
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    row:SetScript("OnMouseUp",function()
+        if this.lair and K.guardianNav then K.guardianNav.Select(this.lair.index or i) end
+    end)
     rows[i]=row
     return row
 end
@@ -107,6 +111,7 @@ function G.Draw(parent,top)
         local text,r,g,b=G.Status(lair)
         row.state:SetText(text); row.state:SetTextColor(r,g,b)
         row:Show()
+        if K.guardianNav then K.guardianNav.Decorate(row) end
     end
     for i=n+1,table.getn(rows) do rows[i].lair=nil; rows[i]:Hide() end
     count:SetText(K.T("%d von %d da",up,table.getn(list)))

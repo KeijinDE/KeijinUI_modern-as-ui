@@ -3,7 +3,7 @@
 -- scroll: numbers rise with ease out and drift to the left or right, coloured by damage school, with the
 -- spell icon on the left; small normal hits are grey, crits are large; crits and misses start with a pop,
 -- they follow the target's nameplate and misses are shown too.
--- rise: like scroll, but straight up (no drift), shorter way, smaller, fading slowly (RISE table).
+-- rise: like scroll, but straight up (no drift), shorter way and smaller (RISE table).
 -- off and native draw nothing here. The native floating text (cvar CombatDamage) cannot do this:
 -- one colour per source, no size for crits (benilla combat_text/mod.rs), so Core.lua keeps it off
 -- and this module draws from the same native combat messages the parser reads (CombatParser.lua).
@@ -14,20 +14,36 @@
 -- mouse wheel to scale). Option "Position" (K.DB().combatTextPosition): plate (default) or fixed, where
 -- every number starts in the anchor and follows no plate.
 local K=KeijinUI
-local NORMAL={size=10,r=1,g=1,b=1,life=0.8,rise=26}
-local CRIT={size=26,r=1,g=0.82,b=0.1,life=1.3,rise=44}
+local NORMAL={size=10,r=1,g=1,b=1,life=0.8,rise=26,fade=0.6}
+local CRIT={size=26,r=1,g=0.82,b=0.1,life=1.3,rise=44,fade=0.6}
 -- scroll style: size, life (s) and rise per kind; colours per school key (CombatParser.lua SchoolKey).
 -- pop: crits and misses start small and swell to double size, then settle (see PopFactor).
 -- small: normal hits under half of the running average are grey and small.
-local SCROLL={normal={size=12,life=1.1,rise=60},crit={size=30,life=1.5,rise=45,pop=true},
-    periodic={size=11,life=1.1,rise=60,alpha=0.85},small={size=11,life=1.1,rise=60},
-    miss={size=13,life=1.2,rise=60,pop=true}}
+local SCROLL={normal={size=12,life=1.1,rise=60,fade=0.7},crit={size=30,life=1.5,rise=45,fade=0.7,pop=true},
+    periodic={size=11,life=1.1,rise=60,fade=0.7,alpha=0.85},small={size=11,life=1.1,rise=60,fade=0.7},
+    miss={size=13,life=1.2,rise=60,fade=0.7,pop=true}}
 -- rise style: straight up with ease out, fades slowly (full opacity for the first 30 %, then evenly to 0).
 -- straight marks the style for the update loop and the preview; same fields as SCROLL.
-local RISE={normal={size=11,life=1.6,rise=34,straight=true},crit={size=22,life=1.8,rise=40,pop=true,straight=true},
-    periodic={size=10,life=1.6,rise=34,alpha=0.85,straight=true},small={size=10,life=1.6,rise=34,straight=true},
-    miss={size=12,life=1.6,rise=34,pop=true,straight=true}}
-local RISE_FADE=0.3        -- share of the life with full opacity
+local RISE={normal={size=11,life=1.6,rise=34,straight=true,fade=0.3},crit={size=22,life=1.8,rise=40,pop=true,straight=true,fade=0.3},
+    periodic={size=10,life=1.6,rise=34,alpha=0.85,straight=true,fade=0.3},small={size=10,life=1.6,rise=34,straight=true,fade=0.3},
+    miss={size=12,life=1.6,rise=34,pop=true,straight=true,fade=0.3}}
+-- Quieter variants apply only to the explicitly selected fixed window. The ordinary
+-- nameplate mode (including its no-plate fallback) retains the original presentation.
+local FIXED={}
+local function FixedStyle(base,life,rise,fade)
+    local s={}
+    for k,v in pairs(base) do s[k]=v end
+    s.life,s.rise,s.fade=life,rise,fade; FIXED[base]=s
+end
+FixedStyle(NORMAL,.55,20,.15)
+FixedStyle(SCROLL.normal,.65,34,.18); FixedStyle(SCROLL.periodic,.6,28,.15)
+FixedStyle(SCROLL.small,.55,26,.15); FixedStyle(SCROLL.miss,.8,30,.2)
+FixedStyle(RISE.normal,.65,24,.15); FixedStyle(RISE.periodic,.6,20,.15)
+FixedStyle(RISE.small,.55,20,.15); FixedStyle(RISE.miss,.8,24,.2)
+local function Presentation(s)
+    if K.DB().combatTextPosition=="fixed" then return FIXED[s] or s end
+    return s
+end
 local SCHOOL={Physical={1,0.95,0.85},Holy={1,0.85,0.35},Fire={1,0.5,0.15},Nature={0.45,0.9,0.3},
     Frost={0.45,0.8,1},Shadow={0.75,0.45,1},Arcane={1,0.55,0.95}}
 local MISS_TEXT={miss="Verfehlt",dodge="Ausgewichen",parry="Pariert",block="Geblockt",evade="Entkommen",
@@ -82,7 +98,7 @@ local function SpellIcon(name)
     local key=byName[name]
     return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
 end
-K.On("SPELLS_CHANGED",function() book=nil end)
+K.On("SPELLS_CHANGED",function() book=nil end,"damageText")
 -- Weapon icon for melee hits (no spell name).
 local function MeleeIcon()
     if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
@@ -92,7 +108,7 @@ end
 function K.damageText.Describe(mode,crit,school,periodic,spell,small)
     if mode=="compact" then
         local s=crit and CRIT or NORMAL
-        return s,s.r,s.g,s.b,nil,false,false
+        return Presentation(s),s.r,s.g,s.b,nil,false,false
     end
     if mode~="scroll" and mode~="rise" then return end
     local T=mode=="rise" and RISE or SCROLL
@@ -103,7 +119,7 @@ function K.damageText.Describe(mode,crit,school,periodic,spell,small)
     if small and not crit and not periodic then s=T.small; r,g,b=.62,.62,.62 end
     local icon
     if K.DB().combatTextIcons~=false then icon=spell and SpellIcon(spell) or (not spell and MeleeIcon()) end
-    return s,r,g,b,icon,true,crit and true or false
+    return Presentation(s),r,g,b,icon,true,crit and true or false
 end
 -- Font size and icon side always match.
 local function SetSize(item,size)
@@ -119,7 +135,7 @@ anchor:SetWidth(200); anchor:SetHeight(120); anchor:SetFrameStrata("BACKGROUND")
 K.layout.Register("combattext",anchor,"Kampftext",function(f)
     f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"CENTER",0,50)
 end,{hidden=true})
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("combattext") end end)
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("combattext") end end,"damageText")
 K.damageText.anchor=anchor
 -- Centre of the anchor in UIParent units and its scale factor against the interface (1 = unscaled).
 local function AnchorCentre()
@@ -141,7 +157,7 @@ local tickRects
 local function Rectangles()
     local result={}
     local frames={K.units and K.units.player,K.units and K.units.target,
-        getglobal("KeijinUISkills"),getglobal("KeijinUITally"),getglobal("KeijinUIResources")}
+        getglobal("KeijinUISkills"),getglobal("KeijinUITally"),getglobal("KeijinUIResources"),getglobal("KeijinUIStoredLevels")}
     local ui=UIParent:GetEffectiveScale()
     for _,f in pairs(frames) do
         if f.IsShown and f:IsShown() and f.GetLeft and f:GetAlpha()>0 then
@@ -215,10 +231,15 @@ local function PopFactor(age)
     return 2-v*v
 end
 K.damageText.PopFactor=PopFactor
+-- One fade curve for live numbers, their icons and the isolated settings preview.
+function K.damageText.Opacity(s,t)
+    local hold=s.fade or 0.6
+    return (s.alpha or 1)*math.max(0,math.min(1,(1-t)/(1-hold)))
+end
 -- Rise and fade of the rise style: lift in pixels and opacity at the share t of the life.
 function K.damageText.RiseMotion(s,t)
     local lift=s.rise*(1-(1-t)*(1-t))
-    local alpha=(s.alpha or 1)*(t<RISE_FADE and 1 or (1-t)/(1-RISE_FADE))
+    local alpha=K.damageText.Opacity(s,t)
     return lift,alpha
 end
 -- Common part: place, style and register one number (scroll and rise: rising, otherwise compact).
@@ -241,10 +262,18 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
                 lift=math.max(lift,prior.y0-y+style.size*1.2)
             end
         end
-        y=y+lift
+        -- Do not let a burst recursively stack new hits toward the screen edge.
+        y=y+(K.damageText.Position()=="fixed" and math.min(lift,28*(scale or 1)) or lift)
     end
     x,y=KeepClear(x,y)
-    if table.getn(active)>=MAX then Give(table.remove(active,1)) end
+    if table.getn(active)>=MAX then
+        -- Heavy ordinary bursts must not evict a still readable critical hit first.
+        local oldest=1
+        if K.damageText.Position()=="fixed" then
+            for i,prior in ipairs(active) do if not prior.crit then oldest=i; break end end
+        end
+        Give(table.remove(active,oldest))
+    end
     local fs=Take()
     local size=style.size
     if pop then size=math.floor(size*PopFactor(0)+0.5) end
@@ -308,7 +337,7 @@ function K.damageText.SpawnMiss(missType,targetName,spell)
     if (mode~="scroll" and mode~="rise") or not MISS_TEXT[missType] then return end
     local icon
     if spell and K.DB().combatTextIcons~=false then icon=SpellIcon(spell) end
-    local item=Add(K.T(MISS_TEXT[missType]),(mode=="rise" and RISE or SCROLL).miss,1,0.82,0.1,targetName,true,true,icon)
+    local item=Add(K.T(MISS_TEXT[missType]),Presentation((mode=="rise" and RISE or SCROLL).miss),1,0.82,0.1,targetName,true,true,icon)
     item.miss=missType
 end
 local combat=CreateFrame("Frame",nil,UIParent)
@@ -320,6 +349,7 @@ combat:SetScript("OnEvent",function()
     elseif hit.kind=="miss" then K.damageText.SpawnMiss(hit.missType,hit.targetName,hit.spell) end
 end)
 host:SetScript("OnUpdate",function()
+    if table.getn(active)==0 then return end
     local dt=tonumber(arg1) or 0
     tickRects=Rectangles()
     local anchors={}   -- plate anchor per name, asked once per tick
@@ -358,7 +388,7 @@ host:SetScript("OnUpdate",function()
                 else
                     local e=1-(1-t)*(1-t)
                     item.x,item.y=item.x0+item.dir*item.drift*e,item.y0+s.rise*(2.4*t-1.9*t*t)
-                    alpha=(s.alpha or 1)*(t<0.7 and 1 or (1-t)/0.3)
+                    alpha=K.damageText.Opacity(s,t)
                 end
                 item.fs:SetAlpha(alpha)
                 if item.icon then item.icon:SetAlpha(alpha) end
@@ -369,12 +399,21 @@ host:SetScript("OnUpdate",function()
                 Place(item,item.x,item.y)
             else
                 Place(item,item.x,item.y+s.rise*t)
-                item.fs:SetAlpha(t<0.6 and 1 or (1-t)/0.4)
+                item.fs:SetAlpha(K.damageText.Opacity(s,t))
             end
             i=i+1
         end
     end
     tickRects=nil
 end)
-K.On("PLAYER_ENTERING_WORLD",function() average=nil end)
-K.On("PLAYER_LEAVING_WORLD",function() while table.getn(active)>0 do Give(table.remove(active)) end end)
+K.On("PLAYER_ENTERING_WORLD",function() average=nil end,"damageText")
+K.On("PLAYER_LEAVING_WORLD",function() while table.getn(active)>0 do Give(table.remove(active)) end end,"damageText")
+K.damageText.drivers={combat,host}
+function K.damageText.Stop()
+    while table.getn(active)>0 do Give(table.remove(active)) end
+    if K.resourceText then K.resourceText.Clear() end
+    local db=K.DB()
+    if db.originalCombatDamage~=nil then SetCVar("CombatDamage",db.originalCombatDamage) end
+    if db.originalShowCombatText~=nil then SHOW_COMBAT_TEXT=db.originalShowCombatText end
+    if CombatText_UpdateDisplayedMessages then CombatText_UpdateDisplayedMessages() end
+end

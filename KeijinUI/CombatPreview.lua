@@ -43,9 +43,9 @@ function K.CreateCombatPreview(parent,x,y)
                 local dx=split and (e.extra and 26 or -26) or 0
                 if scroll and not s.straight then dx=dx+(e.column==2 and 1 or -1)*12*(1-(1-t)*(1-t)) end
                 local dy=s.rise*t
-                local alpha=age>=s.life and 0 or (t<.6 and 1 or (1-t)/.4)
+                local alpha=K.damageText.Opacity(s,t)
                 if s.straight then dy,alpha=K.damageText.RiseMotion(s,t); if age>=s.life then alpha=0 end
-                elseif scroll then dy=s.rise*(2.4*t-1.9*t*t); alpha=age>=s.life and 0 or (s.alpha or 1)*(t<.7 and 1 or (1-t)/.3) end
+                elseif scroll then dy=s.rise*(2.4*t-1.9*t*t); alpha=K.damageText.Opacity(s,t) end
                 item.fs:ClearAllPoints(); item.fs:SetPoint("BOTTOM",self,"TOPLEFT",(e.column-.5)*172+dx,-101+dy)
                 item.fs:SetAlpha(alpha); item.fs:Show()
                 if icon then

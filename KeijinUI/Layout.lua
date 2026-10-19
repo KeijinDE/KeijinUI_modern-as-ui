@@ -61,6 +61,8 @@ L.defaults={
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
+    -- Dynamic panels must have their final width before applying and clamping a saved position.
+    if entry.options.width then f:SetWidth(entry.options.width()) end
     if entry.options.follow and entry.options.follow() then entry.anchor(f); return end
     if entry.options.scale then entry.baseScale=entry.options.scale() end
     local saved=Valid(p)
@@ -260,7 +262,7 @@ end
 -- hits below the meter follow only as far as the meter at its tallest would otherwise cover them, and
 -- never further than the meter moved. Frames with room to spare stay where they are. Once per account,
 -- on ADDON_LOADED, when the saved variables exist.
-local OLD_STATS,NEW_STATS,GAP=166,204,2
+local GAP=2
 function L.MigrateStatistics()
     local db=K.DB()
     if db.layoutMigration074 then return end
@@ -274,7 +276,7 @@ function L.MigrateStatistics()
     local function Below(p,top) return Valid(p) and math.abs(p.x-stats.x)<width and p.y<top end
     local meter=saved.meter
     if not Below(meter,stats.y) then return end
-    local limit=stats.y-NEW_STATS*s/h-GAP/h
+    local limit=stats.y-(entry.frame.headerHeight or entry.frame:GetHeight())*s/h-GAP/h
     local moved=math.max(0,meter.y-limit)
     if moved<=0 then return end
     local crits,meterTop=saved.crits,meter.y

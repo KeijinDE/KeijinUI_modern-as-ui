@@ -121,7 +121,17 @@ for _,name in ipairs({"UIParent_ManageFramePositions","FCF_UpdateDockPosition","
     "FCF_DockUpdate","FCF_Set_SimpleChat","FCF_Set_NormalChat","FCF_ToggleLock","FCF_SetButtonSide","FCF_StopResize"}) do Wrap(name) end
 -- Direct frame:SetPoint calls cannot be wrapped, so the anchor is also checked every frame.
 local watcher=CreateFrame("Frame","KeijinUIChatWatch")
-watcher:SetScript("OnUpdate",function() if saved then Enforce() end end)
+-- Cheap anchor check every frame; the full pass (styling, size, scroll button) on a 0.1 s tick.
+local watched=0
+watcher:SetScript("OnUpdate",function()
+    if not saved then return end
+    watched=watched+(tonumber(arg1) or 0)
+    local point,relative,relativePoint,x,y=chat:GetPoint(1)
+    if watched>=0.1 or chat:GetParent()~=panel or chat:GetNumPoints()~=1 or point~="TOPLEFT"
+        or relative~=panel or relativePoint~="TOPLEFT" or x~=PAD or y~=-PAD then
+        watched=0; Enforce()
+    end
+end)
 K.On("PLAYER_ENTERING_WORLD",function() Capture(); Enforce(); K.layout.Place("chat") end)
 K.On("PLAYER_LOGOUT",function() K.chat.Release() end)
 Enforce()

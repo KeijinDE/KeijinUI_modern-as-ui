@@ -1,7 +1,7 @@
 -- Caches on the minimap (0.8.0): chest symbols, an arrow at the minimap edge and an optional arrow on the screen.
 -- Data: AZS_CHESTS (id, x, y, z world position, mx and my on the zone map, -1 without map data), AZS_LAIRS (same
 -- position fields), AZS_RUN.chest (price of the next cache) and GetPlayerMapPosition("player").
--- The game gives no player position in yards and no scale for the zone map. The scale is therefore measured from
+-- Native px/py/pf are preferred, including instances. Older clients use a map scale measured from
 -- pairs of points that have both a world and a map position (caches and lairs): for two points the world distance
 -- squared equals (sx*dmx)^2+(sy*dmy)^2, solved by least squares over all pairs. Without a measurement nothing is drawn.
 -- The minimap view diameter per zoom level is the client's own table (outdoors 14, 12, 10, 8, 6, 4 chunks of
@@ -141,6 +141,8 @@ local function Square() return K.MinimapStyled and K.MinimapStyled() and true or
 -- Direction the player faces, radians, 0 north, counterclockwise (the game's own convention).
 local GETTERS={}
 function GETTERS.facing()
+    local reported=K.navigation.WorldFacing()
+    if reported~=nil then return reported end
     if type(GetPlayerFacing)~="function" then return nil end
     local value=GetPlayerFacing()
     if Finite(value) then return value end
@@ -216,7 +218,7 @@ local function Chests()
         for _,e in ipairs(AZS_CHESTS) do
             if type(e)=="table" then
                 all=all+1
-                if Finite(e.x) and Finite(e.y) and MapPos(e.mx,e.my) then table.insert(valid,e) end
+                if Finite(e.x) and Finite(e.y) then table.insert(valid,e) end
             end
         end
     end
@@ -330,13 +332,16 @@ local function Notice(total,nearest)
 end
 local function Collect(key,valid)
     local m=Measurement(key)
-    for _,e in ipairs(valid) do AddPoint(m,e.x,e.y,e.mx,e.my) end
+    for _,e in ipairs(valid) do if MapPos(e.mx,e.my) then AddPoint(m,e.x,e.y,e.mx,e.my) end end
     for _,e in ipairs(Lairs()) do AddPoint(m,e.x,e.y,e.mx,e.my) end
 end
-local function Clusters(valid,px,py,sx,sy)
+local function Clusters(valid,px,py,sx,sy,world)
     local list={}
     for _,e in ipairs(valid) do
-        local east,north=(e.mx-px)*sx,0-(e.my-py)*sy
+        local east,north
+        if world then east,north=py-e.y,e.x-px
+        elseif MapPos(e.mx,e.my) then east,north=(e.mx-px)*sx,-(e.my-py)*sy end
+        if east~=nil then
         local into
         for _,c in ipairs(list) do
             if Hypot(c.wx-e.x,c.wy-e.y)<MERGE then into=c; break end
@@ -345,7 +350,9 @@ local function Clusters(valid,px,py,sx,sy)
             into.east=(into.east*into.count+east)/(into.count+1)
             into.north=(into.north*into.count+north)/(into.count+1)
             into.count=into.count+1
-        else table.insert(list,{wx=e.x,wy=e.y,east=east,north=north,count=1}) end
+            into.ids[e.id or false]=true
+        else table.insert(list,{wx=e.x,wy=e.y,east=east,north=north,count=1,ids={[e.id or false]=true}}) end
+        end
     end
     for _,c in ipairs(list) do c.dist=Hypot(c.east,c.north) end
     table.sort(list,function(a,b) return a.dist<b.dist end)
@@ -382,22 +389,33 @@ local function Track(px,py,sx,sy)
     end
 end
 function C.Update()
+    if not K.ModuleOn("caches") then if C.Stop then C.Stop() end; return end
     if not inWorld then Clear("outside world"); return end
     local phase=RunPhase()
-    if not PHASES[phase] then Clear("inactive phase"); return end
+    if not PHASES[phase] or not K.navigation.Active() then Clear("inactive phase"); return end
     arrowOptions.hidden=C.ArrowOn()
     local key=MapKey()
     local total,valid=Chests()
-    Collect(key,valid)
-    local px,py=PlayerPos()
-    local sx,sy,pairs_,source=Resolve(key)
-    Track(px,py,sx,sy)
+    local px,py=K.navigation.WorldPosition()
+    local world=px~=nil
+    local sx,sy,pairs_,source
+    if world then source="world"
+    else
+        Collect(key,valid); px,py=PlayerPos(); sx,sy,pairs_,source=Resolve(key)
+        Track(px,py,sx,sy)
+    end
+    C.coordinateSource=world and "world" or "map"
     C.key,C.total,C.valid,C.px,C.py,C.sx,C.sy,C.pairs,C.scaleSource=key,total,table.getn(valid),px,py,sx,sy,pairs_,source
-    if not px then Notice(total,nil); Clear("no player map position"); return end
-    if not sx then Notice(total,nil); Clear("no scale measured"); return end
-    local clusters=Clusters(valid,px,py,sx,sy)
+    if px==nil then Notice(total,nil); Clear("no player map position"); return end
+    if not world and not sx then Notice(total,nil); Clear("no scale measured"); return end
+    local clusters=Clusters(valid,px,py,sx,sy,world)
     C.clusters=clusters
     local nearest=clusters[1]
+    if C.selectedId then
+        local selected
+        for _,cluster in ipairs(clusters) do if cluster.ids[C.selectedId] then selected=cluster; break end end
+        if selected then nearest=selected else C.selectedId=nil end
+    end
     C.nearest=nearest
     Notice(total,nearest and nearest.dist or nil)
     C.reason=nil
@@ -451,6 +469,15 @@ function C.Update()
     C.shown=shown
 end
 
+-- Shared map fallback for older builds. A lair may supply the calibration points even without caches.
+function K.navigation.mapOffset(point)
+    if not MapPos(point.mx,point.my) then return end
+    local key=MapKey(); local _,valid=Chests(); Collect(key,valid)
+    local px,py=PlayerPos(); local sx,sy=Resolve(key)
+    if px==nil or not sx then return end
+    return (point.mx-px)*sx,-(point.my-py)*sy,"map"
+end
+
 -- Debug and commands ------------------------------------------------------------------------------------
 local function Num(v,format)
     if v==nil then return "n/a" end
@@ -466,7 +493,7 @@ function C.DebugLines()
     Add(string.format("Caches: phase %s, map key %s, chests %s (with map data %s), lairs %d, next price %s",
         tostring(RunPhase()),tostring(MapKey()),Num(C.total),Num(C.valid),lairs,
         Num(type(AZS_RUN)=="table" and AZS_RUN.chest or nil)))
-    Add(string.format("Caches player map position: %s, %s; reason: %s",Num(C.px,"%.4f"),Num(C.py,"%.4f"),tostring(C.reason or "drawing")))
+    Add(string.format("Caches player position (%s): %s, %s; reason: %s",tostring(C.coordinateSource),Num(C.px,"%.4f"),Num(C.py,"%.4f"),tostring(C.reason or "drawing")))
     Add(string.format("Caches scale (yards per map unit): x %s, y %s, from %s pairs (%s)",
         Num(C.sx,"%.1f"),Num(C.sy,"%.1f"),Num(C.pairs),tostring(C.scaleSource or "none")))
     local diameter,inside,zoom=C.Diameter()
@@ -507,12 +534,20 @@ function K.CachesCommand(arg)
     K.Say(K.T("/kui caches icons, edge, arrow, msg, source auto, source facing, source model, source move, source north, debug"))
 end
 
+function C.Select(id)
+    if not K.navigation.Active() or not K.Fresh(AZS_CHESTS_UPDATED) then return false end
+    for _,v in ipairs(type(AZS_CHESTS)=="table" and AZS_CHESTS or {}) do
+        if v.id==id then C.selectedId=id; C.Update(); return true end
+    end
+    return false
+end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then Reset() end
+    if prefix=="AZSZONE" then C.selectedId=nil; Reset() end
     if prefix=="AZSCHESTS" or prefix=="AZSLAIRS" then C.Update() end
-end)
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("cachearrow") end end)
-K.On("PLAYER_ENTERING_WORLD",function() inWorld=true end)
-K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; Clear("outside world") end)
-K.On("PLAYER_LOGOUT",function() inWorld=false; Clear("logout") end)
-table.insert(K.updates,C.Update)
+end,"caches")
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("cachearrow") end end,"caches")
+K.On("PLAYER_ENTERING_WORLD",function() inWorld=true end,"caches")
+K.On("PLAYER_LEAVING_WORLD",function() C.selectedId=nil; inWorld=false; Clear("outside world") end,"caches")
+K.On("PLAYER_LOGOUT",function() inWorld=false; Clear("logout") end,"caches")
+K.Update("caches",C.Update)
+function C.Stop() Clear("disabled") end

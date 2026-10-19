@@ -174,11 +174,13 @@ local function OwnedByPlayer(name)
 end
 
 -- Local school name -> stable English key (the client names are the ones in chat).
+local SCHOOL_KEYS = { [0] = "Physical", "Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane" }
+local SCHOOL_GLOBALS = {}
+for n = 0, 6 do SCHOOL_GLOBALS[n] = "SPELL_SCHOOL" .. n .. "_CAP" end
 local function SchoolKey(localName)
     if not localName then return "Physical" end
-    local keys = { [0] = "Physical", "Holy", "Fire", "Nature", "Frost", "Shadow", "Arcane" }
     for n = 0, 6 do
-        if getglobal("SPELL_SCHOOL" .. n .. "_CAP") == localName then return keys[n] end
+        if getglobal(SCHOOL_GLOBALS[n]) == localName then return SCHOOL_KEYS[n] end
     end
     return localName
 end
@@ -205,10 +207,15 @@ local function TryShapes(line, list, origin, viewpoint, trusted)
     for n = 1, table.getn(list) do
         local rule = list[n]
         local record
+        if not rule.selfName then
+            rule.selfName = rule.stem .. "SELFOTHER"
+            rule.otherName = rule.stem .. "OTHEROTHER"
+            rule.otherArgs = WithSource(rule.args)
+        end
         if viewpoint == "mine" then
-            record = Read(line, rule.stem .. "SELFOTHER", rule.args)
+            record = Read(line, rule.selfName, rule.args)
         else
-            record = Read(line, rule.stem .. "OTHEROTHER", WithSource(rule.args))
+            record = Read(line, rule.otherName, rule.otherArgs)
             if record and not trusted and not OwnedByPlayer(record.sourceName) then record = nil end
         end
         record = Finish(record, rule, origin)

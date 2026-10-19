@@ -1,4 +1,4 @@
-KeijinUI = { version = "2.2.0", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.0.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
@@ -46,6 +46,7 @@ end
 -- The game's floating combat text (SHOW_COMBAT_TEXT, the "-N" over the character) is paused while
 -- the own text runs; CombatText_UpdateDisplayedMessages drops its events at once.
 function K.ApplyCombatText()
+    if K.ModuleOn and not K.ModuleOn("damageText") then if K.damageText and K.damageText.Stop then K.damageText.Stop() end; return end
     local db, mode = K.DB(), K.CombatTextMode()
     if db.originalCombatDamage == nil then db.originalCombatDamage = GetCVar("CombatDamage") end
     SetCVar("CombatDamage", mode == "native" and "1" or "0")
@@ -59,7 +60,14 @@ function K.SetCombatTextMode(mode)
     end
     return K.CombatTextMode()
 end
-function K.CombatScale() return math.min(1,math.max(0.5,(UIParent:GetWidth()-624)/686)) end
+function K.CombatScale()
+    local width=UIParent:GetWidth()
+    -- Once the global slider is used, keep the responsive base tied to the physical viewport.
+    -- Otherwise a larger uiScale makes UIParent narrower and would shrink unit/action frames again.
+    local reference=K.DB().layoutScaleReference
+    if K.Number(reference) and reference>0 then width=width*UIParent:GetEffectiveScale()/reference end
+    return math.min(1,math.max(0.5,(width-624)/686))
+end
 local sourceColors={{0.75,0.53,0.16},{0.18,0.4,0.65},{0.5,0.25,0.62},{0.25,0.5,0.32},{0.65,0.28,0.17},
     {0.2,0.65,0.7},{0.8,0.4,0.6},{0.48,0.6,0.25},{0.55,0.4,0.3},{0.4,0.5,0.8}}
 -- Deliberate ability colours for the warlock set. These identify abilities;
@@ -118,6 +126,7 @@ end
 function K.Text(frame, text, size, point, x, y, width)
     local fs = frame:CreateFontString(nil, "OVERLAY")
     fs:SetFont(K.font, size or 11, "OUTLINE")
+    K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{fs,size or 11})
     fs:SetTextColor(0.94, 0.91, 0.82)
     fs:SetPoint(point or "TOPLEFT", frame, point or "TOPLEFT", x or 0, y or 0)
     if width then fs:SetWidth(width); fs:SetHeight((size or 11) + 5); fs:SetJustifyH("LEFT") end
@@ -277,20 +286,27 @@ function K.Native(part, replace)
         AZS_SetHudShown(part,saved[part]); saved[part] = nil
     end
 end
-function K.On(eventName, fn)
+K.callbackOwners={}
+function K.ModuleOn(key)
+    local modules=K.DB().modules
+    return not (key and type(modules)=="table" and modules[key]==false)
+end
+function K.Update(owner,fn) table.insert(K.updates,fn); K.callbackOwners[fn]=owner end
+function K.On(eventName, fn, owner)
     if not K.events[eventName] then K.events[eventName] = {}; K.driver:RegisterEvent(eventName) end
     table.insert(K.events[eventName],fn)
+    K.callbackOwners[fn]=owner
 end
 K.driver = CreateFrame("Frame", "KeijinUIEvents")
 K.driver:SetScript("OnEvent", function()
-    for _,fn in ipairs(K.events[event] or {}) do fn(event,arg1,arg2) end
+    for _,fn in ipairs(K.events[event] or {}) do if K.ModuleOn(K.callbackOwners[fn]) then fn(event,arg1,arg2) end end
 end)
 local elapsed = 0
 K.driver:SetScript("OnUpdate", function()
     elapsed = elapsed + (tonumber(arg1) or 0)
     if elapsed < 0.1 then return end
     elapsed = 0
-    for _,fn in ipairs(K.updates) do fn() end
+    for _,fn in ipairs(K.updates) do if K.ModuleOn(K.callbackOwners[fn]) then fn() end end
     if K.layout then K.layout.ClampAll() end
 end)
 K.On("PLAYER_LOGOUT", function()

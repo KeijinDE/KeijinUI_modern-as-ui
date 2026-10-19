@@ -110,7 +110,7 @@ local function MigrateTally()
     local function Convert(layout)
         local p=type(layout)=="table" and layout.tally
         if type(p)=="table" and K.Number(p.y) and K.Number(p.scale) and p.scale>0 then
-            p.y=p.y-34*math.max(.5,math.min(1.8,p.scale))/UIParent:GetHeight()
+            p.y=p.y-34*math.max(.5,math.min(1.8,p.scale))/K.UIHeight()
         end
     end
     Convert(db.layout)
@@ -371,7 +371,7 @@ local function DrawBosses(phase)
     end
     -- Native banners sit at about 38% of the screen height from the top: stay above 30%.
     local ratio=bosses:GetEffectiveScale()/UIParent:GetEffectiveScale()
-    local available=(UIParent:GetHeight()*0.30-14)/ratio
+    local available=(K.UIHeight()*0.30-14)/ratio
     local limit=math.min(table.getn(list),12,math.max(1,math.floor((available-20)/14)))
     for _,v in ipairs(list) do
         v.debuffs=K.encounterDebuffs.Read(v.id,v.kind)

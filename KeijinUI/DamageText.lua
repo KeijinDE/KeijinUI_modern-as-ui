@@ -140,7 +140,7 @@ K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("co
 K.damageText.anchor=anchor
 -- Centre of the anchor in UIParent units and its scale factor against the interface (1 = unscaled).
 local function AnchorCentre()
-    local w,h=UIParent:GetWidth() or 1024,UIParent:GetHeight() or 768
+    local w,h=K.UIWidth() or 1024,K.UIHeight() or 768
     local l,b=anchor:GetLeft(),anchor:GetBottom()
     local ratio=anchor:GetEffectiveScale()/UIParent:GetEffectiveScale()
     if not K.Number(l) or not K.Number(b) or not K.Number(ratio) or ratio<=0 then return w/2,h/2+50,1 end
@@ -174,7 +174,7 @@ end
 local function KeepClear(x,y,halfWidth,height)
     local bounded=halfWidth~=nil
     halfWidth,height=halfWidth or 12,height or 14
-    local width,screenHeight=UIParent:GetWidth(),UIParent:GetHeight()
+    local width,screenHeight=K.UIWidth(),K.UIHeight()
     if bounded then
         x=math.max(halfWidth+4,math.min(width-halfWidth-4,x))
         y=math.max(4,math.min(screenHeight-height-4,y))

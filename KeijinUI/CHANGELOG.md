@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.1.1 (2026-10-19, release v3.1.1)
+
+* Hotfix for game version 0.101: frames could not be dragged to the screen edges and saved positions were shifted, because the game reports a different UIParent size than the area it covers. Placement, clamping, snapping and saved positions now use the real screen edges. /kui grid debug shows both sizes.
+
 ### 3.1.0 (2026-10-19, release v3.1.0)
 
 * Fixed for game version 0.101: "DamageText.lua:281: SetText(): Font not set" after the first hit. New floating numbers get their font before their text.
@@ -403,6 +407,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.1.1 (2026-10-19, Release v3.1.1)
+
+* Hotfix für Spielversion 0.101: Fenster ließen sich nicht bis an den Bildschirmrand ziehen und gespeicherte Positionen waren verschoben, weil das Spiel eine andere UIParent Größe meldet als die Fläche, die es abdeckt. Platzierung, Begrenzung, Einrasten und gespeicherte Positionen nutzen jetzt die echten Bildschirmränder. /kui grid debug zeigt beide Größen.
 
 ### 3.1.0 (2026-10-19, Release v3.1.0)
 

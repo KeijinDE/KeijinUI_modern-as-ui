@@ -8,7 +8,7 @@ local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 
 local function Up(entry) return entry.options.grow and entry.options.grow() and true or false end
 local function Clamp(entry)
     local f=entry.frame
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+    local w,h=K.UIWidth(),K.UIHeight()
     if not w or not h or w<40 or h<40 then return end
     local ratio=Scale(f)/Scale(UIParent)
     if entry.options.follow and entry.options.follow() then return end
@@ -38,7 +38,7 @@ local function Save(entry)
     if not Finite(x) or not Finite(y) then return end
     -- Keep the bottom edge as the anchor, so a later change of the height does not move it.
     if up and f:GetPoint()~="BOTTOMLEFT" then f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x,y) end
-    K.DB().layout[entry.key]={x=x*ratio/UIParent:GetWidth(),y=y*ratio/UIParent:GetHeight(),scale=f:GetScale()/entry.baseScale}
+    K.DB().layout[entry.key]={x=x*ratio/K.UIWidth(),y=y*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale}
 end
 -- Standard layout (version 0.5.1, statistics taller since 0.7.4): same format as the saved layout, never written to the DB by Apply.
 L.defaults={
@@ -72,7 +72,7 @@ local function Apply(entry)
         local ratio=Scale(UIParent)/Scale(f)
         f:ClearAllPoints()
         -- For a frame growing upwards p.y is the bottom edge (also in the standard layout).
-        f:SetPoint(Up(entry) and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*UIParent:GetWidth()*ratio,p.y*UIParent:GetHeight()*ratio)
+        f:SetPoint(Up(entry) and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*K.UIWidth()*ratio,p.y*K.UIHeight()*ratio)
     else f:SetScale(entry.baseScale); entry.anchor(f) end
     if Clamp(entry) and saved then Save(entry) end
 end
@@ -101,7 +101,7 @@ end
 local function Snap(entry)
     if K.DB().snap==false or IsShiftKeyDown() then return end
     local f=entry.frame
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+    local w,h=K.UIWidth(),K.UIHeight()
     local l,b,r,t=Rect(f)
     if not l or not w or not h or w<40 or h<40 then return end
     local cx,cy=UIParent:GetCenter()
@@ -160,7 +160,7 @@ local function BuildGrid(w,h)
     gridW,gridH=w,h
 end
 local function RefreshGrid(enabled)
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+    local w,h=K.UIWidth(),K.UIHeight()
     if enabled and K.DB().snap~=false and w and h and w>=40 and h>=40 then
         if w~=gridW or h~=gridH then BuildGrid(w,h) end
         grid:Show()
@@ -230,7 +230,7 @@ function L.GridDebug()
     local function N(v) return v and string.format("%.1f",v) or "nil" end
     local cx,cy=UIParent:GetCenter()
     local gx,gy=grid:GetCenter()
-    K.Say("Grid: UIParent "..N(UIParent:GetWidth()).." x "..N(UIParent:GetHeight()).." centre "..N(cx)..","..N(cy)
+    K.Say("Grid: UIParent "..N(UIParent:GetWidth()).." x "..N(UIParent:GetHeight()).." (edges "..N(K.UIWidth()).." x "..N(K.UIHeight())..") centre "..N(cx)..","..N(cy)
         ..", grid centre "..N(gx)..","..N(gy)..", scale "..N(UIParent:GetEffectiveScale())
         ..", screen "..N(GetScreenWidth and GetScreenWidth()).." x "..N(GetScreenHeight and GetScreenHeight()))
 end
@@ -251,7 +251,7 @@ function L.ClampAll()
 end
 function L.Update()
     L.SyncFollowers()
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+    local w,h=K.UIWidth(),K.UIHeight()
     if lastWidth and (w~=lastWidth or h~=lastHeight) then
         Stop(); for _,e in pairs(L.entries) do Apply(e) end
     end
@@ -283,10 +283,10 @@ function L.MigrateStatistics()
     db.layoutMigration074=true
     local saved,stats=db.layout,db.layout.statistics
     local entry,meterEntry=L.entries.statistics,L.entries.meter
-    local h=UIParent:GetHeight()
+    local h=K.UIHeight()
     if not Valid(stats) or not entry or not meterEntry or not Finite(h) or h<=0 then return end
     local s=entry.baseScale*stats.scale
-    local width=entry.frame:GetWidth()*s/UIParent:GetWidth()
+    local width=entry.frame:GetWidth()*s/K.UIWidth()
     local function Below(p,top) return Valid(p) and math.abs(p.x-stats.x)<width and p.y<top end
     local meter=saved.meter
     if not Below(meter,stats.y) then return end

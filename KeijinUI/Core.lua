@@ -1,8 +1,20 @@
-KeijinUI = { version = "3.1.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.1.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end
+-- Game 0.101 can report a K.UIWidth()/GetHeight() that differs from the area it actually covers;
+-- frames are placed and clamped within its edges, so the size is taken from them when available.
+function K.UIWidth()
+    local l,r=UIParent:GetLeft(),UIParent:GetRight()
+    if l and r and r-l>40 then return r-l end
+    return UIParent:GetWidth()
+end
+function K.UIHeight()
+    local b,t=UIParent:GetBottom(),UIParent:GetTop()
+    if b and t and t-b>40 then return t-b end
+    return UIParent:GetHeight()
+end
 -- Class colour from RAID_CLASS_COLORS (token from the second UnitClass return). The 1.12 table gives shamans the
 -- paladin pink, so they get the later dark blue instead. Returns nil for unknown tokens.
 local CLASS_OVERRIDE = { SHAMAN = { r = 0.00, g = 0.44, b = 0.87 } }
@@ -61,7 +73,7 @@ function K.SetCombatTextMode(mode)
     return K.CombatTextMode()
 end
 function K.CombatScale()
-    local width=UIParent:GetWidth()
+    local width=K.UIWidth()
     -- Once the global slider is used, keep the responsive base tied to the physical viewport.
     -- Otherwise a larger uiScale makes UIParent narrower and would shrink unit/action frames again.
     local reference=K.DB().layoutScaleReference

@@ -20,7 +20,7 @@ local meterRows,baseline={},{}
 local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
 -- Height of the meter with data: as many rows as the screen allows, 3 to MAX_ROWS.
-function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((UIParent:GetHeight()-563)/22)))*22 end
+function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((K.UIHeight()-563)/22)))*22 end
 for i=1,MAX_ROWS do
     local row=K.ListBarRow(meter,i,20)
     -- Separate, bounded columns: ability | total damage | damage per second.

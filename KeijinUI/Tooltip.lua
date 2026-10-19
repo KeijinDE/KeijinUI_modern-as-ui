@@ -15,8 +15,8 @@ local function Place()
     local x,y=anchor:GetLeft()*ratio,anchor:GetBottom()*ratio
     local tooltipScale=GameTooltip:GetEffectiveScale()/UIParent:GetEffectiveScale()
     local w,h=GameTooltip:GetWidth()*tooltipScale,GameTooltip:GetHeight()*tooltipScale
-    x=math.max(8,math.min(UIParent:GetWidth()-w-8,x))
-    y=math.max(8,math.min(UIParent:GetHeight()-h-8,y))
+    x=math.max(8,math.min(K.UIWidth()-w-8,x))
+    y=math.max(8,math.min(K.UIHeight()-h-8,y))
     GameTooltip:ClearAllPoints(); GameTooltip:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x/tooltipScale,y/tooltipScale)
 end
 if GameTooltip then

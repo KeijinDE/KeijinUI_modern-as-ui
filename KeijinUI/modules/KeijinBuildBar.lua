@@ -33,7 +33,7 @@ local skills=CreateFrame("Frame","KeijinUISkills",UIParent)
 skills:SetWidth(306); skills:SetHeight(54); skills:SetFrameStrata("LOW")
 skills:SetScale(KeijinUI.CombatScale()); KeijinUI.Skin(skills)
 KeijinUI.layout.Register("skills",skills,"Aktionsleiste",function(f)
-    f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"BOTTOM",0,UIParent:GetHeight()*0.4*UIParent:GetEffectiveScale()/f:GetEffectiveScale())
+    f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"BOTTOM",0,KeijinUI.UIHeight()*0.4*UIParent:GetEffectiveScale()/f:GetEffectiveScale())
 end,{scale=KeijinUI.CombatScale})
 
 local function Fill(parent, layer, r, g, b, a)

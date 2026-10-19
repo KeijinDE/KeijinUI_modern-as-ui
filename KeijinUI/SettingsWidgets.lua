@@ -55,7 +55,7 @@ function O.UIScale()
 end
 local lastWidth,lastHeight,lastScale,lastUIValue
 function O.Fit()
-    local w,h=UIParent:GetWidth(),UIParent:GetHeight()
+    local w,h=K.UIWidth(),K.UIHeight()
     panel:SetScale(math.min(O.MenuScale(),math.max(.1,(w-24)/760),math.max(.1,(h-24)/570)))
     -- Retain a dragged menu's position where possible, keeping every control on screen.
     local ratio=panel:GetEffectiveScale()/UIParent:GetEffectiveScale()
@@ -84,7 +84,7 @@ function O.SetUIScale(value)
 end
 O.Fit()
 table.insert(K.updates,function()
-    if lastWidth~=UIParent:GetWidth() or lastHeight~=UIParent:GetHeight() or lastScale~=UIParent:GetEffectiveScale() or lastUIValue~=GetCVar("uiScale") then
+    if lastWidth~=K.UIWidth() or lastHeight~=K.UIHeight() or lastScale~=UIParent:GetEffectiveScale() or lastUIValue~=GetCVar("uiScale") then
         O.Fit(); O.Refresh()
     end
 end)

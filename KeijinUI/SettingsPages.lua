@@ -9,6 +9,8 @@ O.Help(p,"Alt halten: Rahmen anzeigen und verschieben.\nAlt + Mausrad: Größe �
 O.Slider(p,"optionsScale","Menügröße",O.MenuScale,O.SetMenuScale,70,100)
 O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
 O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
+O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
+O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
 O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then K.layout.ToggleGrid() end end)
 O.Help(p,"Layout bearbeiten öffnet den Bearbeitungsmodus. Änderungen werden gespeichert.")
 
@@ -52,6 +54,8 @@ O.Help(p,"Nach oben: Titel unten, unterer Rand bleibt fest. Das Fenster bleibt b
 O.Help(p,"Nur neuer Loot blendet Gegenstände aus, die das Spiel als bereits gesammelt meldet.")
 O.Section(p,"Einheitenrahmen")
 O.Choice(p,"healthColor","Lebensbalken",function() return K.DB().classHealth~=false end,function(on) K.DB().classHealth=on end,{{true,"Klassenfarbe"},{false,"Grün / Rot"}})
+O.Toggle(p,"portraits","Porträts anzeigen",function() return K.DB().portraits~=false end,function(on) K.DB().portraits=on; if K.UpdateUnits then K.UpdateUnits() end end)
+O.Help(p,"Aus: statt des Porträts bleibt ein dunkler Kreis.")
 O.Choice(p,"buffs","Buffs",function() return K.DB().buffsLeft==true end,K.SetBuffsLeft,{{true,"linksbündig"},{false,"rechtsbündig"}})
 O.Toggle(p,"resources","Klassenressourcen",function() return K.DB().classResources~=false end,K.SetClassResources)
 O.Choice(p,"resourcePosition","Ressourcenposition",function() return K.DB().resourceFree==true end,K.SetResourceFree,{{false,"Am Spieler"},{true,"Frei"}})

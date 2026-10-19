@@ -6,7 +6,7 @@ local GOLD={1,0.82,0.28}
 local function Skin(f) K.Chamfer(f,4,{0.055,0.055,0.065,1},{0.67,0.57,0.36,1}) end
 local panel=K.Panel("KeijinUIOptions","KeijinUI",760,570)
 O.panel=panel
-panel:SetFrameStrata("DIALOG"); panel:SetBackdropColor(0.045,0.045,0.05,1)
+panel:SetFrameStrata("DIALOG"); panel:SetBackdropColor(0.045,0.045,0.05,1); panel.noOpacity=true
 panel.strip:SetHeight(30)
 panel.title:ClearAllPoints(); panel.title:SetPoint("TOP",panel,"TOP",0,-12)
 panel.title:SetFont(K.font,14,"OUTLINE"); panel.title:SetWidth(680); panel.title:SetHeight(22); panel.title:SetJustifyH("CENTER")

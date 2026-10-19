@@ -19,6 +19,8 @@ local groups={
     "lifesteal lebensraub", "module modules modul module", "cursor mauszeiger cursortracker",
 }
 local aliases={
+    portraits="player spieler target ziel portrait portraet portraits portraets bild",
+    bgAlpha="background opacity transparency hintergrund deckkraft transparenz durchsichtig player spieler target ziel frames rahmen panel",
     healthColor="player spieler target ziel health bar lebensbalken",
     resources="player spieler class resource mana energy combo soulshard wut seelensplitter combopunkte",
     resourcePosition="player spieler class resources position klassenressourcen",

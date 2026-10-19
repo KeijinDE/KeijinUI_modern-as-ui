@@ -76,6 +76,7 @@ local function Create(unit,mirror)
     bar:SetPoint("TOPLEFT",holder,"TOPLEFT",mirror and 1 or -17,-1)
     local rimLayer=CreateFrame("Frame",nil,f)
     rimLayer:SetAllPoints(f); rimLayer:SetFrameLevel(bar:GetFrameLevel()+2)
+    body:SetVertexColor(1,1,1,K.BackgroundAlpha()/K.BG_ALPHA)
     local rim=S.Housing(rimLayer,"OVERLAY","FrameRim.tga",FRAME_W,FRAME_H,mirror)
     local box=CreateFrame("Frame",nil,f)
     box:SetWidth(BOX); box:SetHeight(BOX)
@@ -102,7 +103,7 @@ local function Create(unit,mirror)
     -- Leave room inside the chamfered outer end.
     f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(FRAME_W-53,31),-14,31)
     f.level:SetHeight(12); f.level:SetJustifyH(mirror and "LEFT" or "RIGHT"); f.level:SetTextColor(1,0.82,0.28)
-    f.unit,f.portrait,f.bar,f.box,f.ring,f.rim=unit,portrait,bar,box,ring,rim
+    f.unit,f.portrait,f.bar,f.box,f.ring,f.rim,f.body=unit,portrait,bar,box,ring,rim,body
     f:SetScript("OnClick",function()
         if arg1=="RightButton" then if ToggleGameMenu then ToggleGameMenu() end
         elseif UnitExists(unit) and TargetUnit then TargetUnit(unit) end
@@ -167,8 +168,9 @@ local function Update()
                 if unit=="target" then K.combatDetails.Execute(f,f.bar,pct,true) end
             else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
-            SetPortraitTexture(f.portrait,unit)
-            f.portrait:Show()
+            -- Portraits off: FrameBack already contains a dark disc under the rim, so hiding the portrait leaves a dark circle.
+            if K.DB().portraits~=false then SetPortraitTexture(f.portrait,unit); f.portrait:Show()
+            else f.portrait:SetTexture(nil); f.portrait:Hide() end
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
             f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
@@ -186,6 +188,12 @@ local function Update()
         if f.debuffs then K.RefreshTargetDebuffs() end
     end
 end
+function K.ApplyUnitBackground()
+    local alpha=K.BackgroundAlpha()/K.BG_ALPHA
+    for _,f in pairs(K.units) do f.body:SetVertexColor(1,1,1,math.min(1,alpha)) end
+end
+K.UpdateUnits=function() Update(); K.ApplyUnitBackground() end
 for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE"}) do K.On(ev,Update) end
 table.insert(K.updates,Update)
+K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
 Update()

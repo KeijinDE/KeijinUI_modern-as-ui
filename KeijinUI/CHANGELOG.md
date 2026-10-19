@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.3.0 (2026-10-19, release v3.3.0)
+
+* **Background opacity** (Size & Position): new slider from 20 to 100 percent, default 91 as before. Applies to window backgrounds, tooltips and the player and target frames. The settings window itself stays opaque.
+* **Show portraits** (Unit frames): new switch, default on. With portraits off a dark circle stays where the portrait was.
+* **Coming next:** this is a first step for portraits. A dedicated portrait free unit frame for a cleaner look is planned and will clearly improve this.
+
 ### 3.2.0 (2026-10-19, release v3.2.0)
 
 * **Settings search:** live search across all settings, in English and German whatever your UI language (player/Spieler, target/Ziel and so on). Results are the real switches and sliders. Clear with the x or Escape.
@@ -417,6 +423,12 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.3.0 (2026-10-19, Release v3.3.0)
+
+* **Hintergrund-Deckkraft** (Größe & Position): neuer Regler von 20 bis 100 Prozent, Standard wie bisher 91. Gilt für Fensterhintergründe, Tooltips sowie Spieler- und Zielrahmen. Das Einstellungsfenster selbst bleibt deckend.
+* **Porträts anzeigen** (Einheitenrahmen): neuer Schalter, Standard an. Ohne Porträt bleibt ein dunkler Kreis stehen.
+* **Ausblick:** Das ist ein erster Schritt bei den Porträts. Ein eigener Einheitenrahmen ohne Porträt für einen cleaneren Look ist geplant und wird das deutlich verbessern.
 
 ### 3.2.0 (2026-10-19, Release v3.2.0)
 

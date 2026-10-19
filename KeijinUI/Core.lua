@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.2.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.3.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -148,9 +148,33 @@ function K.Text(frame, text, size, point, x, y, width)
     return fs
 end
 -- One original contour for panels and buttons; circles use their own artwork.
+-- Background opacity (settings): panels and unit frame bodies. nil means the original 0.91.
+K.BG_ALPHA=0.91
+K.skinned={}
+function K.BackgroundAlpha()
+    local v=tonumber(K.DB().bgAlpha)
+    if not v then return K.BG_ALPHA end
+    return math.max(0.2,math.min(1,v))
+end
+function K.ApplyBackground()
+    local a=K.BackgroundAlpha()
+    for _,frame in ipairs(K.skinned) do
+        local shape=frame.chamfer
+        if shape and shape.background and not frame.noOpacity then
+            local c=shape.background; frame:SetBackdropColor(c[1],c[2],c[3],a)
+        end
+    end
+    if K.ApplyUnitBackground then K.ApplyUnitBackground() end
+end
+function K.SetBackgroundAlpha(v)
+    v=math.max(0.2,math.min(1,tonumber(v) or K.BG_ALPHA))
+    if math.abs(v-K.BG_ALPHA)<0.005 then K.DB().bgAlpha=nil else K.DB().bgAlpha=v end
+    K.ApplyBackground()
+end
 function K.Skin(frame, edge)
     local cut=(edge or 10)>=10 and 6 or 4
-    K.Chamfer(frame,cut,{0.055,0.055,0.065,0.91},{0.62,0.57,0.43,1})
+    K.Chamfer(frame,cut,{0.055,0.055,0.065,K.BackgroundAlpha()},{0.62,0.57,0.43,1})
+    if not frame.skinTracked then frame.skinTracked=true; table.insert(K.skinned,frame) end
 end
 function K.Panel(name, title, width, height)
     local f = CreateFrame("Frame", name, UIParent)

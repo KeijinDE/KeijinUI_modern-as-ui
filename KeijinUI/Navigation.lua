@@ -81,6 +81,8 @@ function N.Debug()
         local flagged=type(AZS_GetFlaggedLair)=="function" and AZS_GetFlaggedLair() or nil
         K.Say("Guardian flag: supported="..tostring(guide.FlagSupported and guide.FlagSupported())..", skulls="..tostring(guide.PinsOn and guide.PinsOn())
             ..", cvar="..tostring(cvars and cvars.flag)..", nativeShown="..tostring(type(AZS_IsHudShown)=="function" and AZS_IsHudShown("flag"))
-            ..", flagged="..tostring(flagged and flagged.state)..", saved="..tostring(K.DB().nativeFlagShown))
+            ..", flagged="..tostring(flagged and flagged.state)..", saved="..tostring(K.DB().nativeFlagShown)
+            ..", lairs="..tostring(type(AZS_LAIRS)=="table" and table.getn(AZS_LAIRS) or "nil")
+            ..", age="..tostring(K.Number(AZS_LAIRS_UPDATED) and math.floor(GetTime()-AZS_LAIRS_UPDATED) or "nil"))
     end
 end

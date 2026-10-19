@@ -6,7 +6,7 @@ local K=KeijinUI
 local PAD=7
 local chat=ChatFrame1
 if not chat then return end
-local panel=K.Panel("KeijinUIChat","",chat:GetWidth()+2*PAD,chat:GetHeight()+2*PAD)
+local panel=K.Panel("KeijinUIChat","",K.PANEL_WIDTH,chat:GetHeight()+2*PAD)
 panel.strip:Hide(); panel.title:Hide()
 K.chat={panel=panel}
 K.layout.Register("chat",panel,"Chat",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",25,78) end)
@@ -17,7 +17,7 @@ local function Capture()
     local point,relative,relativePoint,x,y=chat:GetPoint()
     saved={parent=chat:GetParent() or UIParent,point=point or "BOTTOMLEFT",relative=relative or UIParent,
         relativePoint=relativePoint or "BOTTOMLEFT",x=x or 32,y=y or 85,
-        strata=chat.GetFrameStrata and chat:GetFrameStrata() or "BACKGROUND"}
+        width=chat:GetWidth(),strata=chat.GetFrameStrata and chat:GetFrameStrata() or "BACKGROUND"}
 end
 Capture()
 -- Native parts replaced by the panel: tab, menu and scroll buttons, resize edges, background.
@@ -45,6 +45,24 @@ bottom:SetFrameLevel(panel:GetFrameLevel()+5)
 K.Skin(bottom, 7); bottom.text=K.Text(bottom,"v",10,"CENTER",0,0)
 bottom:SetScript("OnClick",function() chat:ScrollToBottom() end)
 bottom:Hide()
+-- Small copy button in the top right corner: opens the copy window (the settings button stays as well).
+local copy=CreateFrame("Button","KeijinUIChatCopyButton",panel)
+copy:SetWidth(16); copy:SetHeight(16); copy:SetPoint("TOPRIGHT",panel,"TOPRIGHT",-3,-3)
+copy:SetFrameLevel(panel:GetFrameLevel()+5)
+K.Skin(copy,5)
+copy.back=copy:CreateTexture(nil,"OVERLAY"); copy.back:SetTexture(K.flat)
+copy.back:SetWidth(6); copy.back:SetHeight(7); copy.back:SetPoint("TOPLEFT",copy,"TOPLEFT",3,-3)
+copy.front=copy:CreateTexture(nil,"OVERLAY"); copy.front:SetTexture(K.flat)
+copy.front:SetWidth(6); copy.front:SetHeight(7); copy.front:SetPoint("BOTTOMRIGHT",copy,"BOTTOMRIGHT",-3,3)
+local function CopyColor(r,g,b) copy.back:SetVertexColor(r*.6,g*.6,b*.6,1); copy.front:SetVertexColor(r,g,b,1) end
+CopyColor(.78,.69,.5)
+copy:SetScript("OnClick",function() if K.chatCopy and K.chatCopy.Open then K.chatCopy.Open() end end)
+copy:SetScript("OnEnter",function()
+    CopyColor(1,.9,.6)
+    GameTooltip:SetOwner(this,"ANCHOR_TOP"); GameTooltip:SetText(K.T("Chat kopieren"),1,.82,.28); GameTooltip:Show()
+end)
+copy:SetScript("OnLeave",function() CopyColor(.78,.69,.5); GameTooltip:Hide() end)
+K.chat.copyButton=copy
 panel:EnableMouse(true); panel:EnableMouseWheel(true)
 panel:SetScript("OnMouseWheel",function()
     for _=1,3 do if arg1>0 then chat:ScrollUp() else chat:ScrollDown() end end
@@ -78,9 +96,10 @@ local function Enforce()
     if chat.SetFrameLevel and chat.GetFrameLevel and chat:GetFrameLevel()<=panel:GetFrameLevel() then
         chat:SetFrameLevel(panel:GetFrameLevel()+2)
     end
-    local width,height=chat:GetWidth(),chat:GetHeight()
-    if K.Number(width) and K.Number(height) and width>0 and height>0 then
-        if panel:GetWidth()~=width+2*PAD then panel:SetWidth(width+2*PAD) end
+    if chat:GetWidth()~=K.PANEL_WIDTH-2*PAD then chat:SetWidth(K.PANEL_WIDTH-2*PAD) end
+    local height=chat:GetHeight()
+    if K.Number(height) and height>0 then
+        if panel:GetWidth()~=K.PANEL_WIDTH then panel:SetWidth(K.PANEL_WIDTH) end
         if panel:GetHeight()~=height+2*PAD then panel:SetHeight(height+2*PAD) end
     end
     Style(true)
@@ -102,7 +121,7 @@ function K.chat.Release()
         for _,part in ipairs(ChatFrameEditBox.chamfer.rim) do part:Hide() end
     end
     Style(false)
-    chat:SetParent(saved.parent); chat:SetScale(1)
+    chat:SetParent(saved.parent); chat:SetScale(1); chat:SetWidth(saved.width)
     chat:ClearAllPoints(); chat:SetPoint(saved.point,saved.relative,saved.relativePoint,saved.x,saved.y)
     if chat.SetFrameStrata then chat:SetFrameStrata(saved.strata) end
     if ChatFrameEditBox then ChatFrameEditBox:SetScale(1) end

@@ -9,7 +9,8 @@
 -- MinimapZoomIn and MinimapZoomOut buttons), MinimapToggleButton, MinimapZoneTextButton and
 -- GameTimeFrame. The tracking, mail, battleground and meeting stone icons stay as they are.
 local K=KeijinUI
-local PANEL_W,PANEL_H,SIZE=180,198,160
+-- Same base width as the run overview; personal layout scales remain independent.
+local PANEL_W,PANEL_H=K.PANEL_WIDTH,K.PANEL_WIDTH+18
 local MASK="Interface\\AddOns\\KeijinUI\\media\\MinimapMask.tga"
 local DEFAULT_MASK="Textures\\MinimapMask"
 local NATIVE={"MinimapBorderTop","MinimapBorder","MinimapBackdrop","MinimapToggleButton","MinimapZoneTextButton","GameTimeFrame"}
@@ -68,10 +69,13 @@ local function Enable()
         saved={cw=cluster:GetWidth(),ch=cluster:GetHeight(),mw=map:GetWidth(),mh=map:GetHeight(),point={map:GetPoint()}}
     end
     Build()
-    cluster:SetWidth(PANEL_W); cluster:SetHeight(PANEL_H)
-    panel:SetWidth(PANEL_W); panel:SetHeight(PANEL_H)
+    local width=PANEL_W
+    local size=width-20
+    cluster:SetWidth(width); cluster:SetHeight(size+38)
+    panel:SetWidth(width); panel:SetHeight(size+38)
+    zone:SetWidth(width-26-CLOCK_W)
     map:ClearAllPoints(); map:SetPoint("TOPLEFT",cluster,"TOPLEFT",10,-28)
-    map:SetWidth(SIZE); map:SetHeight(SIZE)
+    map:SetWidth(size); map:SetHeight(size)
     if map.SetMaskTexture then map:SetMaskTexture(MASK) end
     map:EnableMouseWheel(true); map:SetScript("OnMouseWheel",Wheel)
     styled=true
@@ -127,6 +131,7 @@ local function Update()
     if Wanted() and not styled then Enable()
     elseif not Wanted() and styled then Disable() end
     if not styled then return end
+    if MinimapCluster:GetWidth()~=PANEL_W then Enable() end
     HideNative()
     local text=(GetMinimapZoneText and GetMinimapZoneText()) or (GetRealZoneText and GetRealZoneText()) or ""
     if text~=lastZone then lastZone=text; zone:SetText(text) end

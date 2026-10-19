@@ -1,5 +1,5 @@
 local K = KeijinUI
-local tracker=K.Panel("KeijinUITracker","Runübersicht",300,220)
+local tracker=K.Panel("KeijinUITracker","Runübersicht",K.PANEL_WIDTH,220)
 -- Default: right below the minimap (its size follows the minimap style), else the old absolute place.
 K.layout.Register("tracker",tracker,"Runübersicht",function(f)
     f:ClearAllPoints()
@@ -91,7 +91,7 @@ local head84=K.LText(tracker,"Bosszeit",9,"TOPRIGHT",-84,-105); head84:SetTextCo
 K.HeaderPoint(head84,tracker,"TOPRIGHT",-84,-105)
 local head14=K.LText(tracker,"Runzeit",9,"TOPRIGHT",-14,-105); head14:SetTextColor(0.65,0.63,0.58)
 K.HeaderPoint(head14,tracker,"TOPRIGHT",-14,-105)
-local bosses=K.Panel("KeijinUIBosses","Begegnungen",300,40)
+local bosses=K.Panel("KeijinUIBosses","Begegnungen",K.PANEL_WIDTH,40)
 bosses.title:Hide(); bosses.strip:Hide()
 K.layout.Register("bosses",bosses,"Begegnungen",function(f) f:ClearAllPoints(); f:SetPoint("TOP",UIParent,"TOP",0,-14) end,{hidden=true})
 local bossRows={}

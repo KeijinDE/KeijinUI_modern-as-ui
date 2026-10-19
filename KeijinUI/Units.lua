@@ -57,7 +57,7 @@ end
 local BORDER={0.78,0.69,0.50}
 local FRAME_W,FRAME_H=206,58
 local BOX=54
-local HOLDER_W,HOLDER_H=158,30
+local HOLDER_W,HOLDER_H=FRAME_W-48,30
 local S=K.UnitFrameShapes
 local function Create(unit,mirror)
     local name=unit=="player" and "KeijinUIPlayer" or "KeijinUITarget"
@@ -66,19 +66,17 @@ local function Create(unit,mirror)
     f:SetScale(K.CombatScale()); f:EnableMouse(true); f:RegisterForClicks("LeftButtonUp","RightButtonUp")
     -- Transparent click and layout container. It has no backdrop.
     local contentLeft=mirror and 4 or 44
-    local boxLeft=mirror and 152 or 0
+    local boxLeft=mirror and FRAME_W-BOX or 0
     local holder=CreateFrame("Frame",nil,f)
     holder:SetWidth(HOLDER_W); holder:SetHeight(HOLDER_H)
     holder:SetPoint("TOPLEFT",f,"TOPLEFT",contentLeft,-28)
-    local body=S.Texture(f,"BACKGROUND","FrameBack.tga",206,58,0,0)
-    if mirror then body:SetTexCoord(1,0,0,1) end
+    local body=S.Housing(f,"BACKGROUND","FrameBack.tga",FRAME_W,FRAME_H,mirror)
     -- The alpha-shaped fill follows the portrait edge and the lower connector.
     local bar=S.ConnectedFill(holder,name.."Health",mirror)
     bar:SetPoint("TOPLEFT",holder,"TOPLEFT",mirror and 1 or -17,-1)
     local rimLayer=CreateFrame("Frame",nil,f)
     rimLayer:SetAllPoints(f); rimLayer:SetFrameLevel(bar:GetFrameLevel()+2)
-    local rim=S.Texture(rimLayer,"OVERLAY","FrameRim.tga",206,58,0,0)
-    if mirror then rim:SetTexCoord(1,0,0,1) end
+    local rim=S.Housing(rimLayer,"OVERLAY","FrameRim.tga",FRAME_W,FRAME_H,mirror)
     local box=CreateFrame("Frame",nil,f)
     box:SetWidth(BOX); box:SetHeight(BOX)
     box:SetPoint("TOPLEFT",f,"TOPLEFT",boxLeft,-4)
@@ -95,14 +93,14 @@ local function Create(unit,mirror)
     -- Reflect each text box, including its alignment. Text stays readable:
     -- target percent/level on the left, health/name next to its portrait.
     local function TextLeft(left,width) return mirror and FRAME_W-left-width or left end
-    f.health=K.Text(layer,"?",10,"TOPLEFT",TextLeft(59,80),-36,80)
+    f.health=K.Text(layer,"?",10,"TOPLEFT",TextLeft(59,FRAME_W-126),-36,FRAME_W-126)
     f.health:SetHeight(14); f.health:SetJustifyH(mirror and "RIGHT" or "LEFT")
-    f.percent=K.Text(layer,"?%",10,"TOPLEFT",TextLeft(156,36),-36,36)
+    f.percent=K.Text(layer,"?%",10,"TOPLEFT",TextLeft(FRAME_W-50,36),-36,36)
     f.percent:SetHeight(14); f.percent:SetJustifyH(mirror and "LEFT" or "RIGHT")
-    f.label=K.Text(layer,unit=="player" and K.T("Spieler") or K.T("Kein Ziel"),11,"TOPLEFT",TextLeft(58,90),-13,90)
+    f.label=K.Text(layer,unit=="player" and K.T("Spieler") or K.T("Kein Ziel"),11,"TOPLEFT",TextLeft(58,FRAME_W-116),-13,FRAME_W-116)
     f.label:SetHeight(14); f.label:SetJustifyH(mirror and "RIGHT" or "LEFT"); f.label:SetTextColor(1,0.82,0.28)
-    -- End at x=184: keep the text safely inside the chamfered outer end.
-    f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(153,31),-14,31)
+    -- Leave room inside the chamfered outer end.
+    f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(FRAME_W-53,31),-14,31)
     f.level:SetHeight(12); f.level:SetJustifyH(mirror and "LEFT" or "RIGHT"); f.level:SetTextColor(1,0.82,0.28)
     f.unit,f.portrait,f.bar,f.box,f.ring,f.rim=unit,portrait,bar,box,ring,rim
     f:SetScript("OnClick",function()

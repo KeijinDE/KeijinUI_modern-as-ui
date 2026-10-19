@@ -428,6 +428,13 @@ function R.ZoneList()
     end
     table.sort(extra)
     for _,zone in ipairs(extra) do list[table.getn(list)+1]=zone end
+    -- The zone the player is in always has its own tab, even before its first finished run.
+    local current=type(AZS_ZONE)=="table" and type(AZS_ZONE.zone)=="string" and AZS_ZONE.zone~="" and AZS_ZONE.zone
+    if current and not seen[current] then
+        local known=false
+        for _,zone in ipairs(extra) do if zone==current then known=true end end
+        if not known and current~="names" and current~="open" and current~="announced" then list[table.getn(list)+1]=current end
+    end
     return list
 end
 local function Dash(value) return K.Number(value) and value>0 and K.Clock(value) or "-" end

@@ -2,7 +2,8 @@ local K=KeijinUI
 -- Native game fonts only. No additional font file is redistributed.
 K.fontChoices={{"friz","Friz Quadrata"},{"arial","Arial Narrow"}}
 local fonts={friz="Fonts\\FRIZQT__.TTF",arial="Fonts\\ARIALN.TTF"}
-function K.FontChoice() return fonts[K.DB().fontFace] and K.DB().fontFace or "friz" end
+-- The font option is not offered for now: a saved choice is ignored and Friz Quadrata is always used.
+function K.FontChoice() return "friz" end
 function K.SetFontChoice(key)
     if not fonts[key] then return end
     K.DB().fontFace=key; K.font=fonts[key]

@@ -5,6 +5,16 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.1.2 (2026-10-19, release v3.1.2)
+
+* **Settings search:** live search across all settings, in English and German whatever your UI language (player/Spieler, target/Ziel and so on). Results are the real switches and sliders. Clear with the x or Escape.
+* **Guardian skulls** (game 0.102+): every lair shows a skull on the minimap from the start of the run: gold while a guardian holds it, orange with ! in combat, grey with x when empty. The game's red flag stays hidden while the skulls are on.
+* **Layout:** windows snap flush to the screen edges. Windows docked above the chat stay attached and grow upward. The upper windows share a 300 point width; player, target, action bar, counters and XP keep their sizes. Buffs match the action bar width so both stack cleanly.
+* **New installs and Reset:** a clean start layout without overlaps, minimap at 80 percent.
+* **Minimap button:** larger and in the lower left corner by default; new option with eight fixed positions. A saved position is now applied correctly after loading.
+* **Chat:** small copy button at the chat window (moved out of the settings).
+* **Also:** character attributes follow the section titles setting, run history opens on your current zone, the loot frame keeps its sizes per mode, the font option is removed for now.
+
 ### 3.1.1 (2026-10-19, release v3.1.1)
 
 * Hotfix for game version 0.101: frames could not be dragged to the screen edges and saved positions were shifted, because the game reports a different UIParent size than the area it covers. Placement, clamping, snapping and saved positions now use the real screen edges. /kui grid debug shows both sizes.
@@ -407,6 +417,16 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.1.2 (2026-10-19, Release v3.1.2)
+
+* **Suche in den Einstellungen:** Livesuche über alle Einstellungen, auf Deutsch und Englisch unabhängig von der UI Sprache (Spieler/player, Ziel/target usw.). Treffer sind direkt die echten Schalter und Regler. Leeren mit x oder Escape.
+* **Wächtertotenköpfe** (ab Spiel 0.102): Jeder Hort zeigt ab Runbeginn einen Totenkopf auf der Minimap, gold bei besetztem Hort, orange mit ! im Kampf, grau mit x bei leerem Hort. Die rote Flagge des Spiels bleibt ausgeblendet, solange die Totenköpfe an sind.
+* **Layout:** Fenster rasten bündig am Bildschirmrand ein. Über dem Chat angedockte Fenster bleiben verbunden und wachsen nach oben. Die oberen Fenster sind einheitlich 300 Punkte breit; Spieler, Ziel, Aktionsleiste, Zähler und EP behalten ihre Größe. Buffs haben die Breite der Aktionsleiste und lassen sich sauber darüber stapeln.
+* **Neuinstallation und Zurücksetzen:** aufgeräumtes Startlayout ohne Überlappungen, Minimap mit 80 Prozent.
+* **Minimapknopf:** größer und standardmäßig unten links; neue Option mit acht festen Positionen. Eine gespeicherte Position wird nach dem Laden jetzt richtig übernommen.
+* **Chat:** kleiner Kopierknopf am Chatfenster (aus den Einstellungen dorthin verlegt).
+* **Außerdem:** Charakterwerte folgen der Einstellung Abschnittstitel, die Rundenhistorie öffnet auf der aktuellen Zone, das Lootfenster behält seine Größen je Modus, die Schriftoption ist vorerst entfernt.
 
 ### 3.1.1 (2026-10-19, Release v3.1.1)
 

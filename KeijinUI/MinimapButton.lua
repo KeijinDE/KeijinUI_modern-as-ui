@@ -4,9 +4,10 @@
 -- The angle (degrees, 0 = east, counterclockwise) is kept in KeijinUIDB.minimapButtonAngle. On the square
 -- KeijinUI minimap the angle is projected onto the square edge, on the original minimap onto a circle.
 local K=KeijinUI
-local SIZE,DEFAULT_ANGLE=24,0
+-- 225 degrees: the lower left corner of the square map (on the round map the lower left of the ring).
+local SIZE,DEFAULT_ANGLE=32,225
 local EDGE,RING=2,9
-local button,placedStyle,placedWidth,dragging
+local button,placedStyle,placedWidth,placedAngle,dragging
 local function Wanted() return K.DB().minimapButton~=false end
 local function Angle()
     local a=tonumber(K.DB().minimapButtonAngle)
@@ -31,7 +32,7 @@ local function Place()
     local x,y=K.MinimapButtonOffset(Angle(),half,K.MinimapStyled and K.MinimapStyled())
     button:ClearAllPoints(); button:SetPoint("CENTER",Minimap,"CENTER",x,y)
     placedStyle=K.MinimapStyled and K.MinimapStyled() and true or false
-    placedWidth=Minimap:GetWidth()
+    placedWidth=Minimap:GetWidth(); placedAngle=Angle()
 end
 local function Drag()
     if not dragging or not Minimap.GetLeft or not Minimap:GetLeft() then return end
@@ -59,8 +60,8 @@ local function Build()
     button:SetFrameStrata("MEDIUM"); button:SetFrameLevel(Minimap:GetFrameLevel()+8)
     K.Chamfer(button,2,{0.055,0.055,0.065,0.95},{0.62,0.57,0.43,0.9})
     -- Wordmark "Kui": a large gold K with a small pale "ui" on its baseline.
-    local icon=K.Text(button,"K",16,"CENTER",-3,1)
-    local sub=K.Text(button,"ui",9,"BOTTOMRIGHT",-3,4)
+    local icon=K.Text(button,"K",21,"CENTER",-4,1)
+    local sub=K.Text(button,"ui",11,"BOTTOMRIGHT",-4,5)
     button.icon,button.sub=icon,sub
     button:RegisterForClicks("LeftButtonUp","RightButtonUp")
     button:RegisterForDrag("LeftButton")
@@ -87,6 +88,17 @@ local function Build()
     Place()
 end
 function K.MinimapButtonOn() return Wanted() end
+-- Eight fixed spots around the map, as angles (0 = right middle, counterclockwise). A dragged angle shows the nearest.
+K.minimapButtonSpots={{"0","Rechts mittig"},{"45","Rechts oben"},{"90","Oben mittig"},{"135","Links oben"},
+    {"180","Links mittig"},{"225","Links unten"},{"270","Unten mittig"},{"315","Rechts unten"}}
+function K.MinimapButtonSpot()
+    local a=math.mod(Angle(),360); if a<0 then a=a+360 end
+    return tostring(math.mod(math.floor(a/45+0.5),8)*45)
+end
+function K.SetMinimapButtonSpot(value)
+    local a=tonumber(value); if not a then return end
+    K.DB().minimapButtonAngle=a; Place()
+end
 function K.SetMinimapButton(on)
     K.DB().minimapButton=on and true or false
     if on then Build(); Place(); if button then button:Show() end
@@ -102,7 +114,8 @@ local function Update()
     if not button then return end
     if not button:IsShown() then button:Show() end
     local styled=K.MinimapStyled and K.MinimapStyled() and true or false
-    if styled~=placedStyle or Minimap:GetWidth()~=placedWidth then Place() end
+    -- The saved angle arrives after the files load (ADDON_LOADED), so a changed angle re-places the button too.
+    if styled~=placedStyle or Minimap:GetWidth()~=placedWidth or Angle()~=placedAngle then Place() end
 end
 -- /kui button [on|off]
 function K.MinimapButtonCommand(arg)

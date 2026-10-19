@@ -2,11 +2,12 @@
 local K=KeijinUI
 local size,gap,rowHeight,columns=30,5,46,8
 local container=CreateFrame("Frame","KeijinUIBuffs",UIParent)
-container:SetWidth(columns*size+(columns-1)*gap); container:SetHeight(rowHeight)
+-- Same base width as the 7 slot action bar (16+6*42+38) and the same scale rule, so both can be stacked flush.
+container:SetWidth(306); container:SetHeight(rowHeight)
 container:SetFrameStrata("LOW")
 K.layout.Register("buffs",container,"Buffs",function(f)
-    f:ClearAllPoints(); f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",-220,-13)
-end,{hidden=true})
+    f:ClearAllPoints(); f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",-12-K.PANEL_WIDTH-12,-13)   -- left of the 300 point minimap
+end,{hidden=true,scale=K.CombatScale})
 local entries,known,hooks={},{},{}
 local busy=false
 local Layout

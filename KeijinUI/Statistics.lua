@@ -1,5 +1,5 @@
 local K=KeijinUI
-local stats=K.Panel("KeijinUIStatistics","Dieser Run",260,185)
+local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end)
 -- Level and experience of the current level only: the game hands out no run total of experience.
 local definitions={
@@ -13,9 +13,9 @@ local rows={}
 for i,v in ipairs(definitions) do local text=v[2]; rows[i]=K.ValueRow(stats,i,19); K.Live(rows[i].label,function() return K.T(text) end) end
 -- The panel border closes the list, so the last row needs no line of its own.
 rows[table.getn(rows)].line:Hide()
-local meter=K.Panel("KeijinUIDamage","Schaden",260,235)
+local meter=K.Panel("KeijinUIDamage","Schaden",K.PANEL_WIDTH,235)
 K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end)
-local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,236)
+local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,K.PANEL_WIDTH-26)
 local meterRows,baseline={},{}
 local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
@@ -25,7 +25,7 @@ for i=1,MAX_ROWS do
     local row=K.ListBarRow(meter,i,20)
     -- Separate, bounded columns: ability | total damage | damage per second.
     -- Use the existing text layer so all three stay above the bar artwork.
-    row.label:SetWidth(104)
+    row.label:SetWidth(meter:GetWidth()-156)
     row.value:ClearAllPoints(); row.value:SetPoint("RIGHT",row,"RIGHT",-73,0)
     row.value:SetWidth(53); row.value:SetHeight(16); row.value:SetJustifyH("RIGHT")
     row.dps=K.Text(row.value:GetParent(),"",10,"RIGHT",-6,0,62)
@@ -79,14 +79,14 @@ meter.headerExtra=function(mode)
         tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
         tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
-        summary:SetWidth(100)
+        summary:SetWidth(meter:GetWidth()-160)
     else
         if mode=="thin" then reset:SetPoint("RIGHT",meter.strip,"RIGHT",-3,0)
         else reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6) end
         tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
         tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
-        summary:SetWidth(236)
+        summary:SetWidth(meter:GetWidth()-26)
     end
     PaintTabs()
 end
@@ -99,11 +99,10 @@ local function ResetMeter()
     for _,v in ipairs(lines or {}) do if K.Number(v.dmg) then baseline[v.name]=v.dmg end end
 end
 reset:SetScript("OnClick",ResetMeter)
-local crit=K.Panel("KeijinUICrits","Größte kritische Treffer",300,220)
+local crit=K.Panel("KeijinUICrits","Größte kritische Treffer",K.PANEL_WIDTH,220)
 K.layout.Register("crits",crit,"Kritische Treffer",function(f)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",meter,"BOTTOMLEFT",0,-10)
 end)
-crit:SetWidth(260)
 crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}

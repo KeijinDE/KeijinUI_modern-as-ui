@@ -4,6 +4,7 @@ local N=K.navigation
 local G={pins={}}
 K.guardianNav=G
 local selected,awaitLairs
+local inWorld=true
 local PATH="Interface\\AddOns\\KeijinUI\\media\\caches\\Arrow.tga"
 local rows={}
 function G.On() return K.ModuleOn("guardianNav") and K.DB().guardianGuide~=false end
@@ -16,8 +17,8 @@ function G.FlagSupported()
     return type(AZS_SetHudShown)=="function" and type(AZS_IsHudShown)=="function" and type(AZS_GetFlaggedLair)=="function"
         and type(AZS_HUD_CVARS)=="table" and AZS_HUD_CVARS.flag~=nil
 end
--- The native flag is hidden only while our skulls are drawn. Its earlier state is kept in the saved variables
--- and given back when they are gone (switch off, missing data, loading screen, logout).
+-- Own the native flag while pins are enabled in the world, independently of lair data.
+-- Keep its previous value, including false, and return it on shutdown or leaving the world.
 local function NativeFlag(replaced)
     local db=K.DB()
     if replaced then
@@ -27,8 +28,8 @@ local function NativeFlag(replaced)
         AZS_SetHudShown("flag",db.nativeFlagShown); db.nativeFlagShown=nil
     end
 end
--- A lair is "empty" both before its guardian first appears and after its death. Only a lair seen
--- asleep or awake in this run counts as defeated, so no skull shows during the first seconds.
+-- Legacy clients cannot hide their native flags: only previously occupied, now empty lairs
+-- receive a grey skull there. Clients with the flag API show all three states from the start.
 local seenAlive,runStamp={},nil
 local function Identity(lair) return tostring(lair.index)..":"..tostring(lair.id or 0) end
 function G.List(includeEmpty)
@@ -108,7 +109,32 @@ local function Tip(v,owner)
     G.AddTooltip(v.lair)
     GameTooltip:Show()
 end
-local overlay
+local overlay,playerLayer
+-- The ninth native minimap child is the facing model (also used by Caches.lua).
+-- Raise that model, not the whole map, so the terrain cannot cover our pins.
+local function PlayerAbovePins(on)
+    local model
+    if on and overlay and Minimap and Minimap.GetChildren then
+        local children={Minimap:GetChildren()}
+        local candidate=children[9]
+        if candidate and candidate.GetObjectType and candidate.GetFacing then
+            local kind=candidate:GetObjectType()
+            if kind=="Model" or kind=="PlayerModel" then model=candidate end
+        end
+    end
+    if playerLayer and playerLayer.frame~=model then
+        playerLayer.frame:SetFrameLevel(playerLayer.level)
+        if playerLayer.strata then playerLayer.frame:SetFrameStrata(playerLayer.strata) end
+        playerLayer=nil
+    end
+    if not model then return end
+    if not playerLayer then
+        playerLayer={frame=model,level=model:GetFrameLevel(),strata=model.GetFrameStrata and model:GetFrameStrata()}
+    end
+    local strata=overlay.GetFrameStrata and overlay:GetFrameStrata()
+    if strata then model:SetFrameStrata(strata) end
+    model:SetFrameLevel(math.max(playerLayer.level,overlay:GetFrameLevel()+4))
+end
 local function Overlay()
     if not overlay then
         if not Minimap or not MinimapCluster then return end
@@ -126,10 +152,12 @@ local function Pin(i)
         pin.icon=pin:CreateTexture(nil,"ARTWORK"); pin.icon:SetWidth(14); pin.icon:SetHeight(14)
         pin.icon:SetPoint("CENTER",pin,"CENTER",0,0)
         pin.icon:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
-        pin.badge=CreateFrame("Frame",nil,pin); pin.badge:SetWidth(8); pin.badge:SetHeight(8)
-        pin.badge:SetPoint("BOTTOMRIGHT",pin,"BOTTOMRIGHT",0,0); pin.badge:SetFrameLevel(pin:GetFrameLevel()+1)
-        pin.badge:SetBackdrop({bgFile=K.flat}); pin.badge:SetBackdropColor(.035,.035,.045,1)
-        pin.badge.label=K.Text(pin.badge,"",8,"CENTER",0,0,8); pin.badge.label:SetHeight(9)
+        pin.badge=CreateFrame("Frame",nil,pin); pin.badge:SetAllPoints(pin); pin.badge:SetFrameLevel(pin:GetFrameLevel()+1)
+        -- Tiny FontStrings are clipped/wrapped by this client. Draw one complete transparent
+        -- symbol instead, straddling the lower-right corner rather than floating beside it.
+        pin.badge.mark=pin.badge:CreateTexture(nil,"OVERLAY")
+        pin.badge.mark:SetWidth(8); pin.badge.mark:SetHeight(8)
+        pin.badge.mark:SetPoint("CENTER",pin,"BOTTOMRIGHT",-1,1)
         pin:SetScript("OnClick",function() if this.destination and this.destination.lair.state~="empty" then G.Select(this.destination.lair.index or this.destination.index) end end)
         pin:SetScript("OnEnter",function() Tip(this.destination,this) end)
         pin:SetScript("OnLeave",function() GameTooltip:Hide() end)
@@ -145,33 +173,41 @@ local function Paint(pin,state)
     pin.state=state
     if state=="empty" then
         pin.icon:SetVertexColor(.55,.55,.55,.75)
-        pin.badge.label:SetText("x"); pin.badge.label:SetTextColor(.85,.85,.85); pin.badge:Show()
+        pin.badge.mark:SetTexture("Interface\\AddOns\\KeijinUI\\media\\guardians\\GuardianEmpty.tga")
+        pin.badge.mark:SetVertexColor(.85,.85,.85,1); pin.badge:Show()
     elseif state=="awake" then
         pin.icon:SetVertexColor(1,.45,.16,1)
-        pin.badge.label:SetText("!"); pin.badge.label:SetTextColor(1,.7,.3); pin.badge:Show()
+        pin.badge.mark:SetTexture("Interface\\AddOns\\KeijinUI\\media\\guardians\\GuardianCombat.tga")
+        pin.badge.mark:SetVertexColor(1,.7,.3,1); pin.badge:Show()
     else pin.icon:SetVertexColor(1,.82,.28,1); pin.badge:Hide() end
 end
 function G.Update()
     for row in pairs(rows) do G.Decorate(row) end
-    if not G.On() and not G.PinsOn() then
+    if not inWorld or (not G.On() and not G.PinsOn()) then
         G.current=nil; G.shownPins=0
         for _,pin in ipairs(G.pins) do pin.destination=nil; pin:Hide() end
+        PlayerAbovePins(false)
         NativeFlag(false)
         return
     end
+    -- Even with no lair snapshot yet the native flag is ours to suppress. After leaving
+    -- the world the early return above prevents later ticks from taking it over again.
+    local replace=G.PinsOn() and G.FlagSupported()
+    NativeFlag(replace)
     local list=G.List(); local chosen
     for _,v in ipairs(list) do if selected==v.key then chosen=v; break end end
     chosen=chosen or Nearest(list); selected=chosen and chosen.key or nil; G.current=chosen
     local count=0
     -- With the 0.102 flag switch our skulls stand for every lair and replace the native flag.
     -- Older clients keep their native flag, so only defeated lairs get a skull there.
-    local replace=G.PinsOn() and G.FlagSupported()
     if G.PinsOn() then
         for _,v in ipairs(G.List(true)) do
-            -- Empty lairs only after being seen alive in this run: no skull during the first seconds.
-            local wanted=v.defeated or (replace and v.lair.state~="empty")
+            -- Replacing the native flag: every lair gets a skull, empty ones grey with x from the run start.
+            -- Older clients keep their flag, so there only lairs defeated in this run get one.
+            local wanted=v.defeated or replace
             if wanted and v.dist then
-                local x,y,edge=N.MinimapPoint(v.east,v.north,10)
+                -- Include the small status overhang at the lower-right corner.
+                local x,y,edge=N.MinimapPoint(v.east,v.north,14)
                 if x then
                     local pin=Pin(count+1)
                     if pin then
@@ -186,12 +222,13 @@ function G.Update()
     end
     for i=count+1,table.getn(G.pins) do G.pins[i].destination=nil; G.pins[i]:Hide() end
     G.shownPins=count
-    NativeFlag(replace and count>0)
+    PlayerAbovePins(count>0)
 end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then selected=nil; awaitLairs=true
     elseif prefix=="AZSLAIRS" then awaitLairs=false end
 end)
-K.On("PLAYER_LEAVING_WORLD",function() selected=nil; awaitLairs=true; G.Update() end)
-K.On("PLAYER_LOGOUT",function() selected=nil; G.Update(); NativeFlag(false) end)
+K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; G.Update() end)
+K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
+K.On("PLAYER_LOGOUT",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
 K.Update("guardianNav",G.Update)

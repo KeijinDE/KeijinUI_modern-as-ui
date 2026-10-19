@@ -1,6 +1,6 @@
 -- Shared settings controls, built only from the client's 1.12 frame API.
 local K=KeijinUI
-local O={pages={},controls={},refreshers={},nav={},navSections={},width=516}
+local O={pages={},controls={},refreshers={},nav={},navSections={},width=516,searchEntries={}}
 K.settings=O
 local GOLD={1,0.82,0.28}
 local function Skin(f) K.Chamfer(f,4,{0.055,0.055,0.065,1},{0.67,0.57,0.36,1}) end
@@ -94,6 +94,14 @@ function O.Refresh()
     for _,fn in ipairs(O.refreshers) do fn() end
 end
 function O.Watch(fn) table.insert(O.refreshers,fn); fn() end
+-- Keep the original controls and their source-language labels available to the search.
+function O.SearchEntry(frame,page,label,key)
+    if not page.key or O.pages[page.key]~=page then return end
+    local section=page.sections[table.getn(page.sections)]
+    local entry={frame=frame,page=page,label=label,key=key,section=section and section.caption or "",help={}}
+    frame.searchEntry=entry; page.searchLast=entry
+    table.insert(O.searchEntries,entry)
+end
 function O.Button(parent,text,x,y,width,fn)
     local b=CreateFrame("Button",nil,parent); b:SetWidth(width); b:SetHeight(28)
     b:SetPoint("TOPLEFT",parent,"TOPLEFT",x,y); Skin(b)
@@ -101,15 +109,26 @@ function O.Button(parent,text,x,y,width,fn)
     b:SetScript("OnClick",function() O.CloseChoice(); fn(); O.Refresh() end)
     b:SetScript("OnEnter",function() b:SetBackdropBorderColor(.94,.74,.37,1) end)
     b:SetScript("OnLeave",function() b:SetBackdropBorderColor(.67,.57,.36,1) end)
+    O.SearchEntry(b,parent,text)
     return b
 end
 O.Button(panel,"Schließen",644,-529,100,function() panel:Hide() end)
 O.Button(panel,"Layout bearbeiten",16,-529,164,function() K.layout.Toggle(); panel:Hide() end)
-O.Button(panel,"×",718,-8,26,function() panel:Hide() end)
+-- Same plain x as the search field: no frame of its own, brighter on hover.
+local close=CreateFrame("Button","KeijinUISettingsClose",panel)
+close:SetWidth(16); close:SetHeight(16); close:SetPoint("CENTER",panel,"TOPLEFT",731,-20)
+close.icon=close:CreateTexture(nil,"OVERLAY")
+close.icon:SetTexture("Interface\\AddOns\\KeijinUI\\media\\guardians\\GuardianEmpty.tga")
+close.icon:SetAllPoints(close); close.icon:SetVertexColor(.62,.59,.52,1)
+close:SetScript("OnClick",function() panel:Hide() end)
+close:SetScript("OnEnter",function() close.icon:SetVertexColor(1,.9,.6,1) end)
+close:SetScript("OnLeave",function() close.icon:SetVertexColor(.62,.59,.52,1) end)
+O.closeButton=close
 local footer=K.LText(panel,"Änderungen werden sofort gespeichert.",10,"TOPLEFT",206,-538,424)
 footer:SetTextColor(.66,.65,.60)
 local title=K.Text(panel,"",20,"TOPLEFT",218,-59,516); title:SetTextColor(unpack(GOLD)); title:SetHeight(27)
 local subtitle=K.Text(panel,"",10,"TOPLEFT",218,-91,516); subtitle:SetTextColor(.73,.72,.68); subtitle:SetHeight(20)
+O.title,O.subtitle=title,subtitle
 local viewport=CreateFrame("ScrollFrame","KeijinUISettingsScroll",panel)
 viewport:SetPoint("TOPLEFT",panel,"TOPLEFT",218,-121); viewport:SetWidth(516); viewport:SetHeight(376)
 O.viewport=viewport
@@ -246,6 +265,7 @@ function O.Navigation(items)
     end
 end
 function O.Section(page,text)
+    page.searchLast=nil
     if page.y<0 then page.y=page.y-12 end
     local fs=K.LText(page,text,13,"TOPLEFT",0,page.y,516); fs:SetTextColor(unpack(GOLD)); fs:SetHeight(19)
     table.insert(page.sections,{caption=text,offset=-page.y,heading=fs})
@@ -253,6 +273,7 @@ function O.Section(page,text)
 end
 function O.Help(page,text)
     local fs=K.LText(page,text,10,"TOPLEFT",0,page.y,512); fs:SetTextColor(.68,.67,.62); fs:SetHeight(32)
+    if page.searchLast then table.insert(page.searchLast.help,text) end
     page.y=page.y-36; return fs
 end
 function O.Row(page,key,label,height)
@@ -262,7 +283,9 @@ function O.Row(page,key,label,height)
     row:SetBackdrop({bgFile=K.flat}); row:SetBackdropColor(0,0,0,0)
     row:SetScript("OnEnter",function() row:SetBackdropColor(.25,.2,.1,.2) end)
     row:SetScript("OnLeave",function() row:SetBackdropColor(0,0,0,0) end)
-    O.Wheel(row); O.controls[key]=row; page.y=page.y-(height or 31); return row
+    O.Wheel(row); O.controls[key]=row; page.y=page.y-(height or 31)
+    O.SearchEntry(row,page,label,key)
+    return row
 end
 function O.Toggle(page,key,label,get,set)
     local row=O.Row(page,key,label)
@@ -285,6 +308,7 @@ function O.Choice(page,key,label,get,set,items)
     local text=button.text; text:SetWidth(146); text:SetJustifyH("LEFT"); text:ClearAllPoints(); text:SetPoint("LEFT",button,"LEFT",9,0)
     local arrow=K.Text(button,"v",9,"RIGHT",-8,0); arrow:SetTextColor(unpack(GOLD))
     row.value=text; row.items=items; row.button=button
+    row.searchEntry.items=items
     local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(170); menu:SetHeight(8+table.getn(items)*27); Skin(menu)
     menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",0,-3)
     for i,item in ipairs(items) do

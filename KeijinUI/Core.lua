@@ -1,5 +1,7 @@
-KeijinUI = { version = "3.1.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.1.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
+-- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
+K.PANEL_WIDTH = 300
 K.font = "Fonts\\FRIZQT__.TTF"
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end

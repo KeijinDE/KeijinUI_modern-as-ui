@@ -69,7 +69,7 @@ function S.Value(def,source)
     local value=type(source)=="table" and source[def.key]
     return K.Number(value) and def.format(value) or "?"
 end
-local frame=K.Panel("KeijinUICharacterStats","Charakterwerte",228,132)
+local frame=K.Panel("KeijinUICharacterStats","Charakterwerte",K.PANEL_WIDTH,132)
 S.frame=frame
 K.layout.Register("attributes",frame,"Charakterwerte",function(f)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",KeijinUIStatistics,"TOPRIGHT",10,0)
@@ -83,7 +83,7 @@ function S.Update()
     for _,def in ipairs(S.Ordered()) do
         if S.Selected(def.key) then
             n=n+1; local row=rows[n]
-            row.label:SetText(K.T(def.label)); row.label:SetWidth(136)
+            row.label:SetText(K.T(def.label)); row.label:SetWidth(frame:GetWidth()-92)
             row.value:SetText(S.Value(def,fresh and AZS_STATS or nil))
             row.tip=K.T(def.label); row.detail=nil; row:Show(); row.line:Show()
         end

@@ -5,7 +5,40 @@ local editing,active,lastWidth,lastHeight
 local function Scale(f) return f:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
 -- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
-local function Up(entry) return entry.options.grow and entry.options.grow() and true or false end
+local function Up(entry)
+    if entry.dock then return entry.dock.edge=="above" end
+    return entry.options.grow and entry.options.grow() and true or false
+end
+local function ValidDock(dock)
+    return type(dock)=="table" and type(dock.target)=="string" and
+        (dock.edge=="above" or dock.edge=="below") and Finite(dock.x)
+end
+local function CanDock(entry,target)
+    local seen={[entry.key]=true}
+    while target do
+        if seen[target.key] then return false end
+        seen[target.key]=true
+        target=target.dock and L.entries[target.dock.target] or nil
+    end
+    return true
+end
+local function Dock(entry)
+    local d=entry.dock
+    local target=d and L.entries[d.target]
+    if not target or entry==active or not CanDock(entry,target) then return end
+    local f=entry.frame
+    local ratio=Scale(f)/Scale(UIParent)
+    f:ClearAllPoints()
+    f:SetPoint(d.edge=="above" and "BOTTOMLEFT" or "TOPLEFT",target.frame,
+        d.edge=="above" and "TOPLEFT" or "BOTTOMLEFT",d.x/ratio,0)
+end
+local function Detach(entry)
+    if not entry.dock then return end
+    local f=entry.frame
+    local left,top=f:GetLeft(),f:GetTop()
+    entry.dock=nil
+    f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left,top)
+end
 local function Clamp(entry)
     local f=entry.frame
     local w,h=K.UIWidth(),K.UIHeight()
@@ -21,8 +54,9 @@ local function Clamp(entry)
     local x,y=f:GetLeft(),f:GetBottom()
     if not Finite(x) or not Finite(y) then return end
     x,y=x*ratio,(y-extra)*ratio
-    local left=math.max(8,math.min(w-width-8,x))
-    local bottom=math.max(8,math.min(h-height-8,y))
+    -- No margin: frames may sit flush on the screen edge (snapping targets the edges too).
+    local left=math.max(0,math.min(w-width,x))
+    local bottom=math.max(0,math.min(h-height,y))
     if math.abs(left-x)>0.1 or math.abs(bottom-y)>0.1 then
         f:ClearAllPoints()
         if Up(entry) then f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",left/ratio,bottom/ratio)
@@ -38,29 +72,25 @@ local function Save(entry)
     if not Finite(x) or not Finite(y) then return end
     -- Keep the bottom edge as the anchor, so a later change of the height does not move it.
     if up and f:GetPoint()~="BOTTOMLEFT" then f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x,y) end
-    K.DB().layout[entry.key]={x=x*ratio/K.UIWidth(),y=y*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale}
+    K.DB().layout[entry.key]={x=x*ratio/K.UIWidth(),y=y*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale,dock=entry.dock}
 end
--- Standard layout (version 0.5.1, statistics taller since 0.7.4): same format as the saved layout, never written to the DB by Apply.
+-- Standard layout (3.1.2, 300 point panels): only scales. Positions come from each frame's own anchor
+-- (minimap top right, run overview below it, loot below that, statistics/meter/crits top left, unit frames
+-- beside the action bar), so the start layout fits every screen width without overlaps.
 L.defaults={
-    achievements={x=0.3588,y=0.3057,scale=1},
-    bosses={x=0.4076,y=0.9906,scale=1},
-    buffs={x=0.4096,y=0.3660,scale=1},
-    cachearrow={x=0.4531,y=0.8021,scale=1},
-    chat={x=0.0053,y=0.2082,scale=1},
-    crits={x=0.0053,y=0.5293,scale=0.9},
-    loot={x=0.8157,y=0.4990,scale=0.9},
-    meter={x=0.0053,y=0.7762,scale=0.9},
-    minimap={x=0.8682,y=0.9906,scale=1},
-    player={x=0.2587,y=0.4320,scale=1},
-    skills={x=0.4092,y=0.4230,scale=0.9},
-    statistics={x=0.0053,y=0.9906,scale=0.9},
-    target={x=0.6054,y=0.4320,scale=1},
-    tooltip={x=0.7596,y=0.2391,scale=1},
-    tracker={x=0.8156,y=0.7578,scale=0.9},
+    buffs={scale=0.9},
+    crits={scale=0.9},
+    loot={scale=0.9},
+    meter={scale=0.9},
+    minimap={scale=0.8},
+    skills={scale=0.9},
+    statistics={scale=0.9},
+    tracker={scale=0.9},
 }
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
+    entry.dock=Valid(p) and ValidDock(p.dock) and p.dock or nil
     -- Dynamic panels must have their final width before applying and clamping a saved position.
     if entry.options.width then f:SetWidth(entry.options.width()) end
     if entry.options.follow and entry.options.follow() then entry.anchor(f); return end
@@ -73,8 +103,13 @@ local function Apply(entry)
         f:ClearAllPoints()
         -- For a frame growing upwards p.y is the bottom edge (also in the standard layout).
         f:SetPoint(Up(entry) and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*K.UIWidth()*ratio,p.y*K.UIHeight()*ratio)
-    else f:SetScale(entry.baseScale); entry.anchor(f) end
+    else
+        local d=not saved and L.defaults and L.defaults[entry.key]
+        local scale=d and K.Number(d.scale) and d.scale>0 and d.scale or 1
+        f:SetScale(entry.baseScale*scale); entry.anchor(f)
+    end
     if Clamp(entry) and saved then Save(entry) end
+    Dock(entry)
 end
 local STEP,NEAR=32,10
 local function Rect(f)
@@ -106,7 +141,8 @@ local function Snap(entry)
     if not l or not w or not h or w<40 or h<40 then return end
     local cx,cy=UIParent:GetCenter()
     if not Finite(cx) or not Finite(cy) then cx,cy=w/2,h/2 end
-    local xs,ys={cx},{cy}
+    -- Screen edges are snap targets, so a frame can rest flush on the border.
+    local xs,ys={cx,0,w},{cy,0,h}
     for _,e in pairs(L.entries) do
         if e~=entry and e.frame:IsShown() then
             local el,eb,er,et=Rect(e.frame)
@@ -120,6 +156,19 @@ local function Snap(entry)
     if not dx and not dy then return end
     local ratio=Scale(f)/Scale(UIParent)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",(l+(dx or 0))/ratio,(t+(dy or 0))/ratio)
+    -- A touching horizontal edge is a real attachment, not just a one-time position.
+    -- Above a neighbour the bottom remains fixed, so new rows grow away from it.
+    if entry.options.grow then return end
+    l,b,r,t=Rect(f)
+    for _,target in pairs(L.entries) do
+        if target~=entry and target.frame:IsShown() and CanDock(entry,target) then
+            local tl,tb,tr,tt=Rect(target.frame)
+            if tl and math.min(r,tr)-math.max(l,tl)>1 then
+                local edge=math.abs(b-tt)<.1 and "above" or (math.abs(t-tb)<.1 and "below" or nil)
+                if edge then entry.dock={target=target.key,edge=edge,x=l-tl}; break end
+            end
+        end
+    end
 end
 local function Stop()
     if not active then return end
@@ -186,6 +235,7 @@ function L.Register(key,frame,name,anchor,options)
     handle:SetScript("OnDragStart",function()
         if not editing and not IsAltKeyDown() then return end
         if e.options.beforeMove then e.options.beforeMove() end
+        Detach(e)
         active=e; frame:StartMoving()
     end)
     handle:SetScript("OnDragStop",Stop)
@@ -197,11 +247,13 @@ function L.Register(key,frame,name,anchor,options)
         if L.SyncFollowers then L.SyncFollowers() end
     end)
     handle:Hide(); Apply(e)
+    for _,other in pairs(L.entries) do Dock(other) end
     return e
 end
 function L.Save(key) local e=L.entries[key]; if e then Save(e) end end
 function L.IsMoving(key) return active and active.key==key and true or false end
 function L.SyncFollowers()
+    for _,e in pairs(L.entries) do Dock(e) end
     for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end
 function L.Place(key) local e=L.entries[key]; if e and e~=active then Apply(e) end end

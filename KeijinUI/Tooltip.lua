@@ -5,7 +5,7 @@ for _,name in ipairs({"ItemRefTooltip","ShoppingTooltip1","ShoppingTooltip2"}) d
     if tooltip then K.Skin(tooltip,7) end
 end
 local anchor=CreateFrame("Frame","KeijinUITooltipAnchor",UIParent)
-anchor:SetWidth(250); anchor:SetHeight(90); anchor:Hide()
+anchor:SetWidth(K.PANEL_WIDTH); anchor:SetHeight(90); anchor:Hide()
 K.layout.Register("tooltip",anchor,"Tooltip",function(f)
     f:ClearAllPoints(); f:SetPoint("BOTTOMRIGHT",UIParent,"BOTTOMRIGHT",-24,34)
 end,{hidden=true})

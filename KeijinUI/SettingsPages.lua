@@ -12,7 +12,6 @@ O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen ble
 O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then K.layout.ToggleGrid() end end)
 O.Help(p,"Layout bearbeiten öffnet den Bearbeitungsmodus. Änderungen werden gespeichert.")
 
-O.Choice(p,"fontFace","Schrift",K.FontChoice,K.SetFontChoice,K.fontChoices)
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
 
 O.Section(p,"Runanzeigen")
@@ -67,6 +66,7 @@ function K.UpdateNameplateLabels() O.Refresh() end
 O.Section(p,"Minimap")
 O.Toggle(p,"minimapStyle","Minimap im KeijinUI Stil",function() return K.DB().minimapStyle~=false end,K.SetMinimapStyle)
 O.Toggle(p,"minimapButton","Minimapknopf",K.MinimapButtonOn,K.SetMinimapButton)
+O.Requires(O.Choice(p,"minimapButtonSpot","Position des Minimapknopfs",K.MinimapButtonSpot,K.SetMinimapButtonSpot,K.minimapButtonSpots),K.MinimapButtonOn)
 -- A compact cycling pair avoids an oversized 27-item dropdown.
 local zone=O.Row(p,"clockOffset","Zeitzone der Uhr",34)
 zone.value=K.Text(zone,"",11,"RIGHT",-108,0)
@@ -167,8 +167,6 @@ O.Pair(p,"Taste zuweisen",function() K.autoWalk.Capture() end,"Eigene Belegung e
 O.Help(p,"Belegte Tasten müssen zum Ersetzen zweimal gedrückt werden. Escape bricht ab.")
 K.autoWalk.onChange=O.Refresh
 
-O.Section(p,"Chat")
-O.Pair(p,"Chat kopieren",K.chatCopy.Open)
 O.Finish(p)
 
 p=O.Page("general","Allgemein","Sprache, gespeicherte Level und deine Rundenhistorie.")

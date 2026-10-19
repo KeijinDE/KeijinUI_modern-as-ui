@@ -7,21 +7,14 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ### 3.0.0 (2026-10-19, release v3.0.0)
 
-* Final V3 settings layout. The addon list and settings header read KeijinUI. The four categories remain, and all run displays are one Run displays section under Layout & Display. Section titles sit under Size & Position, character values have their own small section, and XP estimates, lives/rerolls, execute marker, interval combat text and run messages sit in their existing sections. Native jewelry cooldowns on icons are always shown; the checkbox is removed and a previously saved Off value is ignored. The temporary SettingsV3.lua layer is gone. Existing settings and positions remain.
-
-* Minimap: the skull appears only for a guardian lair that was seen alive earlier in this run and is now empty, and disappears on respawn. Lairs that are still empty at the start of a run show no skull. Living and fighting guardians keep their native flag.
-
-* Combat settings: the interval number options are labelled Healing numbers on the player and Incoming damage on the player, with a note that they belong to your character.
-
-* Boss meter automation: when the last boss ends, an automatic Boss view returns to Run, including manual or repeated Boss selection during the fight. Switching the option on or off works during a fight. Run end, zone change and restart clear the temporary state. Manual Run/Healing and a persistent manual Boss view with automation off remain possible.
-
-* Run statistics panel without healing and one row shorter. The Healing meter tab, native source validation, /kui heal and optional healing numbers remain.
-
-* Rerolls show the remaining free count, then the next native purchase price with a G suffix when free rerolls reach zero. Prices update after purchases, missing prices stay unknown, and the exact price remains in the tooltip. No new option or window.
-
-* Fixed the collection-recording switch so it also stops loot observations. Removed unused XP counters and record identifiers of the retired boss history. Retired features and archived layout tools stay outside the runtime.
-
-* Internal performance and cleanup work, behaviour unchanged: less per-frame work and fewer temporary tables in damage text, nameplates, chat and the combat line reader; two dead code branches removed from the achievements and build bar modules; the settings window position is applied again after the saved variables are loaded.
+* Tidier settings: the addon is now simply called KeijinUI. Section titles moved to Size & Position, character values have their own small section, and the jewelry cooldown checkbox is gone (cooldowns on jewelry icons are always shown).
+* Minimap: the skull now only appears for a guardian that was seen alive and has been defeated. No more skulls at the start of a run.
+* Rerolls show how many free rerolls you have left, then the price of the next one in gold.
+* The Boss view of the damage meter now switches back to Run after the last boss.
+* The run statistics window no longer shows healing and is one row shorter. The Healing tab of the meter stays.
+* Clearer combat options: Healing numbers on the player and Incoming damage on the player.
+* Fixed: switching off collection recording now really stops it.
+* Smoother performance in damage numbers, nameplates and chat.
 
 ### 2.4.9 (2026-10-19)
 
@@ -394,21 +387,14 @@ Action bar, build overview, class colored health bars, nameplates.
 
 ### 3.0.0 (2026-10-19, Release v3.0.0)
 
-* Endgültiges V3 Einstellungslayout. Addonliste und Einstellungskopf heißen KeijinUI. Die vier Kategorien bleiben, alle Runanzeigen stehen in einem Abschnitt Runanzeigen unter Layout & Anzeige. Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eigenen kleinen Abschnitt; EP Schätzung, Leben/Rerolls, Execute Markierung, zusätzlicher Kampftext und Run Meldungen stehen in ihren bestehenden Abschnitten. Native Abklingzeiten auf Schmucksymbolen werden immer angezeigt; der Schalter entfällt, ein früher gespeichertes Aus wird ignoriert. Die temporäre SettingsV3.lua Schicht ist entfernt. Bestehende Einstellungen und Positionen bleiben.
-
-* Minimap: Der Totenkopf erscheint nur bei einem Wächterhort, der in diesem Run schon lebend gesehen wurde und jetzt leer ist, und verschwindet beim Wiedererscheinen. Noch leere Horte am Runbeginn zeigen keinen Totenkopf. Lebende und kämpfende Wächter behalten ihre native Flagge.
-
-* Kampf Einstellungen: Die Intervallzahlen heißen Heilzahlen am Spieler und Eingehender Schaden am Spieler, mit Hinweis, dass sie zu deinem Charakter gehören.
-
-* Bossautomatik im Meter: Nach dem letzten Boss kehrt eine automatische Bossansicht zu Run zurück, auch nach manueller oder erneuter Bosswahl im Kampf. Ein-/Ausschalten greift auch während eines Kampfes. Runende, Zonenwechsel und Neustart lösen den temporären Zustand. Manuelle Run-/Heilungswahl und eine dauerhafte manuelle Bosswahl bei ausgeschalteter Automatik bleiben möglich.
-
-* Statistikfenster ohne Heilung und eine Zeile kürzer. Reiter Heilung, Prüfung nativer Quellen, /kui heal und optionale Heilzahlen bleiben erhalten.
-
-* Rerolls zeigen erst die freie Anzahl und bei null den nächsten nativen Kaufpreis mit G. Der Preis aktualisiert sich nach Käufen, fehlende Preise bleiben unbekannt, der exakte Preis steht im Tooltip. Keine neue Option oder weiteres Fenster.
-
-* Schalter zur Sammlungsaufzeichnung korrigiert: Er stoppt jetzt auch die Beobachtung von Beutemeldungen. Ungenutzte EP Zähler und Kennungen der entfernten Bosshistorie entfernt. Ausgebaute Funktionen und archivierte Rahmenwerkzeuge bleiben außerhalb der Laufzeit.
-
-* Interne Leistungs- und Aufräumarbeiten, Verhalten unverändert: weniger Arbeit pro Frame und weniger temporäre Tabellen bei Schadenszahlen, Plaketten, Chat und Kampfzeilenleser; zwei tote Codezweige in den Modulen Erfolge und Buildleiste entfernt; die Position des Einstellungsfensters wird nach dem Laden der gespeicherten Variablen erneut angewendet.
+* Aufgeräumte Einstellungen: Das Addon heißt jetzt einfach KeijinUI. Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eigenen kleinen Abschnitt, und der Schalter für Schmuckcooldowns entfällt (Abklingzeiten auf Schmucksymbolen werden immer angezeigt).
+* Minimap: Der Totenkopf erscheint nur noch bei einem Wächter, der lebend gesehen und besiegt wurde. Keine Totenköpfe mehr am Runbeginn.
+* Rerolls zeigen, wie viele kostenlose du noch hast, danach den Goldpreis des nächsten.
+* Die Bossansicht der Schadensanzeige wechselt nach dem letzten Boss wieder zu Run.
+* Das Statistikfenster zeigt keine Heilung mehr und ist eine Zeile kürzer. Der Reiter Heilung in der Schadensanzeige bleibt.
+* Klarere Kampfoptionen: Heilzahlen am Spieler und Eingehender Schaden am Spieler.
+* Behoben: Das Ausschalten der Sammlungsaufzeichnung stoppt sie jetzt wirklich.
+* Flüssigere Leistung bei Schadenszahlen, Namensplaketten und Chat.
 
 ### 2.4.9 (2026-10-19)
 

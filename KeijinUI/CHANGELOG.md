@@ -7,14 +7,21 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ### 3.0.0 (2026-10-19, release v3.0.0)
 
-* Tidier settings: the addon is now simply called KeijinUI. Section titles moved to Size & Position, character values have their own small section, and the jewelry cooldown checkbox is gone (cooldowns on jewelry icons are always shown).
-* Minimap: the skull now only appears for a guardian that was seen alive and has been defeated. No more skulls at the start of a run.
-* Rerolls show how many free rerolls you have left, then the price of the next one in gold.
-* The Boss view of the damage meter now switches back to Run after the last boss.
-* The run statistics window no longer shows healing and is one row shorter. The Healing tab of the meter stays.
-* Clearer combat options: Healing numbers on the player and Incoming damage on the player.
-* Fixed: switching off collection recording now really stops it.
-* Smoother performance in damage numbers, nameplates and chat.
+* Settings: Display and Layout are now one category, "Layout & Display". The active category shows its sections as links in the sidebar. New sliders for menu size and the whole UI.
+* New third meter tab "Healing": healing by source with HPS and shares.
+* Boss and guardian bars now show their debuffs: icon, stacks and remaining time, details on hover.
+* Guardians: small direction arrows next to guardian names in the run overview, and a skull on the minimap for defeated guardians. Skulls only appear for guardians that were seen alive and defeated, none at the start of a run. Living guardians keep the game's own flag. Both can be switched off.
+* Caches: guidance now also works inside instances.
+* New button for stored level-ups; the "Store Level-Ups" game option can be switched in Controls.
+* New optional displays: XP per minute with time to next level, lives and rerolls (free rerolls first, then the price of the next one), a 30 percent marker on enemy health bars.
+* Character values: 29 selectable values with a reorderable list, in their own settings section.
+* Damage taken: the tooltip shows damage by source, hits, average, min/max and crit rate.
+* Jewelry: searchable diary of the items you found, with the values you saw. Game cooldowns show on the jewelry icons.
+* Optional extra combat text: healing and damage on the player.
+* The Boss view of the damage meter returns to Run after the last boss (optional).
+* Loot list much improved: the small list shows a green check for new items and a red cross for collected ones instead of cut-off text, item names get more room, and lists and icon grids no longer drift left after reloads.
+* New: font choice, optional short run messages, and optional modules you can switch off.
+* Improved: XP bar matches the other windows, boss timer improved, calmer damage numbers in the fixed position, better performance.
 
 ### 2.4.9 (2026-10-19)
 
@@ -387,14 +394,21 @@ Action bar, build overview, class colored health bars, nameplates.
 
 ### 3.0.0 (2026-10-19, Release v3.0.0)
 
-* Aufgeräumte Einstellungen: Das Addon heißt jetzt einfach KeijinUI. Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eigenen kleinen Abschnitt, und der Schalter für Schmuckcooldowns entfällt (Abklingzeiten auf Schmucksymbolen werden immer angezeigt).
-* Minimap: Der Totenkopf erscheint nur noch bei einem Wächter, der lebend gesehen und besiegt wurde. Keine Totenköpfe mehr am Runbeginn.
-* Rerolls zeigen, wie viele kostenlose du noch hast, danach den Goldpreis des nächsten.
-* Die Bossansicht der Schadensanzeige wechselt nach dem letzten Boss wieder zu Run.
-* Das Statistikfenster zeigt keine Heilung mehr und ist eine Zeile kürzer. Der Reiter Heilung in der Schadensanzeige bleibt.
-* Klarere Kampfoptionen: Heilzahlen am Spieler und Eingehender Schaden am Spieler.
-* Behoben: Das Ausschalten der Sammlungsaufzeichnung stoppt sie jetzt wirklich.
-* Flüssigere Leistung bei Schadenszahlen, Namensplaketten und Chat.
+* Einstellungen: Anzeige und Layout sind jetzt eine Kategorie „Layout & Anzeige“. Die aktive Kategorie zeigt ihre Abschnitte als Links in der Seitenleiste. Neue Regler für Menügröße und gesamte UI.
+* Neuer dritter Reiter „Heilung“ in der Schadensanzeige: Heilung nach Quelle mit HPS und Anteilen.
+* Boss und Wächterbalken zeigen ihre Debuffs: Symbol, Stapel und Restzeit, Details per Mauszeiger.
+* Wächter: kleine Richtungspfeile neben den Wächternamen in der Runübersicht und ein Totenkopf auf der Minimap für besiegte Wächter. Totenköpfe erscheinen nur bei Wächtern, die lebend gesehen und besiegt wurden, keine am Runbeginn. Lebende Wächter behalten die Flagge des Spiels. Beides ist abschaltbar.
+* Caches: Wegführung funktioniert jetzt auch in Instanzen.
+* Neuer Button für gespeicherte Levelaufstiege; die Spieloption „Levelaufstiege speichern“ lässt sich unter Bedienung schalten.
+* Neue optionale Anzeigen: EP pro Minute mit Zeit bis zum nächsten Level, Leben und Rerolls (zuerst freie Rerolls, dann der Preis des nächsten), eine 30 Prozent Markierung an Gegnerbalken.
+* Charakterwerte: 29 wählbare Werte mit änderbarer Reihenfolge, in einem eigenen Abschnitt der Einstellungen.
+* Schaden erlitten: Der Tooltip zeigt Schaden je Quelle, Treffer, Durchschnitt, Min/Max und Kritquote.
+* Schmuck: durchsuchbares Tagebuch deiner Funde mit den gesehenen Werten. Abklingzeiten des Spiels erscheinen auf den Schmucksymbolen.
+* Optionaler zusätzlicher Kampftext: Heilung und Schaden am Spieler.
+* Die Bossansicht der Schadensanzeige springt nach dem letzten Boss zurück zu Run (optional).
+* Beuteliste deutlich verbessert: Die kleine Liste zeigt für neue Gegenstände einen grünen Haken und für bereits gesammelte ein rotes Kreuz statt abgeschnittenem Text, Gegenstandsnamen haben mehr Platz, und Listen und Symbolraster verschieben sich nach dem Neuladen nicht mehr nach links.
+* Neu: Schriftwahl, optionale kurze Run Meldungen und optionale Module, die sich abschalten lassen.
+* Verbessert: EP Balken passt zu den anderen Fenstern, Bosstimer verbessert, ruhigere Schadenszahlen an fester Position, bessere Leistung.
 
 ### 2.4.9 (2026-10-19)
 

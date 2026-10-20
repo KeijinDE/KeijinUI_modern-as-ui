@@ -47,6 +47,24 @@ function C.Set(part,on)
     K.DB()[FLAGS[part]]=on and true or false
     C.Update()
 end
+-- Size of the chest symbols on the minimap, 0.5 to 2 times the base 16 points, default 1.
+local ICON_SIZE=16
+function C.IconScale()
+    local value=tonumber(K.DB().cachesIconScale)
+    if not Finite(value) then return 1 end
+    return math.max(0.5,math.min(2,value))
+end
+local function Resize()
+    if not icons then return end
+    local size=math.floor(ICON_SIZE*C.IconScale()+0.5)
+    for _,b in ipairs(icons) do b:SetWidth(size); b:SetHeight(size) end
+end
+function C.SetIconScale(value)
+    value=tonumber(value)
+    if not Finite(value) then return end
+    K.DB().cachesIconScale=math.max(0.5,math.min(2,value))
+    Resize(); C.Update()
+end
 
 -- Scale measurement ----------------------------------------------------------------------------------
 local function MapKey()
@@ -282,11 +300,12 @@ local function Build()
     overlay:SetFrameLevel(Minimap:GetFrameLevel()+3)
     icons={}
     for i=1,MAX_ICONS do
-        local b=NewButton(16,16)
+        local b=NewButton(ICON_SIZE,ICON_SIZE)
         b.tex:SetTexture(PATH.."Chest.tga")
         b.count=K.Text(b,"",9,"BOTTOMRIGHT",4,-3)
         icons[i]=b
     end
+    Resize()
     edge=NewButton(14,14)
     edge.tex:SetTexture(PATH.."Arrow.tga"); Cell(edge.tex,0)
     edge.isEdge=true
@@ -358,12 +377,13 @@ local function Clusters(valid,px,py,sx,sy,world)
     table.sort(list,function(a,b) return a.dist<b.dist end)
     return list
 end
-local function Place(cluster,ppy,width,height,round)
+-- A symbol counts as inside while all of it stays on the map, at least EDGE_INSET from the border.
+local function Place(cluster,ppy,width,height,round,inset)
     local ox,oy=cluster.east*ppy,cluster.north*ppy
     local half,halfH=width/2,height/2
     local inside
-    if round then inside=Hypot(ox,oy)<=half-EDGE_INSET
-    else inside=math.abs(ox)<=half-EDGE_INSET and math.abs(oy)<=halfH-EDGE_INSET end
+    if round then inside=Hypot(ox,oy)<=half-inset
+    else inside=math.abs(ox)<=half-inset and math.abs(oy)<=halfH-inset end
     return ox,oy,inside
 end
 -- Point on the minimap border (inset) in the direction of ox, oy: square clamp or circle.
@@ -443,9 +463,10 @@ function C.Update()
     local width,height=Minimap:GetWidth(),Minimap:GetHeight()
     local ppy=width/diameter
     local round=not Square()
+    local inset=math.max(EDGE_INSET,math.floor(ICON_SIZE*C.IconScale()+0.5)/2)
     local shown=0
     for i,c in ipairs(clusters) do
-        local ox,oy,inside=Place(c,ppy,width,height,round)
+        local ox,oy,inside=Place(c,ppy,width,height,round,inset)
         if i==1 then
             if inside or not wantEdge then edge:Hide()
             else
@@ -510,12 +531,12 @@ function C.DebugLines()
         Add(string.format("Caches nearest: %.0f yards (east %.0f, north %.0f), %d symbols shown",
             C.nearest.dist,C.nearest.east,C.nearest.north,C.shown or 0))
     end
-    Add(string.format("Caches settings: icons %s, edge arrow %s, screen arrow %s, message %s",
-        tostring(C.IconsOn()),tostring(C.EdgeOn()),tostring(C.ArrowOn()),tostring(C.MessageOn())))
+    Add(string.format("Caches settings: icons %s (size %d%%), edge arrow %s, screen arrow %s, message %s",
+        tostring(C.IconsOn()),math.floor(C.IconScale()*100+0.5),tostring(C.EdgeOn()),tostring(C.ArrowOn()),tostring(C.MessageOn())))
     return lines
 end
 function K.CachesDebug() for _,line in ipairs(C.DebugLines()) do K.Say(line) end end
--- /kui caches icons, edge, arrow, msg, source <name>, debug
+-- /kui caches icons, edge, arrow, msg, size <percent>, source <name>, debug
 function K.CachesCommand(arg)
     arg=string.lower(arg or "")
     if arg=="debug" then K.CachesDebug(); return end
@@ -525,13 +546,19 @@ function K.CachesCommand(arg)
         K.Say(K.T(LABELS[part])..": "..(C.Get(part) and K.T("An") or K.T("Aus")))
         return
     end
+    local _,_,percent=string.find(arg,"^size%s+(%d+)$")
+    if percent then
+        C.SetIconScale(tonumber(percent)/100)
+        K.Say(K.T("Cache Symbolgröße")..": "..math.floor(C.IconScale()*100+0.5).."%")
+        return
+    end
     local _,_,value=string.find(arg,"^source%s+(%S+)$")
     if value=="auto" or GETTERS[value or ""] then
         K.DB().cachesSource=value
         K.Say("Caches facing source: "..value)
         return
     end
-    K.Say(K.T("/kui caches icons, edge, arrow, msg, source auto, source facing, source model, source move, source north, debug"))
+    K.Say(K.T("/kui caches icons, edge, arrow, msg, size 50-200, source auto, source facing, source model, source move, source north, debug"))
 end
 
 function C.Select(id)

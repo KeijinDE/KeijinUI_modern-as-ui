@@ -33,6 +33,7 @@ local aliases={
     attributesMaster="player spieler character stats charakterwerte",
     optionsScale="settings menu menue einstellungen size groesse scale skalierung",
     uiScale="interface ui gesamt scale skalierung groesse",
+    cache_size="minimap minikarte chest chests truhe truhen symbol icon groesse size scale skalierung",
     combatTextPosition="damage schaden position fixed fest gegner enemy",
     -- The switches of the modules are found by what the module does, also while its own settings are hidden.
     module_combatText="damage schaden healing heilung incoming eingehend zahlen numbers kampftext combat text",

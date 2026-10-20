@@ -84,6 +84,7 @@ for _,entry in ipairs({{"icons","Cache Symbole"},{"edge","Cache Randpfeil"},{"ar
     local key=entry[1]
     O.Toggle(p,"cache_"..key,entry[2],function() return K.caches.Get(key) end,function(on) K.caches.Set(key,on) end)
 end
+O.Requires(O.Slider(p,"cache_size","Cache Symbolgröße",K.caches.IconScale,K.caches.SetIconScale,50,200),K.caches.IconsOn)
 O.Help(p,"Caches nutzen Weltkoordinaten, wenn das Spiel sie liefert, auch in Instanzen.")
 
 O.Section(p,"Wächter","guardians")

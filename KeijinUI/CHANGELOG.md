@@ -5,6 +5,15 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.4.2 (2026-10-20, release v3.4.2)
+
+* **Cache icon size (new, requested by the community):** you can now choose how big the chest symbols on the minimap are. Open `/kui`, go to Layout & Display, Caches, and move the new **Cache icon size** slider anywhere from 50 to 200 percent. 100 percent is the size you know, so nothing changes until you move it.
+* Bigger chests are easier to spot in the middle of a fight, smaller ones keep a crowded minimap tidy.
+* Large symbols always stay fully on the minimap. If a chest sits too close to the edge for its symbol, the edge arrow points to it instead.
+* The slider works while **Cache icons** is switched on.
+* Prefer the chat? `/kui caches size 150` sets the same value (50 to 200).
+* The settings search finds the slider with words like "chest size", "cache icon size" or "minimap".
+
 ### 3.4.1 (2026-10-20, release v3.4.1)
 
 * **Action bar cooldowns:** now run clockwise by default, like the game's standard action buttons. The previous shade from top to bottom can be chosen again under Frames, Cooldown. The remaining time as a number stays.
@@ -439,6 +448,15 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.4.2 (2026-10-20, Release v3.4.2)
+
+* **Cache Symbolgröße (neu, Wunsch aus der Community):** Du kannst jetzt selbst festlegen, wie groß die Truhensymbole auf der Minimap sind. Öffne `/kui`, dann Layout & Anzeige, Caches, und stelle den neuen Regler **Cache Symbolgröße** zwischen 50 und 200 Prozent ein. 100 Prozent ist die gewohnte Größe, ohne Änderung bleibt also alles wie bisher.
+* Größere Truhen fallen mitten im Kampf schneller auf, kleinere halten eine volle Minimap übersichtlich.
+* Große Symbole bleiben immer vollständig auf der Minimap. Liegt eine Truhe zu nah am Rand, zeigt der Randpfeil auf sie.
+* Der Regler wirkt, solange **Cache Symbole** eingeschaltet ist.
+* Lieber per Chat? `/kui caches size 150` stellt denselben Wert ein (50 bis 200).
+* Die Suche in den Einstellungen findet den Regler zum Beispiel mit „Truhen Größe“, „Cache Symbolgröße“ oder „Minikarte“.
 
 ### 3.4.1 (2026-10-20, Release v3.4.1)
 

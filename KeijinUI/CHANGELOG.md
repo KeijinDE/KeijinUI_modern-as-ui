@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.4.1 (2026-10-20, release v3.4.1)
+
+* **Action bar cooldowns:** now run clockwise by default, like the game's standard action buttons. The previous shade from top to bottom can be chosen again under Frames, Cooldown. The remaining time as a number stays.
+* The action bar help text now describes the current rule: when one of our windows is off, the game's matching one appears.
+
 ### 3.4.0 (2026-10-20, release v3.4.0)
 
 * **Minimap button:** middle click reloads the UI.
@@ -434,6 +439,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.4.1 (2026-10-20, Release v3.4.1)
+
+* **Abklingzeit auf der Aktionsleiste:** läuft jetzt standardmäßig wie bei den normalen Aktionsknöpfen im Uhrzeigersinn ab. Die bisherige Abdunklung von oben nach unten lässt sich unter Fenster, Abklingzeit wieder wählen. Die Restzeit als Zahl bleibt.
+* Der Hilfetext zur Aktionsleiste beschreibt jetzt die geltende Regel: Ist eines unserer Fenster aus, erscheint das passende des Spiels.
 
 ### 3.4.0 (2026-10-20, Release v3.4.0)
 

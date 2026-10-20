@@ -310,6 +310,14 @@ local function Paint(pool, rows, top)
 		cell:Hide()
 	end
 end
+-- Cooldown style of the action bar: clockwise sweep (default, like stock action buttons) or the
+-- older shade that shrinks from top to bottom.
+function KeijinUI.CooldownClockwise() return KeijinUI.DB().cooldownStyle ~= "down" end
+function KeijinUI.SetCooldownStyle(style) KeijinUI.DB().cooldownStyle = style == "down" and "down" or nil end
+local function StopClock(cell)
+	if cell.clockStart then CooldownFrame_SetTimer(cell.clock, 0, 0, 0) end
+	cell.clock:Hide(); cell.clockStart, cell.clockFull = nil, nil
+end
 -- Action bar slot: classic quickslot look, not clickable, shows only icon and real cooldown data.
 local function ActionCell(index)
 	if actionCells[index] then return actionCells[index] end
@@ -326,7 +334,17 @@ local function ActionCell(index)
 	cell.sweep:SetPoint("BOTTOMRIGHT", cell.icon, "BOTTOMRIGHT", 0, 0)
 	cell.sweep:SetHeight(1); cell.sweep:Hide()
 	cell.frame = cell
-	cell.cooldown = cell:CreateFontString(nil, "OVERLAY")
+	-- Clockwise sweep: the game's own cooldown model (CooldownFrameTemplate, as on every stock action
+	-- button). Template frames need a name in this client. The number sits on a layer above the model.
+	if CooldownFrame_SetTimer then
+		cell.clock = CreateFrame("Model", "KeijinUISkillsCooldown"..index, cell, "CooldownFrameTemplate")
+		cell.clock:SetAllPoints(cell.icon)
+		cell.clock:SetFrameLevel(cell:GetFrameLevel() + 1)
+		cell.clock:Hide()
+	end
+	local text = CreateFrame("Frame", nil, cell)
+	text:SetAllPoints(cell); text:SetFrameLevel(cell:GetFrameLevel() + 2)
+	cell.cooldown = text:CreateFontString(nil, "OVERLAY")
 	cell.cooldown:SetFont(FONT, 14, "OUTLINE")
 	cell.cooldown:SetPoint("CENTER", cell, "CENTER", 0, 0)
 	actionCells[index] = cell
@@ -350,12 +368,23 @@ local function PaintActions(rows)
 			cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
 			local left = Number(row.cd) and row.cd > 0 and row.cd or nil
 			cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
-			if left then
-				local fraction = Number(row.cdmax) and row.cdmax > 0 and math.min(1, left / row.cdmax) or 1
+			local full = Number(row.cdmax) and row.cdmax > 0 and row.cdmax or nil
+			if left and cell.clock and KeijinUI.CooldownClockwise() and full then
+				-- Only a new or shifted cooldown restarts the model; the game data counts down in steps.
+				local start = GetTime() - (full - math.min(left, full))
+				if not cell.clockStart or math.abs(start - cell.clockStart) > 0.5 or cell.clockFull ~= full then
+					cell.clockStart, cell.clockFull = start, full
+					CooldownFrame_SetTimer(cell.clock, start, full, 1)
+				end
+				cell.sweep:Hide()
+			elseif left then
+				if cell.clock then StopClock(cell) end
+				local fraction = full and math.min(1, left / full) or 1
 				cell.sweep:SetHeight(math.max(1, (ACTION_ICON - 4) * fraction)); cell.sweep:Show()
-			else cell.sweep:Hide() end
+			else cell.sweep:Hide(); if cell.clock then StopClock(cell) end end
 		else
 			cell.icon:Hide(); cell.sweep:Hide(); cell.cooldown:SetText("")
+			if cell.clock then StopClock(cell) end
 			cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
 		end
 		cell:Show()

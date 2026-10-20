@@ -19,6 +19,7 @@ local groups={
     "lifesteal lebensraub", "module modules modul module", "cursor mauszeiger cursortracker",
 }
 local aliases={
+    cooldownStyle="cooldown abklingzeit timer clockwise uhrzeigersinn sweep action bar aktionsleiste top bottom oben unten",
     portraits="player spieler target ziel portrait portraet portraits portraets bild compact kompakt rahmen frame kreis circle",
     bgAlpha="background opacity transparency hintergrund deckkraft transparenz durchsichtig player spieler target ziel frames rahmen panel",
     healthColor="player spieler target ziel health bar lebensbalken",

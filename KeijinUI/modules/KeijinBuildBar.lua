@@ -65,6 +65,8 @@ local function Settings()
 	KeijinUIBuildDB = KeijinUIBuildDB or {}
 	if KeijinUIBuildDB.enabled == nil then KeijinUIBuildDB.enabled = true end
 	if KeijinUIBuildDB.advisor == nil then KeijinUIBuildDB.advisor = true end
+	-- 3.4.0: the action bar has its own switch. Until it is set it follows the old shared one.
+	if KeijinUIBuildDB.actionBar == nil then KeijinUIBuildDB.actionBar = KeijinUIBuildDB.enabled and true or false end
 	local focus = KeijinUIBuildDB.focus
 	if focus ~= "balanced" and focus ~= "damage" and focus ~= "boss" and focus ~= "survival" then KeijinUIBuildDB.focus = "balanced" end
 	return KeijinUIBuildDB
@@ -107,15 +109,26 @@ local function Release()
 	skills:Hide()
 	if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 	if hovered then GameTooltip:Hide(); hovered = nil end
-	local settings = Settings()
-	local restore = previousShown
-	if restore == nil then restore = settings.originalShown end
-	if restore ~= nil and Supported() then AZS_SetHudShown("build", restore) end
+	-- Ours off, the game's on: the game's spell and jewelry rows come back.
+	if Supported() and not AZS_IsHudShown("build") then AZS_SetHudShown("build", true) end
 	owned, previousShown = false, nil
-	settings.originalShown = nil
+	Settings().originalShown = nil
 end
--- The native spell bar stays hidden while this bar is switched on, data or not. The game may switch it
--- back on by itself, so every update checks it again. The original state is saved only once.
+local function ShowNative()
+	owned, previousShown = false, nil
+	Settings().originalShown = nil
+	if Supported() and not AZS_IsHudShown("build") then AZS_SetHudShown("build", true) end
+end
+-- The game's action bar follows our action bar the same way: ours on, the game's hidden; ours off, the game's back.
+local function StockBar(show)
+	local bar = MainMenuBar
+	if not bar then return end
+	if show then
+		if not bar:IsShown() then bar:SetAlpha(1); bar:EnableMouse(true); bar:Show() end
+	elseif bar:IsShown() then bar:SetAlpha(0); bar:EnableMouse(false); bar:Hide() end
+end
+-- The native spell bar stays hidden while "Spells & jewelry" is switched on, data or not. The game may
+-- switch it back on by itself, so every update checks it again.
 local function HideNative()
 	if not Supported() then return end
 	if not owned then
@@ -273,7 +286,7 @@ local function Paint(pool, rows, top)
 		local start = ROWSTART
 		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*PITCH)
 		cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-        if row.kind=="item" and KeijinUI.collection and KeijinUI.ModuleOn("jewelry") then
+        if row.kind=="item" and KeijinUI.collection and KeijinUI.collection.CooldownsOn() then
             if not cell.nativeCooldown then cell.nativeCooldown=KeijinUI.Text(cell,"",9,"BOTTOM",0,1) end
             local left=KeijinUI.collection.Cooldown(row.slot)
             cell.nativeCooldown:SetText(left and left>0 and KeijinUI.Clock(math.ceil(left)) or "")
@@ -353,19 +366,21 @@ local function PaintActions(rows)
 end
 local function Update()
 	local settings, run = Settings(), AZS_RUN
-	if not settings.enabled then Release(); return end
+	local panelOn, actionOn = settings.enabled and true or false, settings.actionBar and true or false
+	StockBar(not actionOn)
+	if not panelOn and not actionOn then Release(); return end
 	if not Supported() or type(run) ~= "table" or (run.ph and not PHASES[run.ph])
 		or type(AZS_SPELLS) ~= "table" or table.getn(AZS_SPELLS) == 0
 		or type(GetInventoryItemLink) ~= "function" or type(GetInventoryItemTexture) ~= "function" then
 		panel:Hide(); skills:Hide()
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered then GameTooltip:Hide(); hovered = nil end
-		HideNative()
-		PaintActions({}); skills:Show()
+		if panelOn then HideNative() else ShowNative() end
+		PaintActions({}); if actionOn then skills:Show() end
 		Paint(spellCells,{},8); spellsLabel:Hide()
 		Paint(itemCells,{},8); emptyItems:ClearAllPoints(); emptyItems:SetPoint("LEFT",panel,"LEFT",ROWSTART,0); emptyItems:Show()
 		itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("LEFT",panel,"LEFT",10,0)
-		advice:Hide(); divider:Hide(); panel:SetHeight(48); panel:Show(); return
+		advice:Hide(); divider:Hide(); panel:SetHeight(48); if panelOn then panel:Show() end; return
 	end
 	if not run.ph then Release() end
 	local book, spells, items = Book(), {}, {}
@@ -404,7 +419,7 @@ local function Update()
 	panel:SetHeight(itemTop + ICON + 10)
 	advice:ClearAllPoints()
 	advice:SetPoint("TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
-	if settings.advisor and KeijinBuildAdvisor then
+	if KeijinUI.ModuleOn("advisor") and KeijinBuildAdvisor then
 		local result = KeijinBuildAdvisor.Get(spells, run, AZS_STATS, AZS_ZONE, settings.focus)
 		advice.result = result
 		advice.heading:SetText(result.heading)
@@ -430,15 +445,21 @@ local function Update()
 	Paint(spellCells, spells, spellTop)
 	Paint(itemCells, items, itemTop)
 	PaintActions(spells)
-	if PHASES[run.ph] then HideNative() end
-	panel:Show()
-	skills:Show()
+	if not panelOn then ShowNative() elseif PHASES[run.ph] then HideNative() end
+	-- Both parts stay built when hidden, so frames anchored to the action bar keep their place.
+	if panelOn then panel:Show() else panel:Hide(); if hovered then GameTooltip:Hide(); hovered = nil end end
+	if actionOn then skills:Show() else skills:Hide() end
 end
 
 -- One setting shared by the menu and /kbb; restore the native HUD on disable.
 KeijinUI.buildBar={}
-function KeijinUI.buildBar.On() return Settings().enabled end
+-- "Zauber & Schmuck" (panel) and "Aktionsleiste" (skills) are independent since 3.4.0. The native build bar returns
+-- only when both are off.
+function KeijinUI.buildBar.On() return Settings().enabled and true or false end
 function KeijinUI.buildBar.Set(on) Settings().enabled=on and true or false; Update() end
+function KeijinUI.buildBar.ActionOn() return Settings().actionBar and true or false end
+function KeijinUI.buildBar.SetAction(on) Settings().actionBar=on and true or false; Update() end
+function KeijinUI.buildBar.Refresh() if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end; Update() end
 
 SLASH_KEIJINBUILDBAR1 = "/kbb"
 SlashCmdList["KEIJINBUILDBAR"] = function(msg)
@@ -452,13 +473,14 @@ SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 		Update()
 		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Fokus").." "..T(modeNames[modes[focus]])..".")
 	elseif command == "tipps" or command == "tips" or command == "advisor" then
-		Settings().advisor = not Settings().advisor
-		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
-		Update()
-		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Buildtipps").." "..(Settings().advisor and T("an.") or T("aus.")))
+		KeijinUI.modules.Set("advisor", not KeijinUI.ModuleOn("advisor"))
+		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Buildtipps").." "..(KeijinUI.ModuleOn("advisor") and T("an.") or T("aus.")))
 	elseif command == "" or command == "toggle" then
-		KeijinUI.buildBar.Set(not Settings().enabled)
-		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..(Settings().enabled and T("Leiste eingeschaltet.") or T("Leiste ausgeschaltet.")))
+		-- Both parts together: any shown part goes off, otherwise both come on.
+		local on = not (Settings().enabled or Settings().actionBar)
+		Settings().enabled, Settings().actionBar = on, on
+		Update()
+		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..(on and T("Leiste eingeschaltet.") or T("Leiste ausgeschaltet.")))
 	elseif command == "reset" then
 		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills")
 		ApplyPosition()

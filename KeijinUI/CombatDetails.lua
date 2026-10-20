@@ -52,8 +52,11 @@ function C.Execute(parent,bar,share,mirrored)
     if not marker then
         marker=CreateFrame("Frame",nil,parent); marker:SetAllPoints(bar); marker:SetFrameLevel(bar:GetFrameLevel()+8)
         marker.line=marker:CreateTexture(nil,"OVERLAY"); marker.line:SetTexture(K.flat); marker.line:SetWidth(1)
+        marker.bar=bar
         parent.execute=marker
     end
+    -- The frame can switch to another health bar (compact style): follow it with area, level and line.
+    if marker.bar~=bar then marker:SetAllPoints(bar); marker:SetFrameLevel(bar:GetFrameLevel()+8); marker.bar=bar end
     local x=bar:GetWidth()*(mirrored and .70 or .30)
     marker.line:ClearAllPoints(); marker.line:SetPoint("TOPLEFT",bar,"TOPLEFT",x,0); marker.line:SetHeight(bar:GetHeight())
     marker.line:SetVertexColor(1,share<=.30 and .25 or .72,.12,.9)

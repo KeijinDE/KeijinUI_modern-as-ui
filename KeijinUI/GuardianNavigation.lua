@@ -7,8 +7,8 @@ local selected,awaitLairs
 local inWorld=true
 local PATH="Interface\\AddOns\\KeijinUI\\media\\caches\\Arrow.tga"
 local rows={}
-function G.On() return K.ModuleOn("guardianNav") and K.DB().guardianGuide~=false end
-function G.PinsOn() return K.ModuleOn("guardianNav") and K.DB().guardianPins~=false end
+function G.On() return K.ModuleOn("guardians") and K.DB().guardianGuide~=false end
+function G.PinsOn() return K.ModuleOn("guardians") and K.DB().guardianPins~=false end
 function G.Set(on) K.DB().guardianGuide=on and true or false; G.Update() end
 function G.SetPins(on) K.DB().guardianPins=on and true or false; G.Update() end
 -- Game 0.102: AZS_SetHudShown("flag") hides the native minimap flag, AZS_GetFlaggedLair names its lair.
@@ -231,4 +231,4 @@ end)
 K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; G.Update() end)
 K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
 K.On("PLAYER_LOGOUT",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
-K.Update("guardianNav",G.Update)
+K.Update("guardians",G.Update)

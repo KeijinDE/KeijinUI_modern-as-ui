@@ -86,6 +86,7 @@ function C.Detail(e)
     if not e.link then table.insert(lines,K.T("Nur Name bekannt; genaue Gegenstandsvariante unbekannt.")) end
     return table.concat(lines,"\n")
 end
+function C.CooldownsOn() return K.ModuleOn("collection") and K.DB().jewelryCooldowns~=false end
 function C.Cooldown(slot)
     if type(GetInventoryItemCooldown)~="function" then return end
     local start,duration,enabled=GetInventoryItemCooldown("player",slot)

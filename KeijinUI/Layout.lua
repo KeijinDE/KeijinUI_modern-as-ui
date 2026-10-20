@@ -4,6 +4,8 @@ local L=K.layout
 local editing,active,lastWidth,lastHeight
 local function Scale(f) return f:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
+-- A frame handed back to the game (module off) keeps the game's own place and scale.
+local function Off(entry) return entry.options.inactive and entry.options.inactive() end
 -- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
 local function Up(entry)
     if entry.dock then return entry.dock.edge=="above" end
@@ -40,6 +42,7 @@ local function Detach(entry)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left,top)
 end
 local function Clamp(entry)
+    if Off(entry) then return end
     local f=entry.frame
     local w,h=K.UIWidth(),K.UIHeight()
     if not w or not h or w<40 or h<40 then return end
@@ -65,6 +68,7 @@ local function Clamp(entry)
     end
 end
 local function Save(entry)
+    if Off(entry) then return end
     Clamp(entry)
     local f,ratio=entry.frame,Scale(entry.frame)/Scale(UIParent)
     local up=Up(entry)
@@ -90,6 +94,11 @@ L.defaults={
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
+    if Off(entry) then
+        entry.dock=nil
+        if entry.options.release then entry.options.release(f) end
+        return
+    end
     entry.dock=Valid(p) and ValidDock(p.dock) and p.dock or nil
     -- Dynamic panels must have their final width before applying and clamping a saved position.
     if entry.options.width then f:SetWidth(entry.options.width()) end
@@ -225,6 +234,7 @@ function L.Register(key,frame,name,anchor,options)
     handle:SetFrameStrata("TOOLTIP"); handle:SetFrameLevel(180)
     if key=="player" or key=="target" then
         local outline=handle:CreateTexture(nil,"OVERLAY")
+        handle.outline=outline
         outline:SetTexture("Interface\\AddOns\\KeijinUI\\media\\soft\\FrameRim.tga"); outline:SetAllPoints(handle)
         outline:SetVertexColor(1,0.8,0.25,1)
         if key=="target" then outline:SetTexCoord(1,0,0,1) end
@@ -233,7 +243,7 @@ function L.Register(key,frame,name,anchor,options)
     K.Live(handle.label,function() return K.T(name).." | "..K.T("Mausrad: Größe") end)
     handle:EnableMouse(true); handle:EnableMouseWheel(true); handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart",function()
-        if not editing and not IsAltKeyDown() then return end
+        if Off(e) or (not editing and not IsAltKeyDown()) then return end
         if e.options.beforeMove then e.options.beforeMove() end
         Detach(e)
         active=e; frame:StartMoving()
@@ -313,7 +323,7 @@ function L.Update()
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
         if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end
-        local show=enabled and (e.frame:IsShown() or e.options.hidden)
+        local show=enabled and not Off(e) and (e.frame:IsShown() or e.options.hidden)
         if show then
             local region=e.options.region or e.frame
             local ratio=Scale(region)/Scale(UIParent)

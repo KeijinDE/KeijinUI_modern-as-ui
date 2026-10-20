@@ -8,7 +8,7 @@ local K=KeijinUI
 local SIZE,DEFAULT_ANGLE=32,225
 local EDGE,RING=2,9
 local button,placedStyle,placedWidth,placedAngle,dragging
-local function Wanted() return K.DB().minimapButton~=false end
+local function Wanted() return K.ModuleOn("minimap") and K.DB().minimapButton~=false end
 local function Angle()
     local a=tonumber(K.DB().minimapButtonAngle)
     if not a then return DEFAULT_ANGLE end
@@ -50,6 +50,7 @@ local function Tip()
     GameTooltip:SetText("KeijinUI",1,0.82,0.28)
     GameTooltip:AddLine(K.T("Linksklick: Optionen"),0.9,0.9,0.9)
     GameTooltip:AddLine(K.T("Rechtsklick: Rundenübersicht"),0.9,0.9,0.9)
+    GameTooltip:AddLine(K.T("Mittelklick: Oberfläche neu laden"),0.9,0.9,0.9)
     GameTooltip:AddLine(K.T("Ziehen: verschieben"),0.6,0.6,0.62)
     GameTooltip:Show()
 end
@@ -63,10 +64,12 @@ local function Build()
     local icon=K.Text(button,"K",21,"CENTER",-4,1)
     local sub=K.Text(button,"ui",11,"BOTTOMRIGHT",-4,5)
     button.icon,button.sub=icon,sub
-    button:RegisterForClicks("LeftButtonUp","RightButtonUp")
+    button:RegisterForClicks("LeftButtonUp","RightButtonUp","MiddleButtonUp")
     button:RegisterForDrag("LeftButton")
     button:SetScript("OnClick",function()
-        if arg1=="RightButton" then K.runs.Toggle() else SlashCmdList.KEIJINUI("") end
+        if arg1=="RightButton" then K.runs.Toggle()
+        elseif arg1=="MiddleButton" then ReloadUI()
+        else SlashCmdList.KEIJINUI("") end
     end)
     button:SetScript("OnEnter",function()
         this:SetBackdropBorderColor(1,0.82,0.28,1); icon:SetTextColor(1,0.9,0.5); sub:SetTextColor(1,1,1)
@@ -126,4 +129,5 @@ function K.MinimapButtonCommand(arg)
     K.Say(K.T("Minimapknopf")..": "..(on and K.T("An") or K.T("Aus")))
 end
 table.insert(K.updates,Update)
+K.MinimapButtonRefresh=Update
 Update()

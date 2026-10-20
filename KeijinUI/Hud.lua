@@ -185,7 +185,7 @@ end
 function T.UpdateExtras()
     local phase=AZS_GetPhase and AZS_GetPhase()
     local active=phase=="playing" or phase=="paused" or phase=="choosing"
-    local enabled=K.DB().runResources==true and K.ModuleOn("insights") and not K.DB().hidden.tally
+    local enabled=K.DB().runResources==true and K.ModuleOn("analysis") and not K.DB().hidden.tally
         and active and K.Fresh(AZS_RUN_UPDATED) and type(AZS_RUN)=="table"
     local count=0
     for _,cell in ipairs(T.cells) do
@@ -363,7 +363,7 @@ end
 local function DrawBosses(phase)
     local replace=Active(phase) and not K.DB().hidden.bosses
     -- Our group replaces the native boss bars as long as it is switched on, data or not; it is merely empty outside fights.
-    K.Native("bosses",not K.DB().hidden.bosses)
+    K.NativeFollow("bosses",not K.DB().hidden.bosses)
     local list=replace and EngagedList() or {}
     if table.getn(list)==0 then
         for _,row in ipairs(bossRows) do K.encounterDebuffs.Clear(row); row:Hide() end
@@ -475,7 +475,7 @@ local function Update()
         tracker:Show(); K.Native("clock",true)
     else
         paceRow:Hide()
-        K.Native("clock",not K.DB().hidden.tracker)
+        K.NativeFollow("clock",not K.DB().hidden.tracker)
         if K.DB().hidden.tracker then tracker:Hide()
         else
             zone:SetText((GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
@@ -510,7 +510,7 @@ local function Update()
         tallyCells[5].detail=K.T("Fehlendes Gold bis zum nächsten Cache. Grün: bezahlbar, Gelb: höchstens ein Viertel des Preises fehlt, Rot: mehr.")
         tally:Show(); K.Native("tally",true)
     else
-        K.Native("tally",not K.DB().hidden.tally)
+        K.NativeFollow("tally",not K.DB().hidden.tally)
         if K.DB().hidden.tally then tally:Hide() else for _,value in ipairs(tallyValues) do value:SetText("?") end; tally:Show() end
     end
     if Active(phase) and type(r)=="table" and K.Number(r.xp) and K.Number(r.xpn) and r.xpn>0 and not K.DB().hidden.xp then
@@ -521,7 +521,8 @@ table.insert(K.updates,Update)
 local function MoveStock()
     -- The minimap (layout key "minimap") is registered in Minimap.lua.
     -- Automatic spells are represented by the single build bar. The chat window lives in Chat.lua.
-    if MainMenuBar then MainMenuBar:SetAlpha(0); MainMenuBar:EnableMouse(false); MainMenuBar:Hide() end
+    -- The game's action bar is only hidden while our action bar is on (KeijinBuildBar keeps it in step).
+    if MainMenuBar and (not K.buildBar or not K.buildBar.ActionOn or K.buildBar.ActionOn()) then MainMenuBar:SetAlpha(0); MainMenuBar:EnableMouse(false); MainMenuBar:Hide() end
     if MainMenuExpBar then MainMenuExpBar:Hide() end
     if KeijinBuildBarFrame then
         K.layout.Register("build",KeijinBuildBarFrame,"Zauber, Schmuck und Buildtipps",function(f)

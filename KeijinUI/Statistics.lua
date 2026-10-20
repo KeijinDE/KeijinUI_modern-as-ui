@@ -316,7 +316,7 @@ local function Update()
         Summary(K.T("%s gesamt   ·   %s / s",K.Short(total),K.Short(duration>0 and total/duration or 0)),total,duration>0 and total/duration or 0)
         meter:Show(); K.Native("meter",true)
     else
-        K.Native("meter",not K.DB().hidden.meter)
+        K.NativeFollow("meter",not K.DB().hidden.meter)
         if K.DB().hidden.meter then meter:Hide()
         else
             for _,row in ipairs(meterRows) do row:Hide() end

@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.3.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.4.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -32,9 +32,32 @@ function K.ClassColor(token)
     local c = token and (CLASS_OVERRIDE[token] or type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token])
     if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
 end
+-- Modules (OptionalModules.lua). Older module keys that were merged map onto the new key.
+K.moduleAlias = { damageText = "combatText", resourceText = "combatText", guardianNav = "guardians",
+    cursor = "comfort", jewelry = "collection", insights = "analysis" }
+local MODULE_SCHEMA = 340
+-- 3.4.0: modules that were switched off stay off under their new key. Nothing a player stored is removed.
+local function MigrateModules(db)
+    local old = db.modules
+    local function Off(key) return type(old) == "table" and old[key] == false end
+    local function Stop(key)
+        if type(db.modules) ~= "table" then db.modules = {} end
+        db.modules[key] = false
+    end
+    if Off("damageText") then Stop("combatText")
+    elseif Off("resourceText") then db.healingText = false; db.incomingText = false end
+    if Off("guardianNav") then Stop("guardians") end
+    if Off("cursor") then Stop("comfort") end
+    if Off("insights") then Stop("analysis") end
+    if Off("jewelry") and not Off("collection") then db.jewelryCooldowns = false end
+    if type(KeijinUIBuildDB) == "table" and KeijinUIBuildDB.advisor == false then Stop("advisor") end
+    if type(KeijinUIAchievementsDB) == "table" and KeijinUIAchievementsDB.enabled == false then Stop("achievements") end
+    db.moduleSchema = MODULE_SCHEMA
+end
 function K.DB()
     if type(KeijinUIDB) ~= "table" then KeijinUIDB = {} end
     local db = KeijinUIDB
+    if db.moduleSchema ~= MODULE_SCHEMA then MigrateModules(db) end
     if type(db.layout) ~= "table" then db.layout = {} end
     if type(db.native) ~= "table" then db.native = {} end
     if type(db.hidden) ~= "table" then db.hidden = {} end
@@ -60,7 +83,7 @@ end
 -- The game's floating combat text (SHOW_COMBAT_TEXT, the "-N" over the character) is paused while
 -- the own text runs; CombatText_UpdateDisplayedMessages drops its events at once.
 function K.ApplyCombatText()
-    if K.ModuleOn and not K.ModuleOn("damageText") then if K.damageText and K.damageText.Stop then K.damageText.Stop() end; return end
+    if K.ModuleOn and not K.ModuleOn("combatText") then if K.damageText and K.damageText.Stop then K.damageText.Stop() end; return end
     local db, mode = K.DB(), K.CombatTextMode()
     if db.originalCombatDamage == nil then db.originalCombatDamage = GetCVar("CombatDamage") end
     SetCVar("CombatDamage", mode == "native" and "1" or "0")
@@ -324,8 +347,18 @@ function K.Native(part, replace)
         AZS_SetHudShown(part,saved[part]); saved[part] = nil
     end
 end
+-- A switch of the player decides: ours on, the game's part hidden; ours off, the game's part shown,
+-- whatever it was before. K.Native(part,false) only gives back a temporarily taken part.
+function K.NativeFollow(part, ours)
+    if ours then K.Native(part,true); return end
+    if not AZS_SetHudShown or not AZS_IsHudShown then return end
+    K.DB().native[part] = nil
+    if not AZS_IsHudShown(part) then AZS_SetHudShown(part,true) end
+end
 K.callbackOwners={}
+function K.ModuleKey(key) return key and (K.moduleAlias[key] or key) end
 function K.ModuleOn(key)
+    key=K.ModuleKey(key)
     local modules=K.DB().modules
     return not (key and type(modules)=="table" and modules[key]==false)
 end

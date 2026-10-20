@@ -44,6 +44,24 @@ function A.Clear()
     if not A.Available() then return end
     if Release() then Save() end
 end
+-- Module "Eingabehilfen" off: give the key back to the game but remember it, so switching on restores the choice.
+function A.Suspend()
+    if not A.Available() then return end
+    local db=K.DB()
+    local key=db.autoWalkKey
+    if not key then return end
+    if db.autoWalkSet==GetCurrentBindingSet() and GetBindingAction(key)=="TOGGLEAUTORUN" then
+        if not Release() then return end
+        db.autoWalkHeld=key; Save()
+    else db.autoWalkHeld=key; db.autoWalkKey=nil; db.autoWalkPrevious=nil; db.autoWalkSet=nil end
+end
+function A.Resume()
+    local key=K.DB().autoWalkHeld
+    if not key or not A.Available() then return end
+    K.DB().autoWalkHeld=nil
+    local ok,reason=A.Assign(key,true)
+    if not ok then K.DB().autoWalkHeld=(reason=="unavailable") and key or nil end
+end
 -- The shield captures a mouse binding regardless of where the cursor is.
 -- It exists only while assigning, so a side button cannot reach the world.
 local capture=CreateFrame("Frame","KeijinUIAutoWalkCapture",UIParent)

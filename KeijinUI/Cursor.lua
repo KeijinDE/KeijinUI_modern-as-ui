@@ -8,7 +8,7 @@ frame:SetFrameStrata("TOOLTIP"); frame:EnableMouse(false); frame:Hide()
 local texture=frame:CreateTexture(nil,"OVERLAY")
 texture:SetTexture("Interface\\AddOns\\KeijinUI\\media\\CursorRing.tga"); texture:SetAllPoints(frame)
 C.frame,C.texture=frame,texture
-function C.On() return K.ModuleOn("cursor") and K.DB().cursorTracker==true end
+function C.On() return K.ModuleOn("comfort") and K.DB().cursorTracker==true end
 function C.Size()
     local size=K.DB().cursorSize
     return K.Number(size) and math.max(16,math.min(64,math.floor(size+0.5))) or 24
@@ -42,6 +42,6 @@ function C.SetColor(r,g,b)
     K.DB().cursorColor={math.min(1,r),math.min(1,g),math.min(1,b)}; C.Apply()
 end
 frame:SetScript("OnUpdate",Position)
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then C.Apply() end end,"cursor")
-K.On("PLAYER_ENTERING_WORLD",C.Apply,"cursor")
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then C.Apply() end end,"comfort")
+K.On("PLAYER_ENTERING_WORLD",C.Apply,"comfort")
 C.Apply()

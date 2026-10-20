@@ -40,7 +40,7 @@ local MAX_LINES,LINE=12,16
 local MARK_NEW,MARK_OLD="Interface\\Buttons\\UI-CheckBox-Check","Interface\\Buttons\\UI-GroupLoot-Pass-Up"
 local current,lastMode,offset,previousReported,arranged,laidOut=nil,nil,0,nil,nil,nil
 local function Enabled()
-    return AZS_SetHudShown and AZS_IsHudShown and GetItemInfo and AZS_GetPhase and AZS_GetPhase()
+    return K.ModuleOn("loot") and AZS_SetHudShown and AZS_IsHudShown and GetItemInfo and AZS_GetPhase and AZS_GetPhase()
 end
 local function Plain(text)
     text=string.gsub(text,"|c%x%x%x%x%x%x%x%x","")
@@ -450,7 +450,7 @@ local function RenderList(mode)
     notice:Show()
 end
 local function Update()
-    K.Native("loot",Enabled() and true or false)
+    if K.ModuleOn("loot") then K.Native("loot",Enabled() and true or false) else K.NativeFollow("loot",false) end
     if arranged~=Grow() then Arrange() end
     local mode=loot.Mode()
     if mode~=lastMode then ApplyMode(mode); Arrange() end
@@ -472,6 +472,9 @@ function loot.Command(rest)
             K.T(loot.NewOnly() and "An" or "Aus"),tostring(Run().id)))
     else K.Say(K.T("/kui loot clear (Liste leeren), /kui loot debug")) end
 end
+-- Module "Beute" off: the notice goes, the game's own loot notice and its chat lines come back.
+function loot.Stop() current=nil; notice:Hide(); K.NativeFollow("loot",false) end
+function loot.Resume() Update() end
 K.On("CHAT_MSG_LOOT",Receive)
 K.On("CHAT_MSG_SYSTEM",Receive)
 K.On("CHAT_MSG_ADDON",function(_,prefix)
@@ -480,5 +483,5 @@ K.On("CHAT_MSG_ADDON",function(_,prefix)
         local run=Run(); run.entries={}; run.id=nil; offset=0
     end
 end)
-table.insert(K.updates,Update)
+K.Update("loot",Update)
 Update()

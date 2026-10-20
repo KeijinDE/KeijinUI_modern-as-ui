@@ -99,7 +99,7 @@ local function SpellIcon(name)
     local key=byName[name]
     return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
 end
-K.On("SPELLS_CHANGED",function() book=nil end,"damageText")
+K.On("SPELLS_CHANGED",function() book=nil end,"combatText")
 -- Weapon icon for melee hits (no spell name).
 local function MeleeIcon()
     if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
@@ -136,7 +136,7 @@ anchor:SetWidth(200); anchor:SetHeight(120); anchor:SetFrameStrata("BACKGROUND")
 K.layout.Register("combattext",anchor,"Kampftext",function(f)
     f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"CENTER",0,50)
 end,{hidden=true})
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("combattext") end end,"damageText")
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("combattext") end end,"combatText")
 K.damageText.anchor=anchor
 -- Centre of the anchor in UIParent units and its scale factor against the interface (1 = unscaled).
 local function AnchorCentre()
@@ -407,8 +407,8 @@ host:SetScript("OnUpdate",function()
     end
     tickRects=nil
 end)
-K.On("PLAYER_ENTERING_WORLD",function() average=nil end,"damageText")
-K.On("PLAYER_LEAVING_WORLD",function() while table.getn(active)>0 do Give(table.remove(active)) end end,"damageText")
+K.On("PLAYER_ENTERING_WORLD",function() average=nil end,"combatText")
+K.On("PLAYER_LEAVING_WORLD",function() while table.getn(active)>0 do Give(table.remove(active)) end end,"combatText")
 K.damageText.drivers={combat,host}
 function K.damageText.Stop()
     while table.getn(active)>0 do Give(table.remove(active)) end

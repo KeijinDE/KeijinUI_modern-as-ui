@@ -2,7 +2,7 @@
 local K=KeijinUI
 local P={}
 K.pace=P
-function P.On() return K.DB().pace~=false end
+function P.On() return K.ModuleOn("analysis") and K.DB().pace~=false end
 function P.Set(on) K.DB().pace=on and true or false end
 local function Key(z,class)
     z=z or {}

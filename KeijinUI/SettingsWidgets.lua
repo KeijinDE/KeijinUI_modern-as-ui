@@ -90,7 +90,15 @@ table.insert(K.updates,function()
 end)
 
 table.insert(UISpecialFrames,"KeijinUIOptions"); table.insert(UISpecialFrames,"KeijinUISettingsChoice")
+-- Modules switched off hide their rows and whole sections (O.Section(page,text,module)); the rows below move up.
+-- The signature tells Refresh when a module was switched (also by /kui commands or the module page).
+function O.ModuleSignature()
+    local t={}
+    for _,key in ipairs(K.modules and K.modules.order or {}) do table.insert(t,K.ModuleOn(key) and "1" or "0") end
+    return table.concat(t)
+end
 function O.Refresh()
+    if O.ModuleSignature()~=O.modulesSignature then O.ReflowAll() end
     for _,fn in ipairs(O.refreshers) do fn() end
 end
 function O.Watch(fn) table.insert(O.refreshers,fn); fn() end
@@ -98,7 +106,7 @@ function O.Watch(fn) table.insert(O.refreshers,fn); fn() end
 function O.SearchEntry(frame,page,label,key)
     if not page.key or O.pages[page.key]~=page then return end
     local section=page.sections[table.getn(page.sections)]
-    local entry={frame=frame,page=page,label=label,key=key,section=section and section.caption or "",help={}}
+    local entry={frame=frame,page=page,label=label,key=key,section=section and section.caption or "",sectionRef=section,help={}}
     frame.searchEntry=entry; page.searchLast=entry
     table.insert(O.searchEntries,entry)
 end
@@ -110,6 +118,7 @@ function O.Button(parent,text,x,y,width,fn)
     b:SetScript("OnEnter",function() b:SetBackdropBorderColor(.94,.74,.37,1) end)
     b:SetScript("OnLeave",function() b:SetBackdropBorderColor(.67,.57,.36,1) end)
     O.SearchEntry(b,parent,text)
+    if parent.items then O.Track(parent,b,x,y) end
     return b
 end
 O.Button(panel,"Schließen",644,-529,100,function() panel:Hide() end)
@@ -157,18 +166,21 @@ function O.Wheel(frame)
     frame:SetScript("OnMouseWheel",function() O.Scroll((O.current and O.current.offset or 0)+(arg1>0 and -48 or 48)) end)
 end
 O.Wheel(viewport)
-function O.Page(key,label,description,parent)
+function O.Page(key,label,description,parent,module)
     local page=CreateFrame("Frame",nil,viewport)
     page:SetWidth(O.width); page:SetHeight(376); page:SetPoint("TOPLEFT",viewport,"TOPLEFT",0,0)
     page.key,page.caption,page.description,page.parentKey,page.y=key,label,description,parent or key,0
-    page.sections={}
+    page.module=module
+    page.sections={}; page.items={}
     page:Hide(); O.pages[key]=page; O.Wheel(page); return page
 end
-function O.Finish(page) page:SetHeight(math.max(376,-page.y+8)) end
+function O.Finish(page) page.endY=page.y; page:SetHeight(math.max(376,-page.y+8)) end
 function O.ShowPage(key)
     -- Preserve callers using the former categories; there is only one shared UI page.
     local alias=key=="layout" or key=="units"
     local page=O.pages[alias and "display" or key] or O.pages.display
+    -- A page whose module is off has nothing to show: the module page takes over.
+    if not O.PageVisible(page) and O.pages.modules then page=O.pages.modules end
     O.CloseChoice()
     for _,p in pairs(O.pages) do p:Hide() end
     O.current=page; K.DB().optionsTab=page.key
@@ -196,42 +208,57 @@ end
 function O.UpdateSection()
     local page=O.current
     if not page then return end
-    local index=1
-    for i,section in ipairs(page.sections) do if section.offset<=(page.offset or 0)+1 then index=i end end
+    local index,last=1,1
+    for i,section in ipairs(page.sections) do
+        if O.SectionVisible(section) then
+            last=i
+            if section.offset<=(page.offset or 0)+1 then index=i end
+        end
+    end
     local max=math.max(0,page:GetHeight()-viewport:GetHeight())
-    if max>0 and (page.offset or 0)>=max-1 then index=table.getn(page.sections) end
+    if max>0 and (page.offset or 0)>=max-1 then index=last end
     page.sectionIndex=index; O.MarkSections()
 end
 function O.JumpSection(key,index)
     local page=O.pages[key]; local section=page and page.sections[index]
-    if not section then return end
+    if not section or not O.SectionVisible(section) then return end
     if O.current~=page then O.ShowPage(key) end
     O.Scroll(section.offset)
     -- Short final sections cannot reach the viewport top; keep the clicked destination marked.
     page.sectionIndex=index; O.MarkSections()
 end
+local function SubVisible(key,index)
+    local section=O.pages[key] and O.pages[key].sections[index]
+    return section and O.SectionVisible(section)
+end
 function O.UpdateNavigation()
     local y=-57
     local currentKey=O.current and O.current.parentKey
-    local count=table.getn(O.navSections[currentKey] or {})
-    local categories=table.getn(O.navOrder or {})
+    local count,categories=0,0
+    for i in ipairs(O.navSections[currentKey] or {}) do if SubVisible(currentKey,i) then count=count+1 end end
+    for _,item in ipairs(O.navOrder or {}) do if O.PageVisible(O.pages[item[1]]) then categories=categories+1 end end
     local step=count>0 and math.min(22,math.floor((455-categories*40-8-math.max(0,categories-1)*3)/count)) or 22
     for _,item in ipairs(O.navOrder or {}) do
         local key=item[1]; local b=O.nav[key]
-        local selected=O.current and key==O.current.parentKey
-        b:ClearAllPoints(); b:SetPoint("TOPLEFT",panel,"TOPLEFT",12,y)
-        b:SetBackdropColor(selected and .25 or .045,selected and .18 or .045,selected and .075 or .05,1)
-        b.selected=selected and true or false
-        b:SetBackdropBorderColor(selected and .9 or .48,selected and .71 or .40,selected and .34 or .24,1)
-        b.text:SetTextColor(selected and 1 or .94,selected and .82 or .79,selected and .4 or .47)
-        b.disclosure:SetText(selected and "v" or ">")
-        y=y-40
-        for _,sub in ipairs(O.navSections[key]) do
-            if selected then
-                sub:SetHeight(step-2); sub:ClearAllPoints(); sub:SetPoint("TOPLEFT",panel,"TOPLEFT",28,y); sub:Show(); y=y-step
-            else sub:Hide() end
+        if not O.PageVisible(O.pages[key]) then
+            b:Hide(); for _,sub in ipairs(O.navSections[key]) do sub:Hide() end
+        else
+            b:Show()
+            local selected=O.current and key==O.current.parentKey
+            b:ClearAllPoints(); b:SetPoint("TOPLEFT",panel,"TOPLEFT",12,y)
+            b:SetBackdropColor(selected and .25 or .045,selected and .18 or .045,selected and .075 or .05,1)
+            b.selected=selected and true or false
+            b:SetBackdropBorderColor(selected and .9 or .48,selected and .71 or .40,selected and .34 or .24,1)
+            b.text:SetTextColor(selected and 1 or .94,selected and .82 or .79,selected and .4 or .47)
+            b.disclosure:SetText(selected and "v" or ">")
+            y=y-40
+            for i,sub in ipairs(O.navSections[key]) do
+                if selected and SubVisible(key,i) then
+                    sub:SetHeight(step-2); sub:ClearAllPoints(); sub:SetPoint("TOPLEFT",panel,"TOPLEFT",28,y); sub:Show(); y=y-step
+                else sub:Hide() end
+            end
+            y=y+(selected and -8 or -3)
         end
-        y=y+(selected and -8 or -3)
     end
     O.MarkSections()
 end
@@ -264,16 +291,76 @@ function O.Navigation(items)
         end
     end
 end
-function O.Section(page,text)
+-- Everything a page builds is tracked with its anchor and section, so a module switch can hide a section and move
+-- the following rows up (O.Reflow). Items before the first section are never hidden.
+function O.Track(page,obj,x,y,point,relative)
+    if page.items then
+        table.insert(page.items,{obj=obj,x=x,y=y,point=point or "TOPLEFT",relative=relative or point or "TOPLEFT",section=table.getn(page.sections)})
+    end
+    return obj
+end
+function O.SectionVisible(section) return not section.module or K.ModuleOn(section.module) end
+function O.PageVisible(page)
+    if page.module and not K.ModuleOn(page.module) then return false end
+    if table.getn(page.sections)==0 then return true end
+    for _,section in ipairs(page.sections) do if O.SectionVisible(section) then return true end end
+    return false
+end
+function O.EntryVisible(entry)
+    local section=entry.sectionRef
+    if entry.page.module and not K.ModuleOn(entry.page.module) then return false end
+    return not section or O.SectionVisible(section)
+end
+function O.Reflow(page)
+    if not page.items then return end
+    local shifts,total={},0
+    for i,section in ipairs(page.sections) do
+        shifts[i]=total
+        section.offset=section.baseOffset-total
+        if not O.SectionVisible(section) then
+            local following=page.sections[i+1]
+            total=total+(section.top-(following and following.top or page.endY or section.top))
+        end
+    end
+    for _,item in ipairs(page.items) do
+        local section=page.sections[item.section]
+        if section and not O.SectionVisible(section) then
+            item.obj:Hide(); item.hidden=true
+        else
+            if item.hidden then item.obj:Show(); item.hidden=nil end
+            -- A control that the search shows temporarily lives on the result page; leave its anchor alone.
+            if item.obj:GetParent()==page then
+                item.obj:ClearAllPoints()
+                item.obj:SetPoint(item.point,page,item.relative,item.x,item.y+(shifts[item.section] or 0))
+            end
+        end
+    end
+    if page.endY then page:SetHeight(math.max(376,-(page.endY+total)+8)) end
+end
+function O.ReflowPages() for _,page in pairs(O.pages) do O.Reflow(page) end end
+function O.ReflowAll()
+    O.modulesSignature=O.ModuleSignature()
+    O.ReflowPages()
+    if O.current and O.current.items and not O.PageVisible(O.current) and O.pages.modules then O.ShowPage("modules")
+    else
+        if O.current then O.Scroll(O.current.offset or 0) end
+        O.UpdateNavigation()
+    end
+    if O.afterReflow then O.afterReflow() end
+end
+function O.Section(page,text,module)
     page.searchLast=nil
+    local top=page.y
     if page.y<0 then page.y=page.y-12 end
     local fs=K.LText(page,text,13,"TOPLEFT",0,page.y,516); fs:SetTextColor(unpack(GOLD)); fs:SetHeight(19)
-    table.insert(page.sections,{caption=text,offset=-page.y,heading=fs})
-    Rule(page,0,page.y-22,516); page.y=page.y-36
+    table.insert(page.sections,{caption=text,offset=-page.y,baseOffset=-page.y,top=top,module=module,heading=fs})
+    O.Track(page,fs,0,page.y)
+    O.Track(page,Rule(page,0,page.y-22,516),0,page.y-22); page.y=page.y-36
 end
 function O.Help(page,text)
     local fs=K.LText(page,text,10,"TOPLEFT",0,page.y,512); fs:SetTextColor(.68,.67,.62); fs:SetHeight(32)
     if page.searchLast then table.insert(page.searchLast.help,text) end
+    O.Track(page,fs,0,page.y)
     page.y=page.y-36; return fs
 end
 function O.Row(page,key,label,height)
@@ -283,7 +370,7 @@ function O.Row(page,key,label,height)
     row:SetBackdrop({bgFile=K.flat}); row:SetBackdropColor(0,0,0,0)
     row:SetScript("OnEnter",function() row:SetBackdropColor(.25,.2,.1,.2) end)
     row:SetScript("OnLeave",function() row:SetBackdropColor(0,0,0,0) end)
-    O.Wheel(row); O.controls[key]=row; page.y=page.y-(height or 31)
+    O.Wheel(row); O.controls[key]=row; O.Track(page,row,0,page.y); page.y=page.y-(height or 31)
     O.SearchEntry(row,page,label,key)
     return row
 end

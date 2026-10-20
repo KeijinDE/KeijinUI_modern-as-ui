@@ -48,9 +48,9 @@ end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then X.Reset()
     elseif prefix=="AZSRUN" then X.Observe(AZS_RUN) end
-end,"insights")
+end,"analysis")
 local label=K.xpDisplay.rateLabel; X.label=label
-K.Update("insights",function()
+K.Update("analysis",function()
     local phase=AZS_GetPhase and AZS_GetPhase()
     local active=phase=="playing" or phase=="paused" or phase=="choosing"
     if K.DB().xpRate==true and active and not K.DB().hidden.xp then label:SetText(XPText()); label:Show() else label:Hide() end

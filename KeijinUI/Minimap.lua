@@ -17,12 +17,25 @@ local NATIVE={"MinimapBorderTop","MinimapBorder","MinimapBackdrop","MinimapToggl
 local CLOCK_W=40
 local saved,styled,panel,zone,lastZone,clock,lastClock
 local hidden={}
-local function Wanted() return K.DB().minimapStyle~=false end
+-- Module "Minimap" off gives the game's own minimap back (Disable); the style switch only matters while it is on.
+local function Wanted() return K.ModuleOn("minimap") and K.DB().minimapStyle~=false end
+-- The game's own place and scale of MinimapCluster, read once before the layout moves it.
+local native
 local function Register()
     if MinimapCluster then
+        if not native and not K.layout.entries.minimap then
+            native={scale=MinimapCluster:GetScale(),point={MinimapCluster:GetPoint()}}
+        end
         K.layout.Register("minimap",MinimapCluster,"Minimap",function(f)
             f:ClearAllPoints(); f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",-12,-12)
-        end)
+        end,{inactive=function() return not K.ModuleOn("minimap") end,release=function(f)
+            -- Module off: the game's minimap at its own size and place, not at the saved layout scale.
+            local n=native or {scale=1,point={}}
+            local p=n.point
+            f:SetScale(n.scale or 1); f:ClearAllPoints()
+            if p[1] then f:SetPoint(p[1],p[2] or UIParent,p[3] or p[1],p[4] or 0,p[5] or 0)
+            else f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",0,0) end
+        end})
     end
 end
 local function Build()
@@ -143,5 +156,11 @@ local function Update()
     if now~=lastClock then lastClock=now; clock:SetText(now) end
 end
 table.insert(K.updates,Update)
+-- Module switch: restyle or restore at once instead of waiting for the next tick.
+function K.MinimapRefresh()
+    Update()
+    -- Always re-place: switching the module also swaps saved layout and the game's own scale.
+    if K.layout then K.layout.Place("minimap"); K.layout.Place("tracker") end
+end
 Register()
 Update()

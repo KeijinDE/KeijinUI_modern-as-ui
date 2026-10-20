@@ -4,7 +4,7 @@ local R={}
 K.resourceText=R
 function R.Active()
     local mode=K.CombatTextMode()
-    return K.ModuleOn("damageText") and (mode=="compact" or mode=="scroll" or mode=="rise")
+    return K.ModuleOn("combatText") and (mode=="compact" or mode=="scroll" or mode=="rise")
 end
 local priorTaken,priorHealing,lastStart
 local function Lane(name,label,x)
@@ -39,12 +39,12 @@ end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then priorTaken=nil; priorHealing=nil
     elseif prefix=="AZSRUN" or prefix=="AZSHEAL" then R.Observe() end
-end,"resourceText")
+end,"combatText")
 function R.Clear()
     priorTaken=nil; priorHealing=nil
     for _,f in ipairs({healing,taken}) do for _,row in ipairs(f.rows) do row.at=nil; row:Hide() end end
 end
-K.Update("resourceText",function()
+K.Update("combatText",function()
     for _,f in ipairs({healing,taken}) do
         local enabled=f==healing and K.DB().healingText==true or f==taken and K.DB().incomingText==true
         for _,row in ipairs(f.rows) do

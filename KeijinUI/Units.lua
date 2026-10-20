@@ -59,26 +59,59 @@ local FRAME_W,FRAME_H=206,58
 local BOX=54
 local HOLDER_W,HOLDER_H=FRAME_W-48,30
 local S=K.UnitFrameShapes
+local CLEAN_H=K.PortraitFree.H
+local DEBUFF_X,DEBUFF_Y=4,-2
+-- portraits==false selects the compact frame without portrait; nil and true keep the portrait style.
+local function CleanStyle() return K.DB().portraits==false end
+local FIELDS={"label","level","health","percent","bar","rim","body"}
+-- Both geometries are built once under the stable outer frame and only shown or hidden here.
+-- The active one is mirrored into f.label, f.level, f.health, f.percent, f.bar, f.rim and f.body.
+local function ApplyStyle(f,clean)
+    if f.clean==clean then return end
+    local set=clean and f.sets.clean or f.sets.classic
+    f.clean=clean
+    if clean then f.sets.classic.root:Hide(); f.sets.clean.root:Show()
+    else f.sets.clean.root:Hide(); f.sets.classic.root:Show() end
+    for _,key in ipairs(FIELDS) do f[key]=set[key] end
+    f:SetWidth(clean and K.PortraitFree.W or FRAME_W); f:SetHeight(clean and CLEAN_H or FRAME_H)
+    if f.debuffs then f.debuffs:ClearAllPoints(); f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",DEBUFF_X,DEBUFF_Y) end
+    local entry=K.layout.entries[f.unit]
+    if entry and entry.handle and entry.handle.outline then
+        local outline=entry.handle.outline
+        if clean then outline:SetTexture("Interface\\AddOns\\KeijinUI\\media\\portraitfree\\Rim.tga"); outline:SetTexCoord(0,1,0,1)
+        else
+            outline:SetTexture("Interface\\AddOns\\KeijinUI\\media\\soft\\FrameRim.tga")
+            if f.unit=="target" then outline:SetTexCoord(1,0,0,1) else outline:SetTexCoord(0,1,0,1) end
+        end
+    end
+    -- Same saved edge and scale, new height: re-apply once (no compensation), then pull dependants along.
+    K.layout.Place(f.unit)
+    K.layout.SyncFollowers()
+end
 local function Create(unit,mirror)
     local name=unit=="player" and "KeijinUIPlayer" or "KeijinUITarget"
     local f=CreateFrame("Button",name,UIParent)
     f:SetWidth(FRAME_W); f:SetHeight(FRAME_H); f:SetFrameStrata("LOW")
     f:SetScale(K.CombatScale()); f:EnableMouse(true); f:RegisterForClicks("LeftButtonUp","RightButtonUp")
+    -- Everything of the portrait style lives under this container so it can be hidden as a whole.
+    local old=CreateFrame("Frame",nil,f)
+    old:SetAllPoints(f)
+    local clean=K.PortraitFree.Build(f,name,mirror)
     -- Transparent click and layout container. It has no backdrop.
     local contentLeft=mirror and 4 or 44
     local boxLeft=mirror and FRAME_W-BOX or 0
-    local holder=CreateFrame("Frame",nil,f)
+    local holder=CreateFrame("Frame",nil,old)
     holder:SetWidth(HOLDER_W); holder:SetHeight(HOLDER_H)
     holder:SetPoint("TOPLEFT",f,"TOPLEFT",contentLeft,-28)
-    local body=S.Housing(f,"BACKGROUND","FrameBack.tga",FRAME_W,FRAME_H,mirror)
+    local body=S.Housing(old,"BACKGROUND","FrameBack.tga",FRAME_W,FRAME_H,mirror)
     -- The alpha-shaped fill follows the portrait edge and the lower connector.
     local bar=S.ConnectedFill(holder,name.."Health",mirror)
     bar:SetPoint("TOPLEFT",holder,"TOPLEFT",mirror and 1 or -17,-1)
-    local rimLayer=CreateFrame("Frame",nil,f)
+    local rimLayer=CreateFrame("Frame",nil,old)
     rimLayer:SetAllPoints(f); rimLayer:SetFrameLevel(bar:GetFrameLevel()+2)
     body:SetVertexColor(1,1,1,K.BackgroundAlpha()/K.BG_ALPHA)
     local rim=S.Housing(rimLayer,"OVERLAY","FrameRim.tga",FRAME_W,FRAME_H,mirror)
-    local box=CreateFrame("Frame",nil,f)
+    local box=CreateFrame("Frame",nil,old)
     box:SetWidth(BOX); box:SetHeight(BOX)
     box:SetPoint("TOPLEFT",f,"TOPLEFT",boxLeft,-4)
     box:SetFrameLevel(bar:GetFrameLevel()+1)
@@ -89,7 +122,7 @@ local function Create(unit,mirror)
     -- circular bevel intact at the join. No square portrait backdrop is added.
     local ring=rim
     rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
-    local layer=CreateFrame("Frame",nil,f)
+    local layer=CreateFrame("Frame",nil,old)
     layer:SetAllPoints(f); layer:SetFrameLevel(rimLayer:GetFrameLevel()+1)
     -- Reflect each text box, including its alignment. Text stays readable:
     -- target percent/level on the left, health/name next to its portrait.
@@ -104,6 +137,9 @@ local function Create(unit,mirror)
     f.level=K.Text(layer,"",10,"TOPLEFT",TextLeft(FRAME_W-53,31),-14,31)
     f.level:SetHeight(12); f.level:SetJustifyH(mirror and "LEFT" or "RIGHT"); f.level:SetTextColor(1,0.82,0.28)
     f.unit,f.portrait,f.bar,f.box,f.ring,f.rim,f.body=unit,portrait,bar,box,ring,rim,body
+    clean.label:SetText(f.label:GetText())
+    f.clean=false
+    f.sets={classic={root=old,label=f.label,level=f.level,health=f.health,percent=f.percent,bar=bar,rim=rim,body=body},clean=clean}
     f:SetScript("OnClick",function()
         if arg1=="RightButton" then if ToggleGameMenu then ToggleGameMenu() end
         elseif UnitExists(unit) and TargetUnit then TargetUnit(unit) end
@@ -121,7 +157,7 @@ local function Create(unit,mirror)
     end,{scale=K.CombatScale,hidden=mirror})
     if mirror then
         f.debuffs=K.DebuffRow(f,18,false)
-        f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",contentLeft,-2)
+        f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",DEBUFF_X,DEBUFF_Y)
     end
     K.units[unit]=f
 end
@@ -146,6 +182,7 @@ end
 local function Update()
     HideStock()
     for unit,f in pairs(K.units) do
+        ApplyStyle(f,CleanStyle())
         if UnitExists(unit) then
             local hp,max=UnitHealth(unit),UnitHealthMax(unit)
             local r=unit=="player" and AZS_RUN or AZS_TARGET
@@ -168,14 +205,13 @@ local function Update()
                 if unit=="target" then K.combatDetails.Execute(f,f.bar,pct,true) end
             else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
-            -- Portraits off: FrameBack already contains a dark disc under the rim, so hiding the portrait leaves a dark circle.
-            if K.DB().portraits~=false then SetPortraitTexture(f.portrait,unit); f.portrait:Show()
-            else f.portrait:SetTexture(nil); f.portrait:Hide() end
+            -- The compact style has no portrait; the pointer is not touched there.
+            if not f.clean and f.portrait then SetPortraitTexture(f.portrait,unit); f.portrait:Show() end
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
             f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
             f.rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
-            f.portrait:SetTexture(nil); f.portrait:Hide()
+            if not f.clean and f.portrait then f.portrait:SetTexture(nil); f.portrait:Hide() end
         end
         if unit=="target" and not UnitExists(unit) then
             -- No target: the whole frame is gone. Alt or layout editing keeps an invisible,
@@ -190,10 +226,16 @@ local function Update()
 end
 function K.ApplyUnitBackground()
     local alpha=K.BackgroundAlpha()/K.BG_ALPHA
-    for _,f in pairs(K.units) do f.body:SetVertexColor(1,1,1,math.min(1,alpha)) end
+    -- Only the backgrounds of both geometries; fill, text and rim keep their own alpha.
+    for _,f in pairs(K.units) do
+        f.sets.classic.body:SetVertexColor(1,1,1,math.min(1,alpha))
+        f.sets.clean.body:SetVertexColor(1,1,1,math.min(1,alpha))
+    end
 end
 K.UpdateUnits=function() Update(); K.ApplyUnitBackground() end
 for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE"}) do K.On(ev,Update) end
 table.insert(K.updates,Update)
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
+-- Saved variables arrive after the files: switch to a saved compact style as soon as they exist.
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.UpdateUnits() end end)
 Update()

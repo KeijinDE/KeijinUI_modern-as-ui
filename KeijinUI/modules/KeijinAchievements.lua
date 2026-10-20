@@ -28,6 +28,8 @@ local function Settings()
     return db
 end
 
+-- The switch is the module "Erfolgsmeldungen" (KeijinUI.ModuleOn); the old flag is only kept for old saves.
+local function Enabled() return KeijinUI.ModuleOn("achievements") end
 local function Print(text)
     DEFAULT_CHAT_FRAME:AddMessage("|cff88ff88[KeijinAddons]|r " .. text)
 end
@@ -191,13 +193,13 @@ end
 local function Advance()
     current, age = nil, 0
     popup:Hide()
-    if not moving and Settings().enabled and table.getn(queue) > 0 then
+    if not moving and Enabled() and table.getn(queue) > 0 then
         Display(table.remove(queue, 1))
     end
 end
 
 local function Receive(message)
-    if not Settings().enabled then return end
+    if not Enabled() then return end
     local name, points = Parse(message)
     if not name then return end
     local key = name .. "\031" .. points
@@ -236,6 +238,15 @@ driver:SetScript("OnUpdate", function()
     popup:SetAlpha(alpha)
 end)
 
+-- Module off: clear what is waiting or showing.
+KeijinUI.achievements = {}
+function KeijinUI.achievements.Stop()
+    StopDrag()
+    moving, current, queue = false, nil, {}
+    popup:EnableMouse(false)
+    popup:Hide()
+end
+
 SLASH_KEIJINACHIEVEMENTS1 = "/kachi"
 SlashCmdList["KEIJINACHIEVEMENTS"] = function(message)
     local command = string.lower(message or "")
@@ -245,7 +256,7 @@ SlashCmdList["KEIJINACHIEVEMENTS"] = function(message)
         if moving then EndMove() end
         table.insert(queue, { name = KeijinUI.T("Ein denkwürdiger Augenblick"), points = 10, preview = true })
         if not current then Advance() end
-        if not Settings().enabled then
+        if not Enabled() then
             -- Explicit previews work while automatic alerts are disabled.
             Display(table.remove(queue, table.getn(queue)))
         end
@@ -266,10 +277,10 @@ SlashCmdList["KEIJINACHIEVEMENTS"] = function(message)
         moving, current, queue = false, nil, {}
         popup:EnableMouse(false)
         popup:Hide()
-        Settings().enabled = false
+        KeijinUI.modules.Set("achievements", false)
         Print(KeijinUI.T("Erfolgsfenster ausgeschaltet."))
     elseif command == "on" then
-        Settings().enabled = true
+        KeijinUI.modules.Set("achievements", true)
         Print(KeijinUI.T("Erfolgsfenster eingeschaltet."))
     elseif command == "debug" then
         SetDebug(not Settings().debug)

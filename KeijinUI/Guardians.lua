@@ -8,7 +8,7 @@ local G=K.guardians
 local MAX=6
 local rows={}
 local head,count,line
-function G.On() return K.DB().guardians~=false end
+function G.On() return K.ModuleOn("guardians") and K.DB().guardians~=false end
 function G.Set(on) K.DB().guardians=on and true or false end
 local function Left(lair)
     local left=lair.left

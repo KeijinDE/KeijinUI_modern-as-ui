@@ -19,7 +19,7 @@ local groups={
     "lifesteal lebensraub", "module modules modul module", "cursor mauszeiger cursortracker",
 }
 local aliases={
-    portraits="player spieler target ziel portrait portraet portraits portraets bild",
+    portraits="player spieler target ziel portrait portraet portraits portraets bild compact kompakt rahmen frame kreis circle",
     bgAlpha="background opacity transparency hintergrund deckkraft transparenz durchsichtig player spieler target ziel frames rahmen panel",
     healthColor="player spieler target ziel health bar lebensbalken",
     resources="player spieler class resource mana energy combo soulshard wut seelensplitter combopunkte",
@@ -33,6 +33,20 @@ local aliases={
     optionsScale="settings menu menue einstellungen size groesse scale skalierung",
     uiScale="interface ui gesamt scale skalierung groesse",
     combatTextPosition="damage schaden position fixed fest gegner enemy",
+    -- The switches of the modules are found by what the module does, also while its own settings are hidden.
+    module_combatText="damage schaden healing heilung incoming eingehend zahlen numbers kampftext combat text",
+    module_nameplates="namensplaketten nameplates gegner enemy",
+    module_minimap="minimap minikarte knopf button uhr clock zeitzone timezone",
+    module_caches="cache caches truhe kiste chest",
+    module_guardians="waechter guardian guardians flagge flag skull totenkopf horte lair",
+    module_analysis="pace xp rate rerolls leben lives analyse analysis",
+    module_attributes="charakterwerte character stats attributes",
+    module_loot="beute loot drops",
+    module_collection="schmuck jewelry cooldown cooldowns sammlung collection",
+    module_advisor="buildtipps build tips tipps empfehlung advisor",
+    module_storedLevels="levelaufstiege levelups level stored gespeicherte",
+    module_achievements="erfolg erfolge achievement achievements popup",
+    module_comfort="cursor mauszeiger autorun autowalk automatisch laufen eingabehilfen",
 }
 local links={
     ["Werte wählen…"]=true,["Module verwalten…"]=true,
@@ -75,7 +89,8 @@ function O.FindSettings(query)
     local found={}
     if table.getn(terms)==0 then return found end
     for _,entry in ipairs(O.searchEntries) do
-        if not links[entry.label] then
+        -- Settings of a module that is off are not offered; the module switch itself is found instead.
+        if not links[entry.label] and O.EntryVisible(entry) then
             local corpus=Corpus(entry); local match=true
             for _,term in ipairs(terms) do if not string.find(corpus,term,1,true) then match=false; break end end
             if match then table.insert(found,entry) end
@@ -122,6 +137,7 @@ local function Hint()
     if hasText then clear:Show() else clear:Hide() end
 end
 local function Restore()
+    local hadMoved=table.getn(moved)>0
     for _,record in ipairs(moved) do
         local frame=record.frame
         frame:SetParent(record.parent); frame:ClearAllPoints()
@@ -133,6 +149,8 @@ local function Restore()
         view.context:Hide()
         for _,help in ipairs(view.help) do help:Hide() end
     end
+    -- The pages may have been rearranged (module switch) while their controls were away.
+    if hadMoved then O.ReflowPages() end
 end
 local function Move(frame,y)
     local record={frame=frame,parent=frame:GetParent(),points={}}
@@ -186,6 +204,8 @@ function O.ShowPage(key)
     end
     showPage(key); Hint()
 end
+-- A module switched from inside the results: show the results again without the controls that went away.
+O.afterReflow=function() if O.searchQuery and O.searchQuery~="" and not busy then O.SetSearch(O.searchQuery) end end
 edit:SetScript("OnTextChanged",function() O.SetSearch(edit:GetText()) end)
 edit:SetScript("OnEscapePressed",function() O.SetSearch(""); edit:ClearFocus() end)
 edit:SetScript("OnEnterPressed",function() O.CloseChoice() end)

@@ -31,8 +31,10 @@ local function Dock(entry)
     local f=entry.frame
     local ratio=Scale(f)/Scale(UIParent)
     f:ClearAllPoints()
+    -- A dock with ref="bar" holds the distance of the options.edge bar edge, not of the frame's left edge.
+    local ox=d.ref=="bar" and entry.options.edge and (entry.options.edge()) or 0
     f:SetPoint(d.edge=="above" and "BOTTOMLEFT" or "TOPLEFT",target.frame,
-        d.edge=="above" and "TOPLEFT" or "BOTTOMLEFT",d.x/ratio,0)
+        d.edge=="above" and "TOPLEFT" or "BOTTOMLEFT",d.x/ratio-ox,0)
 end
 local function Detach(entry)
     if not entry.dock then return end
@@ -76,7 +78,13 @@ local function Save(entry)
     if not Finite(x) or not Finite(y) then return end
     -- Keep the bottom edge as the anchor, so a later change of the height does not move it.
     if up and f:GetPoint()~="BOTTOMLEFT" then f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x,y) end
-    K.DB().layout[entry.key]={x=x*ratio/K.UIWidth(),y=y*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale,dock=entry.dock}
+    -- options.edge: distance from the frame's left edge and top edge to the corner of the bar that stays put
+    -- when the frame's geometry changes. Such an entry stores that corner (ref="bar") instead of the frame corner.
+    -- (A frame anchored by its bottom keeps the bottom, which is the same in both styles.)
+    local edge=entry.options.edge
+    local ox,oy=0,0
+    if edge then ox,oy=edge(); if up then oy=0 end end
+    K.DB().layout[entry.key]={x=(x+ox)*ratio/K.UIWidth(),y=(y-oy)*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale,dock=entry.dock,ref=edge and "bar" or nil}
 end
 -- Standard layout (3.1.2, 300 point panels): only scales. Positions come from each frame's own anchor
 -- (minimap top right, run overview below it, loot below that, statistics/meter/crits top left, unit frames
@@ -109,9 +117,22 @@ local function Apply(entry)
     if Valid(p) then
         f:SetScale(entry.baseScale*math.max(0.5,math.min(1.8,p.scale)))
         local ratio=Scale(UIParent)/Scale(f)
+        local ox,oy=0,0
+        if entry.options.edge then ox,oy=entry.options.edge() end
+        local up=Up(entry)
+        if up then oy=0 end
+        -- Older positions hold frame corners: ref=nil both corners, ref="edge" (3.5.0, x only) the bar edge and the
+        -- frame top. Convert once, in the style now active, so nothing jumps; ref="bar" holds the bar corner.
+        if saved and entry.options.edge and p.ref~="bar" then
+            if p.ref==nil then p.x=p.x+ox/ratio/K.UIWidth() end
+            p.y=p.y-oy/ratio/K.UIHeight(); p.ref="bar"
+        end
+        if saved and entry.options.edge and ValidDock(p.dock) and p.dock.ref~="bar" then
+            p.dock.x=p.dock.x+ox/ratio; p.dock.ref="bar"
+        end
         f:ClearAllPoints()
         -- For a frame growing upwards p.y is the bottom edge (also in the standard layout).
-        f:SetPoint(Up(entry) and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*K.UIWidth()*ratio,p.y*K.UIHeight()*ratio)
+        f:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",p.x*K.UIWidth()*ratio-ox,p.y*K.UIHeight()*ratio+oy)
     else
         local d=not saved and L.defaults and L.defaults[entry.key]
         local scale=d and K.Number(d.scale) and d.scale>0 and d.scale or 1
@@ -174,7 +195,10 @@ local function Snap(entry)
             local tl,tb,tr,tt=Rect(target.frame)
             if tl and math.min(r,tr)-math.max(l,tl)>1 then
                 local edge=math.abs(b-tt)<.1 and "above" or (math.abs(t-tb)<.1 and "below" or nil)
-                if edge then entry.dock={target=target.key,edge=edge,x=l-tl}; break end
+                if edge then
+                    local ox=entry.options.edge and (entry.options.edge())
+                    entry.dock={target=target.key,edge=edge,x=l-tl+(ox or 0)*ratio,ref=ox and "bar" or nil}; break
+                end
             end
         end
     end
@@ -244,12 +268,14 @@ function L.Register(key,frame,name,anchor,options)
     handle:EnableMouse(true); handle:EnableMouseWheel(true); handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart",function()
         if Off(e) or (not editing and not IsAltKeyDown()) then return end
+        if e.options.locked and e.options.locked() then return end
         if e.options.beforeMove then e.options.beforeMove() end
         Detach(e)
         active=e; frame:StartMoving()
     end)
     handle:SetScript("OnDragStop",Stop)
     handle:SetScript("OnMouseWheel",function()
+        if e.options.locked and e.options.locked() then return end
         if e.options.beforeMove then e.options.beforeMove() end
         local scale=frame:GetScale()/e.baseScale
         frame:SetScale(e.baseScale*math.max(0.5,math.min(1.8,scale+(arg1>0 and 0.05 or -0.05))))
@@ -323,7 +349,7 @@ function L.Update()
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
         if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end
-        local show=enabled and not Off(e) and (e.frame:IsShown() or e.options.hidden)
+        local show=enabled and not Off(e) and not (e.options.locked and e.options.locked()) and (e.frame:IsShown() or e.options.hidden)
         if show then
             local region=e.options.region or e.frame
             local ratio=Scale(region)/Scale(UIParent)

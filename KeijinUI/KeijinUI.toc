@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: KeijinUI
-## Version: 3.4.2
+## Version: 3.5.0
 ## Author: Keijin
 ## Notes: Classic inspired survivor interface, run overview, statistics, damage, builds and achievements.
 ## SavedVariables: KeijinUIDB, KeijinUIBuildDB, KeijinUIAchievementsDB

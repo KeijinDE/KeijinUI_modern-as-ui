@@ -5,6 +5,21 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.0 (2026-10-21, release v3.5.0)
+
+* **Lair markers (new):** every guardian lair now has its own symbol for the whole run. You see the same symbol on the minimap and in front of the guardian's name in the run overview, so you always know which lair is which, no matter how the list is sorted or how far away a lair is.
+* **Five styles to choose from.** The default is **Coloured skulls with number**: the familiar boss skull in six colours, each with its lair number. The alternatives are **Creatures** (six small skulls of an orc, troll, tauren, dragon, demon and undead), **Raid markers** (star, circle, diamond, triangle, moon, square, shown freely without a plate), **Seals with number** and **Classic** (the plain gold, orange and grey skull as before).
+* **Status at a glance:** a lair in combat shows a small **!**, an empty lair is dimmed and shows a small **x**. A waiting lair still tells you when it is due in the run overview.
+* **Where to change it:** open `/kui`, go to Layout & Display, Guardians, and pick the style under **Lair markers**. The change shows immediately on the minimap and in the run overview.
+* **Lair marker size:** a new slider below the marker style sets minimap markers from 50 to 200 percent (default 100). Numbers and status badges scale with them, with room at the map edge and fading near your player arrow. The small symbols in the run overview keep their size.
+* The switch **Lair markers instead of game flag** (formerly "Guardian skulls instead of game flag") turns all of this off at once. Then the run overview looks exactly as before and the game's own flag stays.
+* The settings search finds the new option with words like "marker", "raid marker", "skull" or "creatures".
+* **Smoother minimap symbols:** guardian lair markers and cache chests now glide along with the map while you run, instead of stuttering slightly.
+* **Your player arrow is easier to see:** markers and chests close to the middle of the minimap turn see-through, so they cover your arrow much less.
+* **Unit frames stay put when you switch portraits:** turning **Show portraits** on or off no longer shifts your frames. Your player frame keeps the right end of its health bar in place and the target frame the left end, so only the portrait appears or disappears. Positions you saved earlier are taken over without a jump.
+* **Class resources sit right under your health bar:** with **Attached to player** the resource bar is now centred directly below the health bar, with and without portraits. In this mode it moves together with your player frame and can no longer be dragged on its own. Choose **Free** under resource position if you want to place it yourself.
+* **Free slots in the spell and item list:** the list now shows how much room is left. Empty spell slots appear as blank fields, empty item slots show a small neck, ring or trinket symbol, and hovering them names the free slot.
+
 ### 3.4.2 (2026-10-20, release v3.4.2)
 
 * **Cache icon size (new, requested by the community):** you can now choose how big the chest symbols on the minimap are. Open `/kui`, go to Layout & Display, Caches, and move the new **Cache icon size** slider anywhere from 50 to 200 percent. 100 percent is the size you know, so nothing changes until you move it.
@@ -448,6 +463,21 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.0 (2026-10-21, Release v3.5.0)
+
+* **Hortmarker (neu):** Jeder Wächterhort hat jetzt für den ganzen Run sein eigenes Symbol. Dasselbe Symbol siehst du auf der Minimap und vor dem Namen des Wächters in der Runübersicht. So weißt du immer, welcher Hort welcher ist, egal wie die Liste sortiert ist oder wie weit ein Hort entfernt liegt.
+* **Fünf Stile zur Auswahl.** Standard sind die **Farbschädel mit Ziffer**: der bekannte Bosstotenkopf in sechs Farben, jeweils mit der Nummer des Horts. Als Alternativen gibt es **Kreaturen** (sechs kleine Totenköpfe von Orc, Troll, Tauren, Drache, Dämon und Untotem), **Raidmarker** (Stern, Kreis, Diamant, Dreieck, Mond, Quadrat, frei ohne Unterlage), **Siegel mit Ziffer** und **Klassisch** (der schlichte goldene, orange und graue Totenkopf wie bisher).
+* **Zustand auf einen Blick:** Ein Hort im Kampf zeigt ein kleines **!**, ein leerer Hort ist abgedunkelt und zeigt ein kleines **x**. Wann ein wartender Hort fällig ist, steht weiterhin in der Runübersicht.
+* **Wo du es einstellst:** Öffne `/kui`, dann Layout & Anzeige, Wächter, und wähle unter **Hortmarker** den Stil. Die Änderung ist sofort auf der Minimap und in der Runübersicht zu sehen.
+* **Hortmarkergröße:** Ein neuer Regler unter der Markerwahl stellt Minimapmarker zwischen 50 und 200 Prozent ein (Standard 100). Ziffern und Statuszeichen wachsen mit, mit passendem Randabstand und Ausblendung am Spielerpfeil. Die kleinen Symbole in der Runübersicht behalten ihre Größe.
+* Der Schalter **Hortmarker statt Spielflagge** (früher "Wächtertotenköpfe statt Spielflagge") schaltet das alles auf einmal aus. Dann sieht die Runübersicht genau so aus wie vorher und die Flagge des Spiels bleibt.
+* Die Einstellungssuche findet die neue Option mit Wörtern wie "Marker", "Raidmarker", "Totenkopf" oder "Kreaturen".
+* **Flüssigere Minimap Symbole:** Die Hortmarker der Wächter und die Cache Truhen gleiten jetzt beim Laufen flüssig mit der Karte mit, statt leicht zu ruckeln.
+* **Dein Spielerpfeil ist besser zu sehen:** Marker und Truhen nahe der Minimapmitte werden durchsichtig und verdecken deinen Pfeil kaum noch.
+* **Einheitenrahmen bleiben beim Porträtwechsel stehen:** Wenn du **Porträts anzeigen** ein oder ausschaltest, verrutschen deine Rahmen nicht mehr. Der Spielerrahmen hält das rechte Ende seines Lebensbalkens fest, der Zielrahmen das linke. Es kommt also nur das Porträt dazu oder fällt weg. Früher gespeicherte Positionen werden ohne Sprung übernommen.
+* **Klassenressourcen direkt unter dem Lebensbalken:** Bei **Am Spieler** sitzt der Ressourcenbalken jetzt mittig direkt unter dem Lebensbalken, mit und ohne Porträt. In diesem Modus bewegt er sich mit deinem Spielerrahmen und lässt sich nicht mehr einzeln ziehen. Wenn du ihn selbst platzieren willst, wähle bei der Ressourcenposition **Frei**.
+* **Freie Plätze in der Spell und Itemliste:** Die Liste zeigt jetzt, wie viel Platz noch frei ist. Leere Spellplätze erscheinen als leere Felder, leere Itemplätze zeigen ein kleines Symbol für Hals, Ring oder Schmuckstück, und beim Darüberfahren steht, welcher Platz frei ist.
 
 ### 3.4.2 (2026-10-20, Release v3.4.2)
 

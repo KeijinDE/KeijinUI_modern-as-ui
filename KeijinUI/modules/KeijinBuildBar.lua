@@ -9,6 +9,29 @@ local ICON, PITCH, COLUMNS, WIDTH, ROWSTART = 28, 30, 11, 400, 58
 -- is that assumption: a longer list makes the bar grow, no spell is ever hidden.
 local NORMAL_SLOTS, ACTION_ICON, ACTION_PITCH = 6, 38, 42
 local JEWELRY = { 2, 11, 12, 13, 14 }
+-- Client assets: analysis/patch_list.txt, Interface\PaperDoll\UI-PaperDoll-Slot-*.blp.
+local EMPTY_JEWELRY = {
+	[2] = {"Neck", "Freier Halsplatz"},
+	[11] = {"Finger", "Freier Ringplatz"}, [12] = {"Finger", "Freier Ringplatz"},
+	[13] = {"Trinket", "Freier Schmuckplatz"}, [14] = {"Trinket", "Freier Schmuckplatz"}
+}
+local function EmptyItem(slot)
+	local info = EMPTY_JEWELRY[slot]
+	return {kind="emptyItem", identity="emptyItem:"..slot, slot=slot, name=info[2],
+		icon="Interface\\PaperDoll\\UI-PaperDoll-Slot-"..info[1]}
+end
+-- Keep placeholders out of the advisor and the action bar's native spell list.
+local function SpellSlots(spells)
+	local rows, total = {}, table.getn(spells)
+	local normal = math.max(0, total - 1)
+	local count = math.max(NORMAL_SLOTS, normal) + 1
+	for index = 1, count do
+		local row
+		if index == count then row = spells[total] elseif index <= normal then row = spells[index] end
+		rows[index] = row or {kind="emptySpell", identity="emptySpell:"..index}
+	end
+	return rows
+end
 local PHASES = { ready = true, playing = true, choosing = true, paused = true }
 local QUALITY = { [0] = {0.62,0.62,0.62}, [1] = {0.85,0.85,0.85},
 	[2] = {0.12,1,0}, [3] = {0,0.44,0.87}, [4] = {0.64,0.21,0.93},
@@ -56,10 +79,8 @@ local function Label(text, r, g, b)
 end
 local spellsLabel = Label("", 0.8, 0.8, 0.82)
 local itemsLabel = Label("", 0.8, 0.8, 0.82)
-local emptyItems = Label("", 0.5, 0.5, 0.52)
 KeijinUI.Live(spellsLabel, function() return T("Spells") end)
 KeijinUI.Live(itemsLabel, function() return T("Items") end)
-KeijinUI.Live(emptyItems, function() return T("Keine Items") end)
 
 local function Settings()
 	KeijinUIBuildDB = KeijinUIBuildDB or {}
@@ -127,7 +148,7 @@ local function StockBar(show)
 		if not bar:IsShown() then bar:SetAlpha(1); bar:EnableMouse(true); bar:Show() end
 	elseif bar:IsShown() then bar:SetAlpha(0); bar:EnableMouse(false); bar:Hide() end
 end
--- The native spell bar stays hidden while "Spells & jewelry" is switched on, data or not. The game may
+-- During an active run, the native spell bar stays hidden while "Spells & jewelry" is switched on. The game may
 -- switch it back on by itself, so every update checks it again.
 local function HideNative()
 	if not Supported() then return end
@@ -148,6 +169,25 @@ end
 local function NameFromLink(link)
 	local _, _, name = string.find(link or "", "|h%[(.-)%]|h")
 	return name
+end
+local function Items()
+	local items = {}
+	local available = type(GetInventoryItemLink) == "function" and type(GetInventoryItemTexture) == "function"
+	for index = 1, table.getn(JEWELRY) do
+		local slot = JEWELRY[index]
+		local link = available and GetInventoryItemLink("player", slot)
+		if link then
+			local icon = GetInventoryItemTexture("player", slot)
+			-- Do not conceal a real item whose visual data has not arrived yet.
+			if not icon then return nil end
+			local quality = type(GetInventoryItemQuality) == "function" and GetInventoryItemQuality("player", slot) or 1
+			table.insert(items, {kind="item", identity=link, name=NameFromLink(link) or T("Item"),
+				link=link, slot=slot, icon=icon, quality=quality})
+		else
+			table.insert(items, EmptyItem(slot))
+		end
+	end
+	return items
 end
 local function Book()
 	local out = {}
@@ -210,7 +250,12 @@ local spellCells, itemCells, actionCells = {}, {}, {}
 local function Tooltip(cell)
 	local row = cell.row
 	if not row then return end
+	if row.kind == "emptySpell" then return end
 	GameTooltip:SetOwner(cell, "ANCHOR_TOP")
+	if row.kind == "emptyItem" then
+		GameTooltip:SetText(T(row.name), 0.65, 0.65, 0.68)
+		GameTooltip:Show(); return
+	end
 	if row.kind=="slot" then GameTooltip:SetText(T("Zauber"),1,0.82,0); GameTooltip:AddLine(T("Warte auf die Zauberdaten des Spiels.")); GameTooltip:Show(); return end
 	if row.kind == "item" then
 		local link = GetInventoryItemLink("player", row.slot)
@@ -260,8 +305,9 @@ local function Cell(pool, index)
 	cell.rank:SetTextColor(1, 0.82, 0)
 	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -3, 2)
 	cell:SetScript("OnEnter", function()
+		if not this.row or this.row.kind == "emptySpell" then return end
 		hovered = this
-		this.border:SetBackdropBorderColor(1, 0.82, 0, 1)
+		if this.row.kind ~= "emptyItem" then this.border:SetBackdropBorderColor(1, 0.82, 0, 1) end
 		Tooltip(this)
 	end)
 	cell:SetScript("OnLeave", function()
@@ -278,14 +324,30 @@ local function Paint(pool, rows, top)
 		local cell = Cell(pool, index)
 		local changed = not cell.row or cell.row.identity ~= row.identity or cell.row.rank ~= row.rank
 			or cell.row.recommended ~= row.recommended
+		local empty = row.kind == "emptySpell" or row.kind == "emptyItem"
+		if row.kind == "emptySpell" and hovered == cell then hovered = nil; GameTooltip:Hide() end
 		cell.row = row
 		cell.color = row.kind == "item" and (QUALITY[row.quality] or QUALITY[1]) or {0.4,0.4,0.43}
+		if empty then cell.color = {0.2,0.2,0.23} end
+		cell:EnableMouse(true)
+		cell:SetScript("OnDragStart", DragStart)
+		cell:SetScript("OnDragStop", DragStop)
 		if row.recommended then cell.color = row.safety and {0.35,0.9,0.5} or {0.9,0.75,0.2} end
 		cell:ClearAllPoints()
 		local columns = pool == spellCells and COLUMNS or 5
 		local start = ROWSTART
 		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*PITCH)
-		cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+		if row.kind == "emptySpell" then
+			cell.icon:SetTexture(nil); cell.icon:Hide()
+		else
+			cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+			cell.icon:SetVertexColor(1, 1, 1, 1)
+			cell.icon:SetWidth(ICON - 4); cell.icon:SetHeight(ICON - 4)
+			cell.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+			-- Empty jewelry slots: the full-size paperdoll silhouette, cropped like an item icon, slightly greyed.
+			if row.kind == "emptyItem" then cell.icon:SetVertexColor(0.85, 0.85, 0.85, 1) end
+			cell.icon:Show()
+		end
         if row.kind=="item" and KeijinUI.collection and KeijinUI.collection.CooldownsOn() then
             if not cell.nativeCooldown then cell.nativeCooldown=KeijinUI.Text(cell,"",9,"BOTTOM",0,1) end
             local left=KeijinUI.collection.Cooldown(row.slot)
@@ -298,9 +360,12 @@ local function Paint(pool, rows, top)
 		else
 			cell.rank:Hide(); cell.rankBackground:Hide()
 		end
-		if hovered ~= cell then
+		if hovered == cell and not empty then
+			cell.border:SetBackdropBorderColor(1, 0.82, 0, 1)
+		else
 			cell.border:SetBackdropBorderColor(cell.color[1], cell.color[2], cell.color[3], 0.8)
-		elseif changed then Tooltip(cell) end
+		end
+		if hovered == cell and changed then Tooltip(cell) end
 		cell:Show()
 	end
 	for index = table.getn(rows) + 1, table.getn(pool) do
@@ -309,6 +374,15 @@ local function Paint(pool, rows, top)
 		cell.row = nil
 		cell:Hide()
 	end
+end
+local function BuildLayout(spells)
+	local spellRows = math.max(1, math.ceil(table.getn(spells) / COLUMNS))
+	local spellTop, itemTop = 8, 8 + spellRows * PITCH + 6
+	panel:SetHeight(itemTop + ICON + 10)
+	spellsLabel:ClearAllPoints(); spellsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); spellsLabel:Show()
+	itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10)); itemsLabel:Show()
+	divider:ClearAllPoints(); divider:SetPoint("TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); divider:Show()
+	return spellTop, itemTop
 end
 -- Cooldown style of the action bar: clockwise sweep (default, like stock action buttons) or the
 -- older shade that shrinks from top to bottom.
@@ -399,22 +473,22 @@ local function Update()
 	StockBar(not actionOn)
 	if not panelOn and not actionOn then Release(); return end
 	if not Supported() or type(run) ~= "table" or (run.ph and not PHASES[run.ph])
-		or type(AZS_SPELLS) ~= "table" or table.getn(AZS_SPELLS) == 0
 		or type(GetInventoryItemLink) ~= "function" or type(GetInventoryItemTexture) ~= "function" then
 		panel:Hide(); skills:Hide()
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered then GameTooltip:Hide(); hovered = nil end
 		if panelOn then HideNative() else ShowNative() end
 		PaintActions({}); if actionOn then skills:Show() end
-		Paint(spellCells,{},8); spellsLabel:Hide()
-		Paint(itemCells,{},8); emptyItems:ClearAllPoints(); emptyItems:SetPoint("LEFT",panel,"LEFT",ROWSTART,0); emptyItems:Show()
-		itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("LEFT",panel,"LEFT",10,0)
-		advice:Hide(); divider:Hide(); panel:SetHeight(48); if panelOn then panel:Show() end; return
+		local spells, items = SpellSlots({}), Items()
+		if not items then Release(); return end
+		local spellTop, itemTop = BuildLayout(spells)
+		Paint(spellCells,spells,spellTop); Paint(itemCells,items,itemTop)
+		advice:Hide(); if panelOn then panel:Show() end; return
 	end
-	if not run.ph then Release() end
 	local book, spells, items = Book(), {}, {}
-	for index = 1, table.getn(AZS_SPELLS) do
-		local value = AZS_SPELLS[index]
+	local nativeSpells = type(AZS_SPELLS) == "table" and AZS_SPELLS or {}
+	for index = 1, table.getn(nativeSpells) do
+		local value = nativeSpells[index]
 		if type(value) ~= "table" or type(value.key) ~= "string" or not Number(value.rank)
 			or not Number(value.spell) then Release(); return end
 		local name = (KeijinBuildBarNames or {})[value.key] or string.gsub(value.key, "_", " ")
@@ -430,22 +504,10 @@ local function Update()
 			book=entry and entry.slot,
 			icon=(entry and entry.icon) or (KeijinBuildBarIcons or {})[value.key]})
 	end
-	for index = 1, table.getn(JEWELRY) do
-		local slot = JEWELRY[index]
-		local link = GetInventoryItemLink("player", slot)
-		if link then
-			local icon = GetInventoryItemTexture("player", slot)
-			-- Do not conceal a real item whose visual data has not arrived yet.
-			if not icon then Release(); return end
-			local quality = type(GetInventoryItemQuality) == "function" and GetInventoryItemQuality("player", slot) or 1
-			table.insert(items, {kind="item", identity=link, name=NameFromLink(link) or T("Item"),
-				link=link, slot=slot, icon=icon, quality=quality})
-		end
-	end
-	local spellRows = math.max(1, math.ceil(table.getn(spells) / COLUMNS))
-	local spellTop = 8
-	local itemTop = spellTop + spellRows * PITCH + 6
-	panel:SetHeight(itemTop + ICON + 10)
+	items = Items()
+	if not items then Release(); return end
+	local displaySpells = SpellSlots(spells)
+	local spellTop, itemTop = BuildLayout(displaySpells)
 	advice:ClearAllPoints()
 	advice:SetPoint("TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
 	if KeijinUI.ModuleOn("advisor") and KeijinBuildAdvisor then
@@ -466,15 +528,10 @@ local function Update()
 		if hovered == advice then hovered = nil; GameTooltip:Hide() end
 		advice:Hide()
 	end
-	spellsLabel:ClearAllPoints(); spellsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); spellsLabel:Show()
-	itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10))
-	divider:ClearAllPoints(); divider:SetPoint("TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); divider:Show()
-	emptyItems:ClearAllPoints(); emptyItems:SetPoint("TOPLEFT",panel,"TOPLEFT",ROWSTART,-(itemTop+10))
-	if table.getn(items) == 0 then emptyItems:Show() else emptyItems:Hide() end
-	Paint(spellCells, spells, spellTop)
+	Paint(spellCells, displaySpells, spellTop)
 	Paint(itemCells, items, itemTop)
 	PaintActions(spells)
-	if not panelOn then ShowNative() elseif PHASES[run.ph] then HideNative() end
+	if panelOn then HideNative() else ShowNative() end
 	-- Both parts stay built when hidden, so frames anchored to the action bar keep their place.
 	if panelOn then panel:Show() else panel:Hide(); if hovered then GameTooltip:Hide(); hovered = nil end end
 	if actionOn then skills:Show() else skills:Hide() end

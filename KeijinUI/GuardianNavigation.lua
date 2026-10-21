@@ -11,6 +11,90 @@ function G.On() return K.ModuleOn("guardians") and K.DB().guardianGuide~=false e
 function G.PinsOn() return K.ModuleOn("guardians") and K.DB().guardianPins~=false end
 function G.Set(on) K.DB().guardianGuide=on and true or false; G.Update() end
 function G.SetPins(on) K.DB().guardianPins=on and true or false; G.Update() end
+-- Lair markers: one symbol per lair for the whole run, on the minimap and before the name in the overview.
+local MEDIA="Interface\\AddOns\\KeijinUI\\media\\guardians\\"
+local SKULL="Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
+local RAID="Interface\\TargetingFrame\\UI-RaidTargetingIcons"
+local STYLES={creatures=true,raid=true,skulls=true,seals=true,classic=true}
+-- Cells of the three 128x64 atlases (left,right,top,bottom), lairs 1 to 6.
+local CELLS={
+    {0.015625,0.234375,0.03125,0.46875},{0.265625,0.484375,0.03125,0.46875},{0.515625,0.734375,0.03125,0.46875},
+    {0.765625,0.984375,0.03125,0.46875},{0.015625,0.234375,0.53125,0.96875},{0.265625,0.484375,0.53125,0.96875},
+}
+local RAIDCELLS={
+    {0,0.25,0,0.25},{0.25,0.5,0,0.25},{0.5,0.75,0,0.25},{0.75,1,0,0.25},{0,0.25,0.25,0.5},{0.25,0.5,0.25,0.5},
+}
+local SKULLTINT={
+    {0.901961,0.729412,0.301961},{0.337255,0.705882,0.913725},{0.8,0.474510,0.654902},
+    {0,0.619608,0.450980},{0.835294,0.368627,0},{0.905882,0.913725,0.898039},
+}
+function G.MarkerStyle()
+    local style=K.DB().guardianMarker
+    if STYLES[style] then return style end
+    return "skulls"
+end
+function G.SetMarker(style)
+    K.DB().guardianMarker=STYLES[style] and style or "skulls"; G.Update()
+end
+-- Only minimap pins scale; the small symbols in guardian rows keep their text layout.
+function G.IconScale()
+    local value=tonumber(K.DB().guardianIconScale)
+    if not N.Finite(value) then return 1 end
+    return math.max(0.5,math.min(2,value))
+end
+function G.SetIconScale(value)
+    value=tonumber(value)
+    if not N.Finite(value) then return end
+    K.DB().guardianIconScale=math.max(0.5,math.min(2,value)); G.Update()
+end
+-- The badge extends three points beyond the base frame. Include its diagonal reach on round maps.
+local function PinInset() return math.ceil(16*G.IconScale()) end
+-- The lair number is stable for the run (lair.index); only without it the list position counts.
+function G.Slot(lair,position)
+    local n=lair and lair.index
+    if not K.Number(n) or n<1 then n=position end
+    if not K.Number(n) or n<1 then n=1 end
+    return math.mod(math.floor(n)-1,6)+1
+end
+-- Paints the symbol of one lair into icon (and digit, only used by the skull style) for its state.
+-- Badges for "!" and "x" belong to the minimap pin and are set there.
+function G.ApplyMarker(icon,digit,slot,state)
+    local style=G.MarkerStyle()
+    local empty=state=="empty"
+    if not CELLS[slot] then slot=1 end
+    if digit then digit:Hide() end
+    if style=="classic" then
+        icon:SetTexture(SKULL); icon:SetTexCoord(0,1,0,1)
+        if empty then icon:SetVertexColor(.55,.55,.55,.75)
+        elseif state=="awake" then icon:SetVertexColor(1,.45,.16,1)
+        else icon:SetVertexColor(1,.82,.28,1) end
+        return style
+    end
+    local cell=CELLS[slot]
+    if style=="raid" then
+        cell=RAIDCELLS[slot]; icon:SetTexture(RAID)
+        if empty then icon:SetVertexColor(.65,.65,.65,.9) else icon:SetVertexColor(1,1,1,1) end
+    elseif style=="skulls" then
+        local tint=SKULLTINT[slot]
+        icon:SetTexture(SKULL)
+        if empty then icon:SetVertexColor(tint[1]*.65,tint[2]*.65,tint[3]*.65,.9) else icon:SetVertexColor(tint[1],tint[2],tint[3],1) end
+    elseif style=="seals" then
+        icon:SetTexture(MEDIA.."GuardianSeals.tga")
+        if empty then icon:SetVertexColor(.75,.75,.75,1) else icon:SetVertexColor(1,1,1,1) end
+    else
+        icon:SetTexture(MEDIA.."GuardianCreatures.tga")
+        if empty then icon:SetVertexColor(.65,.65,.65,.9) else icon:SetVertexColor(1,1,1,1) end
+    end
+    if style=="skulls" then
+        icon:SetTexCoord(0,1,0,1)
+        if digit then
+            digit:SetTexture(MEDIA.."GuardianDigits.tga"); digit:SetTexCoord(CELLS[slot][1],CELLS[slot][2],CELLS[slot][3],CELLS[slot][4])
+            if empty then digit:SetVertexColor(.65,.65,.65,.9) else digit:SetVertexColor(1,1,1,1) end
+            digit:Show()
+        end
+    else icon:SetTexCoord(cell[1],cell[2],cell[3],cell[4]) end
+    return style
+end
 -- Game 0.102: AZS_SetHudShown("flag") hides the native minimap flag, AZS_GetFlaggedLair names its lair.
 -- Older clients lack both (and AZS_HUD_CVARS.flag); there the native flag stays untouched.
 function G.FlagSupported()
@@ -82,11 +166,24 @@ function G.Decorate(row)
         row.directionStep=N.Arrow(row.direction,facing-math.atan2(-destination.east,destination.north))
         row.direction:SetVertexColor(1,.82,.28,1); row.direction:Show()
     elseif row.direction then row.direction:Hide(); row.directionStep=nil end
-    row.name:ClearAllPoints(); row.name:SetPoint("LEFT",row,"LEFT",0,0)
-    row.name:SetWidth(visible and 133 or 150)
+    -- The lair symbol (14 px plus 3 px gap) pushes name and arrow right; the status column stays where it is.
+    local marked=row:IsShown() and row.lair and G.PinsOn()
+    local offset=marked and 17 or 0
+    if marked then
+        if not row.marker then
+            row.marker=row:CreateTexture(nil,"ARTWORK"); row.marker:SetWidth(14); row.marker:SetHeight(14)
+            row.marker:SetPoint("LEFT",row,"LEFT",0,0)
+            row.markerDigit=row:CreateTexture(nil,"ARTWORK"); row.markerDigit:SetWidth(14); row.markerDigit:SetHeight(14)
+            row.markerDigit:SetPoint("LEFT",row,"LEFT",0,0)
+        end
+        G.ApplyMarker(row.marker,row.markerDigit,G.Slot(row.lair,row.position),row.lair.state)
+        row.marker:Show()
+    elseif row.marker then row.marker:Hide(); row.markerDigit:Hide() end
+    row.name:ClearAllPoints(); row.name:SetPoint("LEFT",row,"LEFT",offset,0)
+    row.name:SetWidth((visible and 133 or 150)-offset)
     if visible then
-        local width=math.min(133,row.name:GetStringWidth())
-        row.direction:ClearAllPoints(); row.direction:SetPoint("LEFT",row,"LEFT",width+3,0)
+        local width=math.min(133-offset,row.name:GetStringWidth())
+        row.direction:ClearAllPoints(); row.direction:SetPoint("LEFT",row,"LEFT",offset+width+3,0)
     end
 end
 function G.AddTooltip(lair)
@@ -109,31 +206,11 @@ local function Tip(v,owner)
     G.AddTooltip(v.lair)
     GameTooltip:Show()
 end
-local overlay,playerLayer
--- The ninth native minimap child is the facing model (also used by Caches.lua).
--- Raise that model, not the whole map, so the terrain cannot cover our pins.
-local function PlayerAbovePins(on)
-    local model
-    if on and overlay and Minimap and Minimap.GetChildren then
-        local children={Minimap:GetChildren()}
-        local candidate=children[9]
-        if candidate and candidate.GetObjectType and candidate.GetFacing then
-            local kind=candidate:GetObjectType()
-            if kind=="Model" or kind=="PlayerModel" then model=candidate end
-        end
-    end
-    if playerLayer and playerLayer.frame~=model then
-        playerLayer.frame:SetFrameLevel(playerLayer.level)
-        if playerLayer.strata then playerLayer.frame:SetFrameStrata(playerLayer.strata) end
-        playerLayer=nil
-    end
-    if not model then return end
-    if not playerLayer then
-        playerLayer={frame=model,level=model:GetFrameLevel(),strata=model.GetFrameStrata and model:GetFrameStrata()}
-    end
-    local strata=overlay.GetFrameStrata and overlay:GetFrameStrata()
-    if strata then model:SetFrameStrata(strata) end
-    model:SetFrameLevel(math.max(playerLayer.level,overlay:GetFrameLevel()+4))
+local overlay
+-- Dimmer at the minimap border, faded under the player arrow in the centre (N.CenterFade).
+local function Fade(pin,x,y,edge)
+    local alpha=(edge and .8 or 1)*N.CenterFade(x,y,pin:GetWidth()/2)
+    if alpha~=pin.fade then pin.fade=alpha; pin:SetAlpha(alpha) end
 end
 local function Overlay()
     if not overlay then
@@ -151,7 +228,10 @@ local function Pin(i)
         K.Chamfer(pin,3,{.035,.035,.045,1},{.62,.57,.43,1})
         pin.icon=pin:CreateTexture(nil,"ARTWORK"); pin.icon:SetWidth(14); pin.icon:SetHeight(14)
         pin.icon:SetPoint("CENTER",pin,"CENTER",0,0)
-        pin.icon:SetTexture("Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
+        pin.icon:SetTexture(SKULL)
+        -- Number plate of the skull style: same place as the symbol, above it, below the badge frame.
+        pin.digit=pin:CreateTexture(nil,"ARTWORK"); pin.digit:SetWidth(14); pin.digit:SetHeight(14)
+        pin.digit:SetPoint("CENTER",pin,"CENTER",0,0); pin.digit:Hide()
         pin.badge=CreateFrame("Frame",nil,pin); pin.badge:SetAllPoints(pin); pin.badge:SetFrameLevel(pin:GetFrameLevel()+1)
         -- Tiny FontStrings are clipped/wrapped by this client. Draw one complete transparent
         -- symbol instead, straddling the lower-right corner rather than floating beside it.
@@ -166,27 +246,67 @@ local function Pin(i)
         pin:SetScript("OnMouseWheel",function() local f=Minimap:GetScript("OnMouseWheel"); if f then f() end end)
         G.pins[i]=pin
     end
+    local scale=G.IconScale()
+    if pin.iconScale~=scale then
+        pin.iconScale=scale
+        pin:SetWidth(16*scale); pin:SetHeight(16*scale)
+        K.Chamfer(pin,3*scale,{.035,.035,.045,1},{.62,.57,.43,1})
+        pin.icon:SetWidth(14*scale); pin.icon:SetHeight(14*scale)
+        pin.digit:SetWidth(14*scale); pin.digit:SetHeight(14*scale)
+        pin.badge.mark:SetWidth(8*scale); pin.badge.mark:SetHeight(8*scale)
+        pin.badge.mark:ClearAllPoints()
+        pin.badge.mark:SetPoint("CENTER",pin,"BOTTOMRIGHT",-scale,scale)
+        pin.glideX=nil; pin.boxed=nil
+    end
     return pin
 end
--- Gold skull while held, orange with "!" in combat, grey with "x" once empty.
-local function Paint(pin,state)
+-- The symbol of the lair (see G.ApplyMarker), "!" in combat, darker with "x" once empty.
+local function Paint(pin,state,slot)
     pin.state=state
+    -- Raid markers stand on their own; every other style keeps its dark plate with rim.
+    local boxed=G.ApplyMarker(pin.icon,pin.digit,slot,state)~="raid"
+    if pin.boxed~=boxed then
+        pin.boxed=boxed
+        for _,t in ipairs(pin.chamfer.back) do if boxed then t:Show() else t:Hide() end end
+        for _,t in ipairs(pin.chamfer.rim) do if boxed then t:Show() else t:Hide() end end
+    end
     if state=="empty" then
-        pin.icon:SetVertexColor(.55,.55,.55,.75)
-        pin.badge.mark:SetTexture("Interface\\AddOns\\KeijinUI\\media\\guardians\\GuardianEmpty.tga")
+        pin.badge.mark:SetTexture(MEDIA.."GuardianEmpty.tga")
         pin.badge.mark:SetVertexColor(.85,.85,.85,1); pin.badge:Show()
     elseif state=="awake" then
-        pin.icon:SetVertexColor(1,.45,.16,1)
-        pin.badge.mark:SetTexture("Interface\\AddOns\\KeijinUI\\media\\guardians\\GuardianCombat.tga")
+        pin.badge.mark:SetTexture(MEDIA.."GuardianCombat.tga")
         pin.badge.mark:SetVertexColor(1,.7,.3,1); pin.badge:Show()
-    else pin.icon:SetVertexColor(1,.82,.28,1); pin.badge:Hide() end
+    else pin.badge:Hide() end
+end
+-- Every frame: the shown pins follow the smooth player position (sx, sy). Each pin keeps the offset the tick gave
+-- it relative to the raw position of that tick; the clamp at the border is the same as in the tick.
+function G.Glide(sx,sy)
+    local count,px,py=G.shownPins,G.glideX,G.glideY
+    if not count or count<1 or not px or not inWorld or not Minimap or not K.ModuleOn("guardians") or not G.PinsOn() then return end
+    local diameter=K.caches and K.caches.Diameter()
+    if not diameter or diameter<=0 then return end
+    local width,height=Minimap:GetWidth(),Minimap:GetHeight()
+    local square=K.MinimapStyled and K.MinimapStyled()
+    local dx,dy=sx-px,sy-py
+    for i=1,count do
+        local pin=G.pins[i]
+        local v=pin and pin.destination
+        if v and v.source=="world" and pin:IsShown() then
+            local x,y,edge=N.Project(v.east+dy,v.north-dx,PinInset(),width,height,diameter,square)
+            if not pin.glideX or math.abs(pin.glideX-x)>=0.01 or math.abs(pin.glideY-y)>=0.01 then
+                pin.glideX,pin.glideY=x,y
+                pin:ClearAllPoints(); pin:SetPoint("CENTER",Minimap,"CENTER",x,y)
+            end
+            pin.atEdge=edge; Fade(pin,x,y,edge)
+        end
+    end
 end
 function G.Update()
+    G.glideX,G.glideY=nil,nil
     for row in pairs(rows) do G.Decorate(row) end
     if not inWorld or (not G.On() and not G.PinsOn()) then
         G.current=nil; G.shownPins=0
         for _,pin in ipairs(G.pins) do pin.destination=nil; pin:Hide() end
-        PlayerAbovePins(false)
         NativeFlag(false)
         return
     end
@@ -194,6 +314,7 @@ function G.Update()
     -- the world the early return above prevents later ticks from taking it over again.
     local replace=G.PinsOn() and G.FlagSupported()
     NativeFlag(replace)
+    local tickX,tickY=N.WorldPosition()
     local list=G.List(); local chosen
     for _,v in ipairs(list) do if selected==v.key then chosen=v; break end end
     chosen=chosen or Nearest(list); selected=chosen and chosen.key or nil; G.current=chosen
@@ -207,14 +328,15 @@ function G.Update()
             local wanted=v.defeated or replace
             if wanted and v.dist then
                 -- Include the small status overhang at the lower-right corner.
-                local x,y,edge=N.MinimapPoint(v.east,v.north,14)
+                local x,y,edge=N.MinimapPoint(v.east,v.north,PinInset())
                 if x then
                     local pin=Pin(count+1)
                     if pin then
                         count=count+1; pin.destination=v; pin.atEdge=edge
                         pin:ClearAllPoints(); pin:SetPoint("CENTER",Minimap,"CENTER",x,y)
-                        Paint(pin,v.lair.state)
-                        pin:SetAlpha(edge and .8 or 1); pin:Show()
+                        pin.glideX=nil
+                        Paint(pin,v.lair.state,G.Slot(v.lair,v.index))
+                        Fade(pin,x,y,edge); pin:Show()
                     end
                 end
             end
@@ -222,7 +344,12 @@ function G.Update()
     end
     for i=count+1,table.getn(G.pins) do G.pins[i].destination=nil; G.pins[i]:Hide() end
     G.shownPins=count
-    PlayerAbovePins(count>0)
+    -- The offsets of the pins are relative to the raw position of this tick; the glide shifts them every frame.
+    if count>0 and tickX~=nil then
+        G.glideX,G.glideY=tickX,tickY
+        local sx,sy=N.SmoothPosition()
+        if sx then G.Glide(sx,sy) end
+    end
 end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then selected=nil; awaitLairs=true

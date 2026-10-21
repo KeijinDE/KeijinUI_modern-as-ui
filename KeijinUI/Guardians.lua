@@ -53,7 +53,7 @@ end
 local function Row(parent,i)
     if rows[i] then return rows[i] end
     local row=CreateFrame("Frame",nil,parent)
-    row:SetWidth(272); row:SetHeight(17)
+    row:SetWidth(272); row:SetHeight(17); row.position=i
     row.name=K.Text(row,"",10,"LEFT",0,0,150)
     row.state=K.Text(row,"",10,"RIGHT",0,0)
     row.state:SetWidth(120); row.state:SetHeight(15); row.state:SetJustifyH("RIGHT")
@@ -123,6 +123,7 @@ function G.Debug()
     K.Say("guardians debug: AZS_LAIRS "..(type(AZS_LAIRS)=="table" and table.getn(AZS_LAIRS) or "nil")
         .." age "..(age and string.format("%.1f",age) or "nil").." AZS_GetLairs "..tostring(AZS_GetLairs~=nil)
         .." run gu/ga/lairs "..(type(AZS_RUN)=="table" and (tostring(AZS_RUN.gu).."/"..tostring(AZS_RUN.ga).."/"..tostring(AZS_RUN.lairs)) or "nil"))
+    if K.navigation and K.navigation.SmoothText then K.Say("guardians debug: "..K.navigation.SmoothText()) end
     for _,l in ipairs(type(AZS_LAIRS)=="table" and AZS_LAIRS or {}) do
         K.Say(string.format("lair %s %s %s id=%s left=%s",tostring(l.index),tostring(l.name),tostring(l.state),tostring(l.id),tostring(l.left)))
     end

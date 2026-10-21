@@ -50,7 +50,7 @@ Bind("minimap","Minimap","Minimap im KeijinUI Stil mit Uhr und Minimapknopf. Aus
     {},function() K.MinimapRefresh(); K.MinimapButtonRefresh() end,function() K.MinimapRefresh(); K.MinimapButtonRefresh() end,nil,true)
 Bind("caches","Caches","Cachesymbole, Randpfeil, Bildschirmpfeil und Meldung. Aus: keine Cachehinweise von KeijinUI.",
     {},K.caches.Stop,K.caches.Update)
-Bind("guardians","Wächter","Wächter in der Runübersicht, Richtungspfeile und Totenköpfe an den Horten. Aus: Die rote Wächterflagge des Spiels kommt zurück.",
+Bind("guardians","Wächter","Wächter in der Runübersicht, Richtungspfeile und Hortmarker an den Horten. Aus: Die rote Wächterflagge des Spiels kommt zurück.",
     {},K.guardianNav.Update,K.guardianNav.Update)
 Bind("analysis","Run-Analyse","Pace-Indikator, XP Rate mit Levelschätzung sowie Leben und Rerolls. Aus: Die Runübersicht zeigt nur die Grundwerte.",
     {},function() K.xpRate.label:Hide(); K.tally.UpdateExtras() end,function() K.xpRate.Reset(); K.tally.UpdateExtras() end)

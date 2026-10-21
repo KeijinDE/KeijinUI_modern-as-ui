@@ -57,7 +57,7 @@ end
 local function Resize()
     if not icons then return end
     local size=math.floor(ICON_SIZE*C.IconScale()+0.5)
-    for _,b in ipairs(icons) do b:SetWidth(size); b:SetHeight(size) end
+    for _,b in ipairs(icons) do b:SetWidth(size); b:SetHeight(size); b.glideX=nil end
 end
 function C.SetIconScale(value)
     value=tonumber(value)
@@ -378,8 +378,8 @@ local function Clusters(valid,px,py,sx,sy,world)
     return list
 end
 -- A symbol counts as inside while all of it stays on the map, at least EDGE_INSET from the border.
-local function Place(cluster,ppy,width,height,round,inset)
-    local ox,oy=cluster.east*ppy,cluster.north*ppy
+local function Place(east,north,ppy,width,height,round,inset)
+    local ox,oy=east*ppy,north*ppy
     local half,halfH=width/2,height/2
     local inside
     if round then inside=Hypot(ox,oy)<=half-inset
@@ -387,17 +387,59 @@ local function Place(cluster,ppy,width,height,round,inset)
     return ox,oy,inside
 end
 -- Point on the minimap border (inset) in the direction of ox, oy: square clamp or circle.
-local function EdgePoint(ox,oy,width,height,round)
+local function EdgePoint(ox,oy,width,height,round,inset)
+    inset=inset or EDGE_INSET
     local r=Hypot(ox,oy)
     if r<1e-6 then return 0,0 end
     local t
-    if round then t=(width/2-EDGE_INSET)/r
+    if round then t=(width/2-inset)/r
     else
-        local tx=math.abs(ox)>1e-6 and (width/2-EDGE_INSET)/math.abs(ox) or 1e9
-        local ty=math.abs(oy)>1e-6 and (height/2-EDGE_INSET)/math.abs(oy) or 1e9
+        local tx=math.abs(ox)>1e-6 and (width/2-inset)/math.abs(ox) or 1e9
+        local ty=math.abs(oy)>1e-6 and (height/2-inset)/math.abs(oy) or 1e9
         t=math.min(tx,ty)
     end
     return ox*t,oy*t
+end
+-- Placing at the border or moving a symbol in between: skip when it has not moved.
+local function Move(f,x,y)
+    if f.glideX and math.abs(f.glideX-x)<0.01 and math.abs(f.glideY-y)<0.01 then return end
+    f.glideX,f.glideY=x,y
+    f:ClearAllPoints(); f:SetPoint("CENTER",Minimap,"CENTER",x,y)
+    -- Symbols under the player arrow fade so the arrow stays visible; the edge arrow sits at the border anyway.
+    if not f.isEdge then
+        local alpha=K.navigation.CenterFade(x,y,f:GetWidth()/2)
+        if alpha~=f.fade then f.fade=alpha; f:SetAlpha(alpha) end
+    end
+end
+-- Every frame: the visible symbols follow the smooth player position (sx, sy). They stay where the tick put them
+-- relative to the world; a symbol that would leave the border is clamped to it until the next tick decides.
+function C.Glide(sx,sy)
+    local px,py=C.glideX,C.glideY
+    if not px or not icons or not Minimap or not K.ModuleOn("caches") then return end
+    local count=C.shown or 0
+    local arrowShown=edge and edge:IsShown() and edge.info
+    if count<1 and not arrowShown then return end
+    local diameter=C.Diameter()
+    if not diameter or diameter<=0 then return end
+    local width,height=Minimap:GetWidth(),Minimap:GetHeight()
+    local ppy=width/diameter
+    local round=not Square()
+    local dx,dy=sx-px,sy-py
+    local inset=math.max(EDGE_INSET,math.floor(ICON_SIZE*C.IconScale()+0.5)/2)
+    for i=1,count do
+        local b=icons[i]
+        local c=b and b.info
+        if c and b:IsShown() then
+            local ox,oy,inside=Place(c.east+dy,c.north-dx,ppy,width,height,round,inset)
+            if not inside then ox,oy=EdgePoint(ox,oy,width,height,round,inset) end
+            Move(b,ox,oy)
+        end
+    end
+    if arrowShown then
+        local c=edge.info
+        local ex,ey=EdgePoint((c.east+dy)*ppy,(c.north-dx)*ppy,width,height,round)
+        Move(edge,ex,ey)
+    end
 end
 local function Track(px,py,sx,sy)
     if not px or not sx then return end
@@ -409,6 +451,7 @@ local function Track(px,py,sx,sy)
     end
 end
 function C.Update()
+    C.glideX,C.glideY=nil,nil
     if not K.ModuleOn("caches") then if C.Stop then C.Stop() end; return end
     if not inWorld then Clear("outside world"); return end
     local phase=RunPhase()
@@ -466,12 +509,13 @@ function C.Update()
     local inset=math.max(EDGE_INSET,math.floor(ICON_SIZE*C.IconScale()+0.5)/2)
     local shown=0
     for i,c in ipairs(clusters) do
-        local ox,oy,inside=Place(c,ppy,width,height,round,inset)
+        local ox,oy,inside=Place(c.east,c.north,ppy,width,height,round,inset)
         if i==1 then
             if inside or not wantEdge then edge:Hide()
             else
                 local ex,ey=EdgePoint(ox,oy,width,height,round)
                 edge:ClearAllPoints(); edge:SetPoint("CENTER",Minimap,"CENTER",ex,ey)
+                edge.glideX=nil
                 edge.info=c
                 Cell(edge.tex,math.atan2(ox,oy))
                 edge:Show()
@@ -480,7 +524,8 @@ function C.Update()
         if inside and wantIcons and shown<MAX_ICONS then
             shown=shown+1
             local b=icons[shown]
-            b:ClearAllPoints(); b:SetPoint("CENTER",Minimap,"CENTER",ox,oy)
+            b.glideX=nil
+            Move(b,ox,oy); b.glideX=nil
             b.info=c
             b.count:SetText(c.count>1 and tostring(c.count) or "")
             b:Show()
@@ -488,6 +533,12 @@ function C.Update()
     end
     for i=shown+1,MAX_ICONS do icons[i]:Hide() end
     C.shown=shown
+    -- Raw position of this tick: the offsets in the clusters are relative to it, the per frame glide shifts them.
+    if world then
+        C.glideX,C.glideY=px,py
+        local sx,sy=K.navigation.SmoothPosition()
+        if sx then C.Glide(sx,sy) end
+    end
 end
 
 -- Shared map fallback for older builds. A lair may supply the calibration points even without caches.
@@ -531,6 +582,7 @@ function C.DebugLines()
         Add(string.format("Caches nearest: %.0f yards (east %.0f, north %.0f), %d symbols shown",
             C.nearest.dist,C.nearest.east,C.nearest.north,C.shown or 0))
     end
+    Add("Caches "..K.navigation.SmoothText())
     Add(string.format("Caches settings: icons %s (size %d%%), edge arrow %s, screen arrow %s, message %s",
         tostring(C.IconsOn()),math.floor(C.IconScale()*100+0.5),tostring(C.EdgeOn()),tostring(C.ArrowOn()),tostring(C.MessageOn())))
     return lines

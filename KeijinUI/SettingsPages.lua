@@ -90,8 +90,10 @@ O.Help(p,"Caches nutzen Weltkoordinaten, wenn das Spiel sie liefert, auch in Ins
 O.Section(p,"Wächter","guardians")
 O.Toggle(p,"guardians","Wächter in der Runübersicht",K.guardians.On,K.guardians.Set)
 O.Toggle(p,"guardianGuide","Richtungspfeile bei Wächtern",K.guardianNav.On,K.guardianNav.Set)
-O.Toggle(p,"guardianPins","Wächtertotenköpfe statt Spielflagge",K.guardianNav.PinsOn,K.guardianNav.SetPins)
-O.Help(p,"Totenkopf an jedem Hort: gold besetzt, orange mit ! im Kampf, grau mit x leer. Ersetzt die rote Flagge des Spiels (ab 0.102), davor nur graue Totenköpfe. Tooltip mit Rückkehrzeit.")
+O.Toggle(p,"guardianPins","Hortmarker statt Spielflagge",K.guardianNav.PinsOn,K.guardianNav.SetPins)
+O.Requires(O.Choice(p,"guardianMarker","Hortmarker",K.guardianNav.MarkerStyle,K.guardianNav.SetMarker,{{"creatures","Kreaturen"},{"raid","Raidmarker"},{"skulls","Farbschädel mit Ziffer"},{"seals","Siegel mit Ziffer"},{"classic","Klassisch"}}),K.guardianNav.PinsOn)
+O.Requires(O.Slider(p,"guardian_size","Hortmarkergröße",K.guardianNav.IconScale,K.guardianNav.SetIconScale,50,200),K.guardianNav.PinsOn)
+O.Help(p,"Jeder Hort hat für den ganzen Run sein eigenes Symbol, auf der Minimap und vor dem Namen in der Runübersicht. Mit ! im Kampf, abgedunkelt mit x leer. Ersetzt die rote Flagge des Spiels (ab 0.102), davor nur Symbole für besiegte Horte. Tooltip mit Rückkehrzeit.")
 O.Help(p,"Kleine Richtungspfeile rechts neben den Wächternamen. Entfernung zum festen Hort im Tooltip. Mit der Runübersicht verschiebbar.")
 
 O.Section(p,"Run-Analyse","analysis")

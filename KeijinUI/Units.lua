@@ -63,6 +63,15 @@ local CLEAN_H=K.PortraitFree.H
 local DEBUFF_X,DEBUFF_Y=4,-2
 -- portraits==false selects the compact frame without portrait; nil and true keep the portrait style.
 local function CleanStyle() return K.DB().portraits==false end
+-- Distance from the frame's left and top edge to the corner of its health bar that stays put when the style changes:
+-- top right corner for the player (portrait on the left), top left corner for the target (portrait on the right).
+-- The bar top sits 29 points below the frame top in the portrait style and HEAD (20) in the compact one.
+local BAR_TOP=29
+local function EdgeOffset(unit,clean)
+    if clean then return unit=="player" and K.PortraitFree.W or 0,K.PortraitFree.HEAD end
+    if unit=="player" then return 44-17+HOLDER_W+16,BAR_TOP end
+    return 4+1,BAR_TOP
+end
 local FIELDS={"label","level","health","percent","bar","rim","body"}
 -- Both geometries are built once under the stable outer frame and only shown or hidden here.
 -- The active one is mirrored into f.label, f.level, f.health, f.percent, f.bar, f.rim and f.body.
@@ -153,8 +162,14 @@ local function Create(unit,mirror)
     f:SetScript("OnLeave",function() GameTooltip:Hide() end)
     K.layout.Register(unit,f,unit=="player" and "Spieler" or "Ziel",function(frame)
         frame:ClearAllPoints()
-        frame:SetPoint(mirror and "LEFT" or "RIGHT",KeijinUISkills,mirror and "RIGHT" or "LEFT",mirror and 12 or -12,0)
-    end,{scale=K.CombatScale,hidden=mirror})
+        -- The health bar edge sits 12 points from the skill bar in both styles; the frame edge moves instead.
+        local clean=CleanStyle()
+        local off,top=EdgeOffset(unit,clean)
+        local x=mirror and 12-off or -12+((clean and K.PortraitFree.W or FRAME_W)-off)
+        -- The frame is centred on the skill bar: the bar top moves with the frame height, so shift it back.
+        local y=top-(clean and CLEAN_H or FRAME_H)/2
+        frame:SetPoint(mirror and "LEFT" or "RIGHT",KeijinUISkills,mirror and "RIGHT" or "LEFT",x,y)
+    end,{scale=K.CombatScale,hidden=mirror,edge=function() return EdgeOffset(unit,CleanStyle()) end})
     if mirror then
         f.debuffs=K.DebuffRow(f,18,false)
         f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",DEBUFF_X,DEBUFF_Y)

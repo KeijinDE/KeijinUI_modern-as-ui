@@ -37,11 +37,13 @@ flash:SetTexture(K.flat); flash:SetPoint("TOPLEFT",housing,"TOPLEFT",7,-1)
 flash:SetPoint("TOPRIGHT",housing,"TOPRIGHT",-7,-1); flash:SetHeight(1); flash:SetVertexColor(0.88,0.82,0.67,1); flash:SetAlpha(0)
 local inWorld=true
 local glowUntil=0
+local GAP=2
 local function Attached() return K.DB().resourceFree~=true end
 local function Anchor(f)
     local player=K.units.player
     f:ClearAllPoints(); f:SetScale(player:GetScale())
-    f:SetPoint("TOP",player,"BOTTOM",0,-4)
+    -- Centred just below the health bar of the active frame style (the bar ends at the frame's bottom edge).
+    f:SetPoint("TOP",player.bar,"BOTTOM",0,-GAP)
 end
 local function Detach()
     if not Attached() then return end
@@ -50,10 +52,11 @@ local function Detach()
     frame:ClearAllPoints(); frame:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",x,y)
 end
 K.layout.Register("resources",frame,"Klassenressourcen",Anchor,
-    {scale=K.CombatScale,hidden=true,follow=Attached,beforeMove=Detach})
+    {scale=K.CombatScale,hidden=true,follow=Attached,locked=Attached})
 local playerEntry=K.layout.entries.player
 playerEntry.options.bottom=function()
-    if Attached() and (frame:IsShown() or IsAltKeyDown() or K.layout.IsEditing()) then return 24 end
+    -- Gap below the health bar plus the frame height; the bar ends at the player frame's bottom edge.
+    if Attached() and (frame:IsShown() or IsAltKeyDown() or K.layout.IsEditing()) then return GAP+frame:GetHeight() end
     return 0
 end
 local function Clear(reason)

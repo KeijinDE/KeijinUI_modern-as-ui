@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.5.3", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.5.4", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300

@@ -1,5 +1,6 @@
 -- Survivors proc resources, not a normal WoW casting-power bar.
--- Native active power is read directly. Never reconstruct points from combat events.
+-- Since game 0.105 AZS_RUN.proc/pv/pm report the class proc exactly; native power is the fallback.
+-- Never reconstruct points from combat events.
 local K=KeijinUI
 local R={}
 K.resources=R
@@ -122,6 +123,13 @@ local function Read()
         if not value then return nil,text end
         return kind,value,cd,cdmax,text
     end
+    -- The game's own meter (0.105+): proc names the mechanic, pv how full it is, pm full.
+    local r=AZS_RUN
+    if type(r)=="table" and r.proc==kind.key and K.Number(r.pv) and K.Number(r.pm) and r.pm>0
+        and r.pv>=0 and r.pv<=r.pm and K.Fresh(AZS_RUN_UPDATED) then
+        if kind.art then return kind,math.min(5,math.floor(r.pv/r.pm*5+0.0001)),r.pv,r.pm end
+        return kind,math.min(100,r.pv/r.pm*100),r.pv,r.pm
+    end
     if UnitPowerType("player")~=kind.power then return nil,"power type mismatch" end
     local raw,max=UnitMana("player"),UnitManaMax("player")
     if not K.Number(raw) or not K.Number(max) or max<=0 or raw>max then return nil,"invalid native power" end
@@ -179,6 +187,8 @@ function K.ResourceDebug()
         tostring(class),tostring(phase),tostring(UnitPowerType and UnitPowerType("player")),
         tostring(UnitMana and UnitMana("player")),tostring(UnitManaMax and UnitManaMax("player")),
         tostring(R.value),tostring(R.reason or "valid")))
+    local r=type(AZS_RUN)=="table" and AZS_RUN or {}
+    K.Say(string.format("Resources game: proc %s, pv %s, pm %s",tostring(r.proc),tostring(r.pv),tostring(r.pm)))
     if class=="PRIEST" then
         local spell=Spell("lightwell") or {}
         K.Say(string.format("Resources lightwell: cd %s, cdmax %s, mana %s / %s, type %s",

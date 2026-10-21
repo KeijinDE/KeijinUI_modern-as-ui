@@ -1,4 +1,4 @@
-# KeijinUI 3.5.3
+# KeijinUI 3.5.4
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -93,7 +93,7 @@ Ability names (recommendation title, tooltips, meter) follow the language: Germa
 
 ## Data
 
-Class resources read native active power rather than counting combat events. The reported Survivors encoding uses 20 absolute units per point or shard, with a native maximum of 100. Other ranges stay hidden. Rage accepts native maximum 100 or 1000 and shows progress to full. These adapters are covered by fixture tests; the packaged game value transitions still require confirmation. `/kui resources debug` prints current native inputs without saving them.
+Class resources read the game's own count first (`AZS_RUN.proc`, `pv`, `pm`, game 0.105 and later) and fall back to native active power; they never count combat events. The reported Survivors encoding uses 20 absolute units per point or shard, with a native maximum of 100. Other ranges stay hidden. Rage accepts native maximum 100 or 1000 and shows progress to full. These adapters are covered by fixture tests; the packaged game value transitions still require confirmation. `/kui resources debug` prints current native inputs and the game's proc fields without saving them.
 
 Run time, level, kills, elites, guardians, bosses, gold, cache count and damage totals come straight from the game interface. Pause and card choice use the stopped game time. Missing values show as question marks. The damage meter takes over all sources of the native meter, including talents and items. The native reset does not affect this interface. Frames you move yourself can overlap again.
 
@@ -214,7 +214,7 @@ Fähigkeitsnamen (Titel der Empfehlung, Tooltips, Meter) folgen der Sprache: deu
 
 ## Daten
 
-Klassenressourcen lesen die aktive native Ressource statt Kampfeignisse zu zählen. Die berichtete Survivors Zuordnung verwendet 20 absolute Einheiten pro Punkt oder Splitter bei einem nativen Maximum von 100. Andere Bereiche werden ausgeblendet. Wut unterstützt ein natives Maximum von 100 oder 1000 und zeigt den Fortschritt bis voll. Die Adapter sind mit Testdaten geprüft; die Wertübergänge im ausgelieferten Spiel müssen noch bestätigt werden. Der Lichtbrunnen Countdown stammt aus `AZS_SPELLS` (`cd`, `cdmax`) und läuft zwischen den Updates anhand der Laufzeit weiter. `/kui resources debug` gibt aktuelle native Eingaben aus (beim Priester zusätzlich cd, cdmax und Mana), ohne sie zu speichern.
+Klassenressourcen lesen zuerst den Wert des Spiels (`AZS_RUN.proc`, `pv`, `pm`, ab Spiel 0.105) und sonst die aktive native Ressource; Kampfeignisse werden nie gezählt. Die berichtete Survivors Zuordnung verwendet 20 absolute Einheiten pro Punkt oder Splitter bei einem nativen Maximum von 100. Andere Bereiche werden ausgeblendet. Wut unterstützt ein natives Maximum von 100 oder 1000 und zeigt den Fortschritt bis voll. Die Adapter sind mit Testdaten geprüft; die Wertübergänge im ausgelieferten Spiel müssen noch bestätigt werden. Der Lichtbrunnen Countdown stammt aus `AZS_SPELLS` (`cd`, `cdmax`) und läuft zwischen den Updates anhand der Laufzeit weiter. `/kui resources debug` gibt aktuelle native Eingaben und die Procfelder des Spiels aus (beim Priester zusätzlich cd, cdmax und Mana), ohne sie zu speichern.
 
 Runzeit, Level, Kills, Eliten, Wächter, Bosse, Goldverdienst, Cacheanzahl und Schadenssummen kommen direkt aus der Spielschnittstelle. Pause und Kartenwahl verwenden die angehaltene Spielzeit. Fehlende Werte erscheinen als Fragezeichen. Die Schadensanzeige übernimmt alle Quellen des nativen Meters, einschließlich Talenten und Gegenständen. Der native Reset beeinflusst diese Schnittstelle nicht. Selbst verschobene Rahmen können wieder Überlappungen erzeugen.
 

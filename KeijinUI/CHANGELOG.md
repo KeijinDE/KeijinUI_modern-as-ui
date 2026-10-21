@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.4 (2026-10-22, release v3.5.4)
+
+* **Class resources read the game's own count:** soul shards, combo points and Bloodrage now show exactly what the game counts, instead of being worked out from your mana or energy. A soul shard only counts once it is full.
+* **Warlock demons in the damage meter:** the Imp, Felhunter, Voidwalker, Succubus, Infernal, Doomguard, Felguard and Pit Lord now show their own icon in the damage meter, the **Biggest critical hits** window and the floating damage numbers. Their attacks Firebolt, Felseeker, Doom Bringer and Brutal Momentum and the spell Demonic Empowerment have icons too, in every game language.
+
 ### 3.5.3 (2026-10-21, release v3.5.3)
 
 * **Damage meter icons in every game language:** spell, ability and talent icons now also appear when the game runs in Russian, Ukrainian, Polish, French, Spanish, Portuguese, Czech, Romanian, Turkish, Chinese, Japanese or Korean. Before, only English and German names found their icon. A few names that stand for two different abilities in one language stay without an icon.
@@ -477,6 +482,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.4 (2026-10-22, Release v3.5.4)
+
+* **Klassenressourcen zeigen den Wert des Spiels:** Seelensplitter, Combopunkte und Blutrausch zeigen jetzt genau das, was das Spiel zählt, statt aus Mana oder Energie errechnet zu werden. Ein Seelensplitter zählt erst, wenn er ganz voll ist.
+* **Dämonen des Hexenmeisters in der Schadensanzeige:** Wichtel, Teufelsjäger, Leerwandler, Sukkubus, Höllenbestie, Verdammniswache, Teufelswache und Grubenlord zeigen jetzt ihr eigenes Symbol in der Schadensanzeige, im Fenster **Größte kritische Treffer** und bei den Schadenszahlen. Auch ihre Angriffe Feuerblitz, Teufelssucher, Verdammnisbringer und Brutaler Schwung und der Zauber Dämonische Ermächtigung haben Symbole, in jeder Spielsprache.
 
 ### 3.5.3 (2026-10-21, Release v3.5.3)
 

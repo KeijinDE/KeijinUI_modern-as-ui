@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.3 (2026-10-21, release v3.5.3)
+
+* **Damage meter icons in every game language:** spell, ability and talent icons now also appear when the game runs in Russian, Ukrainian, Polish, French, Spanish, Portuguese, Czech, Romanian, Turkish, Chinese, Japanese or Korean. Before, only English and German names found their icon. A few names that stand for two different abilities in one language stay without an icon.
+
 ### 3.5.2 (2026-10-21, release v3.5.2)
 
 * **Item icons in the damage meter:** damage that comes from one of your items now shows the icon of that item next to its name, in the damage meter, the **Biggest critical hits** window and the floating damage numbers. The icon stays even after the item is taken off, for example after death or victory. Sources without a known icon keep an empty space.
@@ -473,6 +477,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.3 (2026-10-21, Release v3.5.3)
+
+* **Symbole in der Schadensanzeige in allen Spielsprachen:** Zauber, Fähigkeiten und Talente zeigen ihr Symbol jetzt auch, wenn das Spiel auf Russisch, Ukrainisch, Polnisch, Französisch, Spanisch, Portugiesisch, Tschechisch, Rumänisch, Türkisch, Chinesisch, Japanisch oder Koreanisch läuft. Bisher fanden nur englische und deutsche Namen ihr Symbol. Einige wenige Namen, die in einer Sprache für zwei verschiedene Fähigkeiten stehen, bleiben ohne Symbol.
 
 ### 3.5.2 (2026-10-21, Release v3.5.2)
 

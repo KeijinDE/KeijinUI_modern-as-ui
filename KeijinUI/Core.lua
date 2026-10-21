@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.5.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.5.3", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -183,7 +183,7 @@ function K.SpellIcon(name)
     local key=byName[name]
     local icon=key and KeijinBuildBarIcons and KeijinBuildBarIcons[key]
     if icon then return icon end
-    -- Last: talents that deal damage under their own name (Seal of Command), English and German.
+    -- Last: talents that deal damage under their own name (Seal of Command) and abilities, in all game languages.
     return KeijinTalentIcons and KeijinTalentIcons[Lower(name)] or nil
 end
 -- One language everywhere: German names for the German interface, English names otherwise.

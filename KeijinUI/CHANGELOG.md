@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.1 (2026-10-21, release v3.5.1)
+
+* **Spell icons in the damage meter (new, requested by the community):** the damage meter can now show the icon of each spell next to its name, in the Run, Boss and Healing views and in the **Biggest critical hits** window. Melee shows your weapon. Switch it on with `/kui`, Combat, Damage meter, **Show spell icons**. It starts switched off, so nothing changes until you turn it on.
+* **Loot list hides while empty:** in the list and icon modes the loot window now only appears once you have looted something in the run, instead of showing "No loot in this run yet". Hold Alt or use the layout editor to see and move it while it is empty.
+
 ### 3.5.0 (2026-10-21, release v3.5.0)
 
 * **Lair markers (new):** every guardian lair now has its own symbol for the whole run. You see the same symbol on the minimap and in front of the guardian's name in the run overview, so you always know which lair is which, no matter how the list is sorted or how far away a lair is.
@@ -463,6 +468,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.1 (2026-10-21, Release v3.5.1)
+
+* **Spellsymbole in der Schadensanzeige (neu, Wunsch aus der Community):** die Schadensanzeige kann jetzt neben jedem Namen das Symbol des Zaubers zeigen, in den Ansichten Run, Boss und Heilung und im Fenster **Größte kritische Treffer**. Nahkampf zeigt deine Waffe. Einschalten unter `/kui`, Kampf, Schadensanzeige, **Spellsymbole anzeigen**. Die Option ist zu Beginn aus, es ändert sich also nichts, bis du sie einschaltest.
+* **Beuteliste bleibt leer unsichtbar:** in den Listen und Symbolmodi erscheint das Beutefenster erst, wenn du im Run etwas erbeutet hast, statt "Noch keine Beute in diesem Run" zu zeigen. Mit gedrückter Alt Taste oder im Layout Editor siehst und verschiebst du es auch leer.
 
 ### 3.5.0 (2026-10-21, Release v3.5.0)
 

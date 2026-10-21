@@ -386,10 +386,12 @@ local function CheckRun()
     if reported then previousReported=reported end
 end
 local function RenderList(mode)
-    local show=Enabled() or (IsAltKeyDown and IsAltKeyDown()) or (K.layout.IsEditing and K.layout.IsEditing())
-    if not show then notice:Hide(); return end
+    local arranging=(IsAltKeyDown and IsAltKeyDown()) or (K.layout.IsEditing and K.layout.IsEditing())
+    if not (Enabled() or arranging) then notice:Hide(); return end
     local list=Visible()
     local n=table.getn(list)
+    -- Without loot the list stays hidden; Alt and the layout editor still show the empty panel to move it.
+    if n==0 and not arranging then notice:Hide(); return end
     local icons=(mode=="icons")
     local perPage=icons and PER_ROW*SMALL_ROWS or (mode=="small" and MAX_LINES or MAX_ROWS)
     local step=icons and PER_ROW or 1

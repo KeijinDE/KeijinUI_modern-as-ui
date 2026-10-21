@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.5.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.5.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -128,6 +128,40 @@ function K.SourceKey(name)
         for key,aliases in pairs(KeijinBuildBarAliases or {}) do for _,label in ipairs(aliases) do sourceKeys[Key(label)]=key end end
     end
     return sourceKeys[Key(name)] or Key(name)
+end
+-- Spell book as name -> texture, rebuilt on SPELLS_CHANGED and at the first need (same calls as KeijinBuildBar.lua).
+local book, byName
+function K.SpellIcon(name)
+    if not name or name=="" or K.SourceKey(name)=="melee" then
+        if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
+        return nil
+    end
+    if not book then
+        book={}
+        if type(GetNumSpellTabs)=="function" and type(GetSpellTabInfo)=="function"
+            and type(GetSpellName)=="function" and type(GetSpellTexture)=="function" then
+            for tab=1,math.min(16,GetNumSpellTabs()) do
+                local _,_,offset,count=GetSpellTabInfo(tab)
+                if type(offset)=="number" and type(count)=="number" then
+                    for index=math.max(1,offset+1),math.min(1023,offset+count) do
+                        local spell=GetSpellName(index,"spell")
+                        if spell then book[spell]=GetSpellTexture(index,"spell") end
+                    end
+                end
+            end
+        end
+    end
+    if book[name] then return book[name] end
+    -- Fallback: spell name (English or localized) -> ability key -> fixed icon table.
+    if not byName then
+        byName={}
+        for key,value in pairs(KeijinBuildBarNames or {}) do byName[value]=key end
+        for key,list in pairs(KeijinBuildBarAliases or {}) do
+            for index=1,table.getn(list) do if not byName[list[index]] then byName[list[index]]=key end end
+        end
+    end
+    local key=byName[name]
+    return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
 end
 -- One language everywhere: German names for the German interface, English names otherwise.
 -- Unknown names stay as they are.
@@ -372,6 +406,8 @@ K.driver = CreateFrame("Frame", "KeijinUIEvents")
 K.driver:SetScript("OnEvent", function()
     for _,fn in ipairs(K.events[event] or {}) do if K.ModuleOn(K.callbackOwners[fn]) then fn(event,arg1,arg2) end end
 end)
+-- Shared cache stays current even when the combat text module is disabled.
+K.On("SPELLS_CHANGED",function() book=nil end)
 local elapsed = 0
 K.driver:SetScript("OnUpdate", function()
     elapsed = elapsed + (tonumber(arg1) or 0)

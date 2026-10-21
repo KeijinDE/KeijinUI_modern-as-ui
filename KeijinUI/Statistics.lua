@@ -21,11 +21,27 @@ local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
 -- Height of the meter with data: as many rows as the screen allows, 3 to MAX_ROWS.
 function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((K.UIHeight()-563)/22)))*22 end
+local function AddSpellIcon(row,size)
+    row.iconSize=size; row.labelWidth=row.label:GetWidth()
+    row.icon=row.label:GetParent():CreateTexture(nil,"ARTWORK")
+    row.icon:SetWidth(size); row.icon:SetHeight(size)
+    row.icon:SetPoint("LEFT",row,"LEFT",5,0)
+    row.icon:SetTexCoord(.08,.92,.08,.92); row.icon:Hide()
+end
+local function UpdateSpellIcon(row,name)
+    local enabled=K.DB().meterIcons==true
+    local inset=enabled and row.iconSize+3 or 0
+    row.label:ClearAllPoints(); row.label:SetPoint("LEFT",row.label:GetParent(),"LEFT",5+inset,0)
+    row.label:SetWidth(row.labelWidth-inset)
+    local texture=enabled and K.SpellIcon(name)
+    if texture then row.icon:SetTexture(texture); row.icon:Show() else row.icon:Hide() end
+end
 for i=1,MAX_ROWS do
     local row=K.ListBarRow(meter,i,20)
     -- Separate, bounded columns: ability | total damage | damage per second.
     -- Use the existing text layer so all three stay above the bar artwork.
     row.label:SetWidth(meter:GetWidth()-156)
+    AddSpellIcon(row,16)
     row.value:ClearAllPoints(); row.value:SetPoint("RIGHT",row,"RIGHT",-73,0)
     row.value:SetWidth(53); row.value:SetHeight(16); row.value:SetJustifyH("RIGHT")
     row.dps=K.Text(row.value:GetParent(),"",10,"RIGHT",-6,0,62)
@@ -106,7 +122,9 @@ end)
 crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}
-for i=1,8 do critRows[i]=K.ListBarRow(crit,i,19) end
+for i=1,8 do
+    local row=K.ListBarRow(crit,i,19); AddSpellIcon(row,15); critRows[i]=row
+end
 -- Validated native sources for the Healing meter and diagnostic command.
 local awaitingHealing=false
 local function ReadHealing(valid)
@@ -195,6 +213,7 @@ local function UpdateBoss()
         local v=sorted[i+offset]
         if v and i<=visible then
             local rate=K.Number(v.dps) and v.dps or 0
+            UpdateSpellIcon(row,v.name)
             row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
             row.dps:SetText(K.Short(rate).." DPS")
             row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
@@ -227,6 +246,7 @@ local function UpdateHealing(lines,total,hps,supported)
     for i,row in ipairs(meterRows) do
         local value=sorted[i+offset]
         if value and i<=visible then
+            UpdateSpellIcon(row,value.name)
             row.label:SetText(K.DisplayName(value.name)); row.value:SetText(K.Short(value.dmg))
             row.dps:SetText(K.Short(K.Number(value.dps) and value.dps or 0).." HPS")
             row.bar:SetValue(sorted[1].dmg>0 and value.dmg/sorted[1].dmg or 0)
@@ -301,6 +321,7 @@ local function Update()
                 -- Same run clock and reset baseline as the summary and tooltip;
                 -- do not mix native run DPS with damage measured since Reset.
                 local dps=duration>0 and v.dmg/duration or 0
+                UpdateSpellIcon(row,v.name)
                 row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
                 row.dps:SetText(K.Short(dps).." DPS")
                 row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
@@ -333,6 +354,7 @@ local function Update()
         for i,row in ipairs(critRows) do
             local v=crits[i+critOffset]
             if v and i<=visible then
+                UpdateSpellIcon(row,v.name)
                 row.label:SetText(v.name); row.value:SetText(K.Short(v.best))
                 row.bar:SetValue(v.best/crits[1].best)
                 local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)

@@ -68,42 +68,6 @@ local function Give(item)
     item.fs:Hide(); table.insert(pool,item.fs)
     if item.icon then item.icon:Hide(); table.insert(iconPool,item.icon) end
 end
--- Spell book as name -> texture, rebuilt on SPELLS_CHANGED and at the first need (same calls as KeijinBuildBar.lua).
-local book, byName
-local function SpellIcon(name)
-    if not name then return nil end
-    if not book then
-        book={}
-        if type(GetNumSpellTabs)=="function" and type(GetSpellTabInfo)=="function"
-            and type(GetSpellName)=="function" and type(GetSpellTexture)=="function" then
-            for tab=1,math.min(16,GetNumSpellTabs()) do
-                local _,_,offset,count=GetSpellTabInfo(tab)
-                if type(offset)=="number" and type(count)=="number" then
-                    for index=math.max(1,offset+1),math.min(1023,offset+count) do
-                        local spell=GetSpellName(index,"spell")
-                        if spell then book[spell]=GetSpellTexture(index,"spell") end
-                    end
-                end
-            end
-        end
-    end
-    if book[name] then return book[name] end
-    -- Fallback: spell name (English or localized) -> ability key -> fixed icon table.
-    if not byName then
-        byName={}
-        for key,value in pairs(KeijinBuildBarNames or {}) do byName[value]=key end
-        for key,list in pairs(KeijinBuildBarAliases or {}) do
-            for index=1,table.getn(list) do if not byName[list[index]] then byName[list[index]]=key end end
-        end
-    end
-    local key=byName[name]
-    return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
-end
-K.On("SPELLS_CHANGED",function() book=nil end,"combatText")
--- Weapon icon for melee hits (no spell name).
-local function MeleeIcon()
-    if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
-end
 -- Shared, side-effect-free presentation for live hits and the settings preview.
 -- The preview never spawns world hits or updates the running damage average.
 function K.damageText.Describe(mode,crit,school,periodic,spell,small)
@@ -119,7 +83,7 @@ function K.damageText.Describe(mode,crit,school,periodic,spell,small)
     if crit then r,g,b=r+(1-r)*.35,g+(1-g)*.35,b+(1-b)*.35 end
     if small and not crit and not periodic then s=T.small; r,g,b=.62,.62,.62 end
     local icon
-    if K.DB().combatTextIcons~=false then icon=spell and SpellIcon(spell) or (not spell and MeleeIcon()) end
+    if K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
     return Presentation(s),r,g,b,icon,true,crit and true or false
 end
 -- Font size and icon side always match.
@@ -337,7 +301,7 @@ function K.damageText.SpawnMiss(missType,targetName,spell)
     local mode=K.CombatTextMode()
     if (mode~="scroll" and mode~="rise") or not MISS_TEXT[missType] then return end
     local icon
-    if spell and K.DB().combatTextIcons~=false then icon=SpellIcon(spell) end
+    if spell and K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
     local item=Add(K.T(MISS_TEXT[missType]),Presentation((mode=="rise" and RISE or SCROLL).miss),1,0.82,0.1,targetName,true,true,icon)
     item.miss=missType
 end

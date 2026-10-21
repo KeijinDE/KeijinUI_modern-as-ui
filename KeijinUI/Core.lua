@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.5.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.5.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -131,6 +131,10 @@ function K.SourceKey(name)
 end
 -- Spell book as name -> texture, rebuilt on SPELLS_CHANGED and at the first need (same calls as KeijinBuildBar.lua).
 local book, byName
+-- Lower case for A to Z only: string.lower follows the C locale and could alter UTF-8 bytes (Ü, Ä).
+local function AsciiLower(c) return string.char(string.byte(c)+32) end
+local function Lower(s) return (string.gsub(s,"[A-Z]",AsciiLower)) end
+local gear, gearDirty, gearScan = {}, true, 0
 function K.SpellIcon(name)
     if not name or name=="" or K.SourceKey(name)=="melee" then
         if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
@@ -152,6 +156,22 @@ function K.SpellIcon(name)
         end
     end
     if book[name] then return book[name] end
+    -- Items that deal damage under their own name: worn gear, remembered for the session so the icon
+    -- stays after the item is taken off (death, victory). Rescanned on inventory changes and, in case the
+    -- game equips items without that event, at most every 2 seconds while a name is still unknown.
+    local now=type(GetTime)=="function" and GetTime() or 0
+    if not gear[Lower(name)] and (gearDirty or now-gearScan>=2) then
+        gearDirty=false; gearScan=now
+        if type(GetInventoryItemLink)=="function" and type(GetInventoryItemTexture)=="function" then
+            for slot=1,19 do
+                local link=GetInventoryItemLink("player",slot)
+                local _,_,item=string.find(link or "","%[(.-)%]")
+                local texture=item and GetInventoryItemTexture("player",slot)
+                if texture then gear[Lower(item)]=texture end
+            end
+        end
+    end
+    if gear[Lower(name)] then return gear[Lower(name)] end
     -- Fallback: spell name (English or localized) -> ability key -> fixed icon table.
     if not byName then
         byName={}
@@ -161,7 +181,10 @@ function K.SpellIcon(name)
         end
     end
     local key=byName[name]
-    return key and KeijinBuildBarIcons and KeijinBuildBarIcons[key] or nil
+    local icon=key and KeijinBuildBarIcons and KeijinBuildBarIcons[key]
+    if icon then return icon end
+    -- Last: talents that deal damage under their own name (Seal of Command), English and German.
+    return KeijinTalentIcons and KeijinTalentIcons[Lower(name)] or nil
 end
 -- One language everywhere: German names for the German interface, English names otherwise.
 -- Unknown names stay as they are.
@@ -408,6 +431,7 @@ K.driver:SetScript("OnEvent", function()
 end)
 -- Shared cache stays current even when the combat text module is disabled.
 K.On("SPELLS_CHANGED",function() book=nil end)
+K.On("UNIT_INVENTORY_CHANGED",function(_,unit) if unit=="player" then gearDirty=true end end)
 local elapsed = 0
 K.driver:SetScript("OnUpdate", function()
     elapsed = elapsed + (tonumber(arg1) or 0)

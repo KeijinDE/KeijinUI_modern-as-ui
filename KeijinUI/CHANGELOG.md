@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.2 (2026-10-21, release v3.5.2)
+
+* **Item icons in the damage meter:** damage that comes from one of your items now shows the icon of that item next to its name, in the damage meter, the **Biggest critical hits** window and the floating damage numbers. The icon stays even after the item is taken off, for example after death or victory. Sources without a known icon keep an empty space.
+* **Talent icons in the damage meter:** damage from talents, for example **Seal of Command**, now shows the talent's icon as well. KeijinUI knows the icons of all talents of every class in English and German.
+
 ### 3.5.1 (2026-10-21, release v3.5.1)
 
 * **Spell icons in the damage meter (new, requested by the community):** the damage meter can now show the icon of each spell next to its name, in the Run, Boss and Healing views and in the **Biggest critical hits** window. Melee shows your weapon. Switch it on with `/kui`, Combat, Damage meter, **Show spell icons**. It starts switched off, so nothing changes until you turn it on.
@@ -468,6 +473,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.2 (2026-10-21, Release v3.5.2)
+
+* **Itemsymbole in der Schadensanzeige:** Schaden, der von einem deiner Items kommt, zum Beispiel **Das Auge Hakkars**, zeigt jetzt das Symbol dieses Items neben dem Namen, in der Schadensanzeige, im Fenster **Größte kritische Treffer** und bei den Schadenszahlen. Das Symbol bleibt auch, wenn das Item abgelegt wird, etwa nach Tod oder Sieg. Quellen ohne bekanntes Symbol behalten einen leeren Platz.
+* **Talentsymbole in der Schadensanzeige:** Schaden von Talenten, zum Beispiel **Siegel des Befehls**, zeigt jetzt ebenfalls das Symbol des Talents. KeijinUI kennt die Symbole aller Talente jeder Klasse auf Englisch und Deutsch.
 
 ### 3.5.1 (2026-10-21, Release v3.5.1)
 

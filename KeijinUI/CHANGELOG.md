@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.5 (2026-10-22, release v3.5.5)
+
+* **Build tips in every game language:** the damage upgrades of your spells are now read in all languages the game offers, not just English and German, so the build tips work the same in Russian, Polish, French, Chinese and the others.
+* **New spells in the spell list:** spells added by a game patch, such as **Demonic Empowerment** or the druid's **Shred**, now show their icon and proper name instead of a question mark.
+* **More accurate build tips:** an upgrade that gives damage reduction is no longer counted as extra damage.
+
 ### 3.5.4 (2026-10-22, release v3.5.4)
 
 * **Class resources read the game's own count:** soul shards, combo points and Bloodrage now show exactly what the game counts, instead of being worked out from your mana or energy. A soul shard only counts once it is full.
@@ -482,6 +488,12 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.5 (2026-10-22, Release v3.5.5)
+
+* **Buildtipps in jeder Spielsprache:** die Schadensverbesserungen deiner Zauber werden jetzt in allen Sprachen des Spiels erkannt, nicht nur auf Englisch und Deutsch. Die Buildtipps funktionieren damit auch auf Russisch, Polnisch, Französisch, Chinesisch und in den übrigen Sprachen.
+* **Neue Zauber in der Zauberliste:** Zauber aus einem Spielpatch, etwa **Dämonische Ermächtigung** oder **Schreddern** des Druiden, zeigen jetzt ihr Symbol und ihren richtigen Namen statt eines Fragezeichens.
+* **Genauere Buildtipps:** eine Verbesserung mit Schadensreduktion zählt nicht mehr als zusätzlicher Schaden.
 
 ### 3.5.4 (2026-10-22, Release v3.5.4)
 

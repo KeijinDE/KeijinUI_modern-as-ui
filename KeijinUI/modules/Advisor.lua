@@ -119,15 +119,37 @@ end
 -- Only interpret the game's explicit local upgrade line. Global bonuses are not counted twice.
 function A.ParseBonus(text, rank)
 	text = ClearColor(text)
-	local _, _, upgrades = string.find(text, "Upgrades:%s*([^\n]+)")
-	if not upgrades then _, _, upgrades = string.find(text, "Verbesserungen:%s*([^\n]+)") end
+	-- The game's words in all its languages (GameText.lua), English and German as before if it is missing.
+	local words = KeijinGameText or {}
+	local upgrades
+	for _, prefix in ipairs(words.upgrades or {"Upgrades:", "Verbesserungen:"}) do
+		local _, last = string.find(text, prefix, 1, true)
+		if last then _, _, upgrades = string.find(string.sub(text, last + 1), "^[ \t]*([^ \t\n][^\n]*)"); break end
+	end
 	if upgrades then
-		local _, _, value = string.find(upgrades, "%+([%d%.,]+)%%%s+damage")
-		if not value then _, _, value = string.find(upgrades, "%+([%d%.,]+)%%%s+Schaden") end
+		-- A whole bonus only: "+5% damage reduction" is not damage, so the match must end the line
+		-- or be followed by a list separator.
+		local value
+		for _, pattern in ipairs(words.damage or {"%+([%d%.,]+)%% damage", "%+([%d%.,]+)%% Schaden"}) do
+			local init = 1
+			while not value do
+				local first, last, found = string.find(upgrades, pattern, init)
+				if not first then break end
+				local after = string.sub(upgrades, last + 1, last + 3)
+				if after == "" or string.find(after, "^[,;%)]") or string.find(after, "^\239\188\140")
+					or string.find(after, "^\227\128\129") then value = found end
+				init = last + 1
+			end
+			if value then break end
+		end
 		return (Decimal(value) or 0) / 100
 	end
-	if rank == 1 and (string.find(text, "Your bonuses:", 1, true)
-		or string.find(text, "Eure Boni:", 1, true) or string.find(text, "Deine Boni:", 1, true)) then return 0 end
+	if rank == 1 then
+		for _, prefix in ipairs(words.bonuses or {"Your bonuses:", "Deine Boni:"}) do
+			if string.find(text, prefix, 1, true) then return 0 end
+		end
+		if string.find(text, "Eure Boni:", 1, true) then return 0 end
+	end
 	return nil
 end
 

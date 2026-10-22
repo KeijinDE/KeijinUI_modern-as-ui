@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.5.6 (2026-10-22, release v3.5.6)
+
+* **Spell tooltips for new spells:** some spells, such as **Demonic Empowerment**, **Penance** and the hunter traps, are listed in your spellbook under another name. The spell list now also looks for them there, so hovering them can show the game's description like other spells. Demonic Empowerment also uses the game's own icon now.
+
 ### 3.5.5 (2026-10-22, release v3.5.5)
 
 * **Build tips in every game language:** the damage upgrades of your spells are now read in all languages the game offers, not just English and German, so the build tips work the same in Russian, Polish, French, Chinese and the others.
@@ -488,6 +492,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.5.6 (2026-10-22, Release v3.5.6)
+
+* **Tooltips für neue Zauber:** manche Zauber wie **Dämonische Ermächtigung**, **Sühne** und die Fallen des Jägers stehen im Zauberbuch unter einem anderen Namen. Die Zauberliste sucht sie jetzt auch dort, damit beim Überfahren die Beschreibung des Spiels wie bei anderen Zaubern erscheinen kann. Dämonische Ermächtigung nutzt außerdem jetzt das Symbol des Spiels.
 
 ### 3.5.5 (2026-10-22, Release v3.5.5)
 

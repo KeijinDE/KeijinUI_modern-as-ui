@@ -499,10 +499,18 @@ local function Update()
 				if book[Normalize(aliases[alias])] then entry = book[Normalize(aliases[alias])]; break end
 			end
 		end
+		-- The game casts another 1.12 spell for some abilities (Demonic Empowerment is Fel Domination):
+		-- its book entry gives the tooltip, the name and the icon stay the ability's.
+		local other = (KeijinBuildBarBook or {})[value.key]
+		local display, icon = entry and entry.name or name, entry and entry.icon
+		if not entry and other and book[Normalize(other)] then
+			entry = book[Normalize(other)]
+			icon = (KeijinBuildBarIcons or {})[value.key] or entry.icon
+		end
 		table.insert(spells, {kind="spell", key=value.key, identity=value.key..":"..value.spell,
-			name=entry and entry.name or name, rank=value.rank, cd=value.cd, cdmax=value.cdmax,
+			name=display, rank=value.rank, cd=value.cd, cdmax=value.cdmax,
 			book=entry and entry.slot,
-			icon=(entry and entry.icon) or (KeijinBuildBarIcons or {})[value.key]})
+			icon=icon or (KeijinBuildBarIcons or {})[value.key]})
 	end
 	items = Items()
 	if not items then Release(); return end

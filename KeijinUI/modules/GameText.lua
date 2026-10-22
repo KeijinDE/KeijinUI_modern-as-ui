@@ -12,6 +12,15 @@ local function Add(key, names, german, icon)
 	if not KeijinBuildBarGerman[key] then KeijinBuildBarGerman[key] = german end
 	if icon and not KeijinBuildBarIcons[key] then KeijinBuildBarIcons[key] = icon end
 end
-Add("demonic_empowerment", {"Demonic Empowerment", "Demoniczne Wzmocnienie", "Démonické posílení", "Dämonische Ermächtigung", "Fortalecimento Demoníaco", "Potenciación demoníaca", "Renforcement démoniaque", "Întărire demonică", "Демоническое усиление", "Демонічне посилення", "恶魔增效", "悪魔の増強", "악마 강화"}, "Dämonische Ermächtigung", "Interface\\Icons\\Spell_Shadow_ShadowPact")
+Add("demonic_empowerment", {"Demonic Empowerment", "Demoniczne Wzmocnienie", "Démonické posílení", "Dämonische Ermächtigung", "Fortalecimento Demoníaco", "Potenciación demoníaca", "Renforcement démoniaque", "Întărire demonică", "Демоническое усиление", "Демонічне посилення", "恶魔增效", "悪魔の増強", "악마 강화"}, "Dämonische Ermächtigung", "Interface\\Icons\\Spell_Nature_RemoveCurse")
 Add("penance", {"Penance", "Pokuta", "Pokání", "Sühne", "Penitência", "Penitencia", "Pénitence", "Penitență", "Исповедь", "Покаяння", "苦修", "ペナンス", "회개"}, "Sühne", "Interface\\Icons\\Spell_Holy_SearingLight")
 Add("shred", {"Shred", "Rozszarpanie", "Rozcupování", "Schreddern", "Retalhar", "Triturar", "Lambeau", "Sfârtecare", "Полоснуть", "Шматування", "撕碎", "シュレッド", "칼날 발톱"}, "Schreddern", "Interface\\Icons\\Spell_Shadow_VampiricAura")
+-- Abilities the spell book lists under another 1.12 spell (the one the game casts).
+KeijinBuildBarBook = {
+	["demonic_empowerment"] = "Fel Domination",
+	["explosive_trap"] = "Explosive Trap Effect",
+	["fire_nova"] = "Fire Nova Totem",
+	["frost_trap"] = "Frost Trap Aura",
+	["immolation_trap"] = "Immolation Trap Effect",
+	["penance"] = "Holy Shock",
+}

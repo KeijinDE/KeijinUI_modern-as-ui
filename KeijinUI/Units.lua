@@ -116,6 +116,11 @@ local function Create(unit,mirror)
     -- The alpha-shaped fill follows the portrait edge and the lower connector.
     local bar=S.ConnectedFill(holder,name.."Health",mirror)
     bar:SetPoint("TOPLEFT",holder,"TOPLEFT",mirror and 1 or -17,-1)
+    -- Absorb shield layer on the player's health bar (both geometries); the target frame has none.
+    if not mirror then
+        S.AddShield(bar,"Interface\\AddOns\\KeijinUI\\media\\soft\\ConnectedHealth.tga")
+        S.AddShield(clean.bar,"Interface\\AddOns\\KeijinUI\\media\\portraitfree\\Health.tga")
+    end
     local rimLayer=CreateFrame("Frame",nil,old)
     rimLayer:SetAllPoints(f); rimLayer:SetFrameLevel(bar:GetFrameLevel()+2)
     body:SetVertexColor(1,1,1,K.BackgroundAlpha()/K.BG_ALPHA)
@@ -214,17 +219,26 @@ local function Update()
             f.rim:SetVertexColor(border[1],border[2],border[3],1)
             if K.Number(hp) and K.Number(max) and max>0 then
                 local pct=math.max(0,math.min(1,hp/max))
-                f.bar:SetValue(pct); f.health:SetText(K.Short(hp))
+                -- Absorb shield (AZS_RUN.sh, game 0.110): only the player; missing, zero or not a number shows nothing.
+                -- The shield is in the run's units (AZS_RUN.hpm); the frame may show UnitHealth's, so it is scaled to max.
+                local shield=unit=="player" and type(AZS_RUN)=="table" and AZS_RUN.sh
+                if not K.Number(shield) or shield<=0 then shield=nil
+                elseif K.Number(AZS_RUN.hpm) and AZS_RUN.hpm>0 then shield=shield*max/AZS_RUN.hpm end
+                f.bar:SetValue(pct); f.health:SetText(K.Short(hp)..(shield and " +"..K.Short(shield) or ""))
+                if f.bar.SetShield then f.bar:SetShield(hp/max,shield and shield/max) end
                 f.percent:SetText(string.format("%.0f%%",math.floor(pct*100)))
-                f.exact=string.format("%.0f / %.0f",hp,max)
+                f.exact=string.format("%.0f / %.0f",hp,max)..(shield and string.format(" (+%.0f)",shield) or "")
                 if unit=="target" then K.combatDetails.Execute(f,f.bar,pct,true) end
-            else f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
+            else
+                if f.bar.SetShield then f.bar:SetShield(0,nil) end
+                f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
             -- The compact style has no portrait; the pointer is not touched there.
             if not f.clean and f.portrait then SetPortraitTexture(f.portrait,unit); f.portrait:Show() end
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
             f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
+            if f.bar.SetShield then f.bar:SetShield(0,nil) end
             f.rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
             if not f.clean and f.portrait then f.portrait:SetTexture(nil); f.portrait:Hide() end
         end

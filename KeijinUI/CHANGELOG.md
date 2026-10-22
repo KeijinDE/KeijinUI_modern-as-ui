@@ -5,6 +5,13 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.6.0 (2026-10-22, release v3.6.0)
+
+* **Summons bar:** a new bar shows your active summons, for every class: a Warlock's demons (Imp, Felguard, Infernals and the rest), a Hunter's beast, Druid Treants, Spirit Wolves and the Water Elemental. Each kind gets one icon with the count at the bottom right (from 2) and the time left of the first one to go below it; permanent summons show no time. Hover an icon for name, count, how many are permanent or timed and when the next one ends. It shows during a run only and needs game 0.110 or newer (older versions simply show nothing). Hold Alt to move it, Alt and mouse wheel to resize; it can be switched off as the new module **Summons**. Asked for by Bersh.
+* **Damage number size slider:** a slider in the Combat settings (50 to 200 percent) sets the font size of the floating damage numbers. Only the text grows or shrinks; the combat text anchor and its Alt mouse wheel scale stay as they are. The preview follows it.
+* **Absorb shield on your health bar:** a light, translucent layer shows your absorb shield from your current health to the right. Beyond your maximum health it is cut off at the bar end and a bright edge marks the overflow. The health text adds the shield as +x.
+* **Blue and green lair skulls easier to tell apart:** the blue skull is now a deeper, more saturated blue and the green one a yellow green.
+
 ### 3.5.6 (2026-10-22, release v3.5.6)
 
 * **Spell tooltips for new spells:** some spells, such as **Demonic Empowerment**, **Penance** and the hunter traps, are listed in your spellbook under another name. The spell list now also looks for them there, so hovering them can show the game's description like other spells. Demonic Empowerment also uses the game's own icon now.
@@ -492,6 +499,13 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.6.0 (2026-10-22, Release v3.6.0)
+
+* **Beschwörungsleiste:** eine neue Leiste zeigt deine aktiven Beschwörungen für jede Klasse: die Dämonen des Hexenmeisters (Wichtel, Teufelswache, Infernos und die übrigen), das Tier des Jägers, Treants des Druiden, Geisterwölfe und den Wasserelementar. Jede Art bekommt ein Symbol mit der Anzahl unten rechts (ab 2) und darunter der Restzeit der Ersten, die geht; dauerhafte Beschwörungen zeigen keine Zeit. Beim Überfahren erscheinen Name, Anzahl, wie viele dauerhaft oder zeitlich sind und wann die nächste endet. Die Leiste erscheint nur im Lauf und braucht Spiel 0.110 oder neuer (ältere Versionen zeigen einfach nichts). Alt halten zum Verschieben, Alt und Mausrad zum Skalieren; als neues Modul **Beschwörungen** abschaltbar. Auf Wunsch von Bersh.
+* **Regler für die Größe der Schadenszahlen:** ein Regler in den Kampfeinstellungen (50 bis 200 Prozent) stellt die Schriftgröße der schwebenden Schadenszahlen ein. Nur der Text wird größer oder kleiner, der Kampftext Anker und seine Skalierung mit Alt und Mausrad bleiben, wie sie sind. Die Vorschau folgt ihm.
+* **Absorbschild auf dem Lebensbalken:** eine helle, halbtransparente Schicht zeigt dein Absorbschild vom aktuellen Leben aus nach rechts. Über dem Maximalleben wird sie am Balkenende abgeschnitten und ein heller Rand markiert den Überlauf. Der Lebenstext ergänzt das Schild als +x.
+* **Blaue und grüne Hortschädel besser unterscheidbar:** der blaue Schädel ist jetzt ein dunkleres, satteres Blau und der grüne ein Gelbgrün.
 
 ### 3.5.6 (2026-10-22, Release v3.5.6)
 

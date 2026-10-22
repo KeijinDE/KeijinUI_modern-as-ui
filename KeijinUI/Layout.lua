@@ -97,6 +97,7 @@ L.defaults={
     minimap={scale=0.8},
     skills={scale=0.9},
     statistics={scale=0.9},
+    summons={scale=0.9},
     tracker={scale=0.9},
 }
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
@@ -281,6 +282,8 @@ function L.Register(key,frame,name,anchor,options)
         frame:SetScale(e.baseScale*math.max(0.5,math.min(1.8,scale+(arg1>0 and 0.05 or -0.05))))
         Save(e)
         if L.SyncFollowers then L.SyncFollowers() end
+        -- Open settings show the new size at once (the combat text slider).
+        if K.settings and K.settings.panel and K.settings.panel:IsShown() then K.settings.Refresh() end
     end)
     handle:Hide(); Apply(e)
     for _,other in pairs(L.entries) do Dock(other) end

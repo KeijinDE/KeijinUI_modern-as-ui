@@ -89,7 +89,7 @@ end
 -- Font size and icon side always match.
 local function SetSize(item,size)
     item.size=size
-    local shown=math.max(1,math.floor(size*(item.scale or 1)+0.5))
+    local shown=math.max(1,math.floor(size*(item.scale or 1)*K.damageText.TextSize()+0.5))
     item.fs:SetFont(K.font,shown,"OUTLINE")
     if item.icon then item.icon:SetWidth(shown); item.icon:SetHeight(shown) end
 end
@@ -112,6 +112,19 @@ local function AnchorCentre()
 end
 function K.damageText.Position() return K.DB().combatTextPosition=="fixed" and "fixed" or "plate" end
 function K.damageText.SetPosition(value) K.DB().combatTextPosition=value=="fixed" and "fixed" or nil end
+-- Font size of the numbers as a factor (0.5 to 2, K.DB().combatTextSize, settings slider). Only the text
+-- grows; the anchor and its Alt mouse wheel scale stay as they are.
+function K.damageText.TextSize()
+    local value=K.DB().combatTextSize
+    if not K.Number(value) then return 1 end
+    return math.max(0.5,math.min(2,value))
+end
+function K.damageText.SetTextSize(value)
+    value=tonumber(value)
+    if not K.Number(value) then return end
+    value=math.max(0.5,math.min(2,value))
+    K.DB().combatTextSize=math.abs(value-1)>0.001 and value or nil
+end
 local function Start()
     local x,y,ratio=AnchorCentre()
     return x+math.random(-50,50),y-10+math.random(0,20),ratio
@@ -173,10 +186,10 @@ local function Footprint(item)
     -- Include the largest pop, the whole label and its left-hand icon. A plate
     -- can move into a unit frame after spawn, so this is checked every tick.
     local scale=item.scale or 1
-    local size=item.style.size*scale*(item.pop and 2 or 1)
+    local size=item.style.size*scale*K.damageText.TextSize()*(item.pop and 2 or 1)
     local measured=item.fs.GetStringWidth and item.fs:GetStringWidth()
     local width=type(measured)=="number" and measured>0 and measured or string.len(item.fs:GetText() or "")*size*.65
-    if type(measured)=="number" and measured>0 and item.size and item.size>0 then width=measured*size/(item.size*scale) end
+    if type(measured)=="number" and measured>0 and item.size and item.size>0 then width=measured*size/(item.size*scale*K.damageText.TextSize()) end
     return width/2+(item.icon and size+ICON_GAP or 0)+4,size*1.3
 end
 local function Place(item,x,y)
@@ -224,7 +237,7 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
             local prior=active[i]
             if prior.style.straight and prior.tn==targetName and prior.age<prior.style.life/3
                 and math.abs(prior.x0-x)<40 then
-                lift=math.max(lift,prior.y0-y+style.size*1.2)
+                lift=math.max(lift,prior.y0-y+style.size*K.damageText.TextSize()*1.2)
             end
         end
         -- Do not let a burst recursively stack new hits toward the screen edge.

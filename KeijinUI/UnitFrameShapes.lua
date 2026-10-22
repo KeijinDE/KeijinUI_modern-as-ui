@@ -48,6 +48,51 @@ function S.ConnectedFill(parent,name,mirror)
     return f
 end
 
+-- Absorb shield on a health bar of cropped pieces (bar.parts, as in ConnectedFill and the compact frame):
+-- a translucent light layer from the current health to the right, cut at the bar end, plus a bright
+-- strip at the bar end when health plus shield exceeds the maximum. Both layers reuse the texture of the
+-- fill, so they follow the bar's shape (portrait join, chamfered end). Not for mirrored bars.
+local SHIELD_COLOR={0.78,0.92,1,0.5}
+local OVERFLOW_W=3
+function S.AddShield(bar,file)
+    local total=bar:GetWidth()
+    local bands={shield={},edge={}}
+    for key,list in pairs(bands) do
+        for i,part in ipairs(bar.parts) do
+            local t=bar:CreateTexture(nil,"OVERLAY")
+            t:SetTexture(file); t:SetHeight(part.texture:GetHeight())
+            if key=="shield" then t:SetVertexColor(SHIELD_COLOR[1],SHIELD_COLOR[2],SHIELD_COLOR[3],SHIELD_COLOR[4])
+            else t:SetVertexColor(1,1,1,0.95) end
+            t:Hide(); list[i]=t
+        end
+    end
+    bar.shieldBands=bands
+    local function Band(list,from,to)
+        for i,part in ipairs(bar.parts) do
+            local t=list[i]
+            local x1,x2=math.max(from,part.start),math.min(to,part.start+part.width)
+            if x2>x1 then
+                local ul=part.u+(part.v-part.u)*(x1-part.start)/part.width
+                local ur=part.u+(part.v-part.u)*(x2-part.start)/part.width
+                t:ClearAllPoints(); t:SetPoint("LEFT",bar,"LEFT",x1,0)
+                t:SetWidth(x2-x1); t:SetTexCoord(ul,ur,0,1); t:Show()
+            else t:Hide() end
+        end
+    end
+    -- health and shield as shares of the maximum health (shield may be missing or zero: layers hidden).
+    function bar:SetShield(health,shield)
+        health=math.max(0,math.min(1,tonumber(health) or 0))
+        if not K.Number(shield) or shield<=0 then
+            self.shield=nil; Band(bands.shield,0,0); Band(bands.edge,0,0); return
+        end
+        local over=health+shield>1
+        self.shield={from=health,to=math.min(1,health+shield),over=over}
+        Band(bands.shield,health*total,self.shield.to*total)
+        if over then Band(bands.edge,total-OVERFLOW_W,total) else Band(bands.edge,0,0) end
+    end
+    bar:SetShield(0,0)
+end
+
 -- Extend the straight shoulder without stretching the round portrait or rim.
 function S.Housing(parent,layer,file,width,height,mirror)
     local spans={{60,0,60/206},{width-76,60/206,190/206},{16,190/206,1}}

@@ -36,6 +36,7 @@ local aliases={
     uiScale="interface ui gesamt scale skalierung groesse",
     cache_size="minimap minikarte chest chests truhe truhen symbol icon groesse size scale skalierung",
     guardian_size="minimap minikarte hort lair wächter waechter guardian marker symbol icon groesse size scale skalierung",
+    combatTextSize="damage schaden zahlen numbers kampftext combat text groesse size scale skalierung textgroesse",
     combatTextPosition="damage schaden position fixed fest gegner enemy",
     -- The switches of the modules are found by what the module does, also while its own settings are hidden.
     module_combatText="damage schaden healing heilung incoming eingehend zahlen numbers kampftext combat text",
@@ -51,6 +52,7 @@ local aliases={
     module_storedLevels="levelaufstiege levelups level stored gespeicherte",
     module_achievements="erfolg erfolge achievement achievements popup",
     module_comfort="cursor mauszeiger autorun autowalk automatisch laufen eingabehilfen",
+    module_summons="beschwoerungen summons pets begleiter daemonen demons hexenmeister warlock treants wolf",
 }
 local links={
     ["Werte wählen…"]=true,["Module verwalten…"]=true,

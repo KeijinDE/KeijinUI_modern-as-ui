@@ -52,6 +52,9 @@ attributes:SetWidth(342); attributes.name:SetWidth(250)
 O.Button(p,"Werte wählen…",376,attributesY-1,140,function() O.ShowPage("attributes") end)
 O.Help(p,"Krit, Tempo, Lebensraub und weitere Werte")
 
+O.Section(p,"Beschwörungen","summons")
+O.Help(p,"Symbol je Beschwörung mit Anzahl (ab 2) und Restzeit. Alt halten zum Verschieben, Alt + Mausrad ändert die Größe.")
+
 O.Section(p,"Beute","loot")
 O.Choice(p,"lootMode","Beuteanzeige",K.loot.Mode,K.loot.SetMode,{{"notice","Meldung"},{"list","Liste"},{"small","Liste klein"},{"icons","Nur Symbole"}})
 O.Choice(p,"lootGrow","Wachstum",K.loot.GrowMode,K.loot.SetGrow,{{"down","Nach unten"},{"up","Nach oben"}})
@@ -118,6 +121,7 @@ local function OwnNumbers() local mode=K.CombatTextMode(); return mode=="compact
 O.Requires(O.Toggle(p,"icons","Zaubersymbole",function() return K.DB().combatTextIcons~=false end,function(on) K.DB().combatTextIcons=on end),OwnNumbers)
 O.Requires(O.Toggle(p,"merge","Flächentreffer bündeln",function() return K.DB().combatTextMerge~=false end,function(on) K.DB().combatTextMerge=on end),OwnNumbers)
 O.Help(p,"Fasst gleiche Treffer innerhalb kurzer Zeit zusammen.")
+O.Requires(O.Slider(p,"combatTextSize","Größe der Schadenszahlen",K.damageText.TextSize,K.damageText.SetTextSize,50,200),OwnNumbers)
 O.Requires(O.Choice(p,"combatTextPosition","Position",K.damageText.Position,K.damageText.SetPosition,{{"plate","Am Gegner"},{"fixed","Feste Stelle"}}),OwnNumbers)
 local function PositionHelp()
     local mode=K.CombatTextMode()

@@ -164,7 +164,9 @@ local function Number(value)
 	return type(value) == "number" and value == value and value >= 0 and value < 1e15
 end
 local function Normalize(name)
-	return string.gsub(string.lower(name or ""), "[%s%p]", "")
+	name = string.gsub(name or "", "|c%x%x%x%x%x%x%x%x", "")
+	name = string.gsub(name, "|r", "")
+	return string.gsub(string.lower(name), "[%s%p]", "")
 end
 local function NameFromLink(link)
 	local _, _, name = string.find(link or "", "|h%[(.-)%]|h")
@@ -247,6 +249,93 @@ end)
 advice:SetScript("OnLeave", function() if hovered == this then hovered = nil; GameTooltip:Hide() end end)
 
 local spellCells, itemCells, actionCells = {}, {}, {}
+-- Abilities whose 1.12 spell is not in the spell book (Call of Flame): GameTooltip:SetAction builds
+-- the tooltip from the action slot's spell id, where the game writes its own ability text. The slot
+-- is found by the tooltip's first line and remembered per ability until it no longer matches.
+local actionSlot = {}
+local function TipTitle()
+	local line = getglobal("GameTooltipTextLeft1")
+	return line and line.GetText and Normalize(line:GetText()) or ""
+end
+-- Normalized name -> ability key, or false when one translation names two abilities
+-- (Romanian and Ukrainian Blood Fury/Bloodrage, Portuguese Shred/Slice and Dice).
+local owners
+local function Owners()
+	if owners then return owners end
+	owners = {}
+	local tables = {KeijinBuildBarAliases or {}, KeijinGameAbilityNames or {}}
+	for list = 1, 2 do
+		for key, names in pairs(tables[list]) do
+			for index = 1, table.getn(names) do
+				local name = Normalize(names[index])
+				if owners[name] == nil or owners[name] == key then owners[name] = key else owners[name] = false end
+			end
+		end
+	end
+	return owners
+end
+local function Texture(path)
+	return string.lower(string.gsub(path or "", "/", "\\"))
+end
+local function Matches(row, title, slot)
+	if title == "" then return false end
+	local hit = title == Normalize(row.name) or title == Normalize(row.key)
+	-- Hand made aliases and the game's own names in all 14 languages (GameText.lua).
+	local lists = {(KeijinBuildBarAliases or {})[row.key] or {}, (KeijinGameAbilityNames or {})[row.key] or {}}
+	for list = 1, 2 do
+		for index = 1, table.getn(lists[list]) do
+			if not hit and title == Normalize(lists[list][index]) then hit = true end
+		end
+	end
+	if not hit then return false end
+	if Owners()[title] ~= false then return true end
+	-- An ambiguous title only counts when the slot also shows this ability's icon.
+	return row.icon ~= nil and type(GetActionTexture) == "function"
+		and Texture(GetActionTexture(slot)) == Texture(row.icon)
+end
+-- Cleared first, so a slot that writes nothing cannot pass with the previous tooltip's title.
+local function ShowAction(slot)
+	GameTooltip:ClearLines()
+	GameTooltip:SetAction(slot)
+end
+local function ActionTooltip(row)
+	if type(GameTooltip.SetAction) ~= "function" or type(HasAction) ~= "function" then return false end
+	local slot = actionSlot[row.key]
+	if slot and HasAction(slot) then
+		ShowAction(slot)
+		if Matches(row, TipTitle(), slot) then return true end
+	end
+	actionSlot[row.key] = nil
+	for index = 1, 120 do
+		if HasAction(index) then
+			ShowAction(index)
+			if Matches(row, TipTitle(), index) then actionSlot[row.key] = index; return true end
+		end
+	end
+	GameTooltip:ClearLines()
+	return false
+end
+-- /kbb slots: every filled action slot with the first tooltip line the client writes for it.
+local function SlotDebug()
+	if type(HasAction) ~= "function" or type(GameTooltip.SetAction) ~= "function" then
+		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: HasAction/SetAction fehlen."); return
+	end
+	GameTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	local found = 0
+	for index = 1, 120 do
+		if HasAction(index) then
+			ShowAction(index)
+			local line = getglobal("GameTooltipTextLeft1")
+			local second = getglobal("GameTooltipTextLeft2")
+			DEFAULT_CHAT_FRAME:AddMessage(string.format("Slot %d: %s | %s | %s", index,
+				tostring(line and line:GetText()), tostring(second and second:GetText()),
+				tostring(GetActionTexture and GetActionTexture(index))))
+			found = found + 1
+		end
+	end
+	GameTooltip:Hide()
+	DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..found.." belegte Aktionsplätze.")
+end
 local function Tooltip(cell)
 	local row = cell.row
 	if not row then return end
@@ -268,6 +357,8 @@ local function Tooltip(cell)
 	else
 		if row.book and type(GameTooltip.SetSpell) == "function" then
 			GameTooltip:SetSpell(row.book, "spell")
+		elseif row.key and ActionTooltip(row) then
+			-- the game's own ability tooltip from its action slot
 		else
 			GameTooltip:SetText(Display(row), 1, 0.82, 0)
 		end
@@ -575,6 +666,8 @@ SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 		Settings().enabled, Settings().actionBar = on, on
 		Update()
 		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..(on and T("Leiste eingeschaltet.") or T("Leiste ausgeschaltet.")))
+	elseif command == "slots" then
+		SlotDebug()
 	elseif command == "reset" then
 		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills")
 		ApplyPosition()

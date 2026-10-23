@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.6.1 (2026-10-23, release v3.6.1)
+
+* **Tooltips for abilities outside the spellbook:** abilities that have no spellbook entry, such as **Call of Flame**, now show the game's own description when you hover them in the spell list. KeijinUI finds the matching action slot by name in every game language.
+* **Talent icons for game 0.112:** the talent list moved inside the game data. KeijinUI reads it again and the damage meter shows icons for new talents such as **Trauma** and **Bloodlust**, with updated names in all game languages.
+
 ### 3.6.0 (2026-10-22, release v3.6.0)
 
 * **Summons bar:** a new bar shows your active summons, for every class: a Warlock's demons (Imp, Felguard, Infernals and the rest), a Hunter's beast, Druid Treants, Spirit Wolves and the Water Elemental. Each kind gets one icon with the count at the bottom right (from 2) and the time left of the first one to go below it; permanent summons show no time. Hover an icon for name, count, how many are permanent or timed and when the next one ends. It shows during a run only and needs game 0.110 or newer (older versions simply show nothing). Hold Alt to move it, Alt and mouse wheel to resize; it can be switched off as the new module **Summons**. Asked for by Bersh.
@@ -499,6 +504,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.6.1 (2026-10-23, Release v3.6.1)
+
+* **Tooltips für Fähigkeiten ohne Zauberbucheintrag:** Fähigkeiten, die nicht im Zauberbuch stehen, etwa **Ruf der Flamme**, zeigen beim Überfahren in der Zauberliste jetzt die Beschreibung des Spiels. KeijinUI findet den passenden Aktionsplatz über den Namen, in jeder Spielsprache.
+* **Talentsymbole für Spiel 0.112:** die Talentliste liegt in den Spieldaten an anderer Stelle. KeijinUI liest sie wieder und der Schadensmesser zeigt Symbole für neue Talente wie **Trauma** und **Kampfrausch**, mit aktualisierten Namen in allen Spielsprachen.
 
 ### 3.6.0 (2026-10-22, Release v3.6.0)
 

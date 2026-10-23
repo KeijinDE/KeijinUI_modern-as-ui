@@ -1,8 +1,4 @@
-# KeijinUI 3.7.0-beta.1
-
-**Beta:** initial in-game testing is complete; independent code review and Chinese language validation are still pending. The stable release is [3.6.1](https://github.com/KeijinDE/KeijinUI_modern-as-ui/releases/tag/v3.6.1).
-
-**Vorabversion:** Ein erster Spieltest ist erfolgt. Unabhängiger Code Review und Prüfung der chinesischen Oberfläche stehen noch aus. Die stabile Version bleibt [3.6.1](https://github.com/KeijinDE/KeijinUI_modern-as-ui/releases/tag/v3.6.1).
+# KeijinUI 3.7.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui

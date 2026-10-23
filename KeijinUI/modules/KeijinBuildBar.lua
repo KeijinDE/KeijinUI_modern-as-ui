@@ -153,6 +153,23 @@ end
 local function Number(value)
 	return type(value) == "number" and value == value and value >= 0 and value < 1e15
 end
+-- Height of the cooldown number strip above each spell row; 0 when the option is off.
+local function CooldownStrip()
+	return KeijinUI.DB().buildCooldownText ~= false and 14 or 0
+end
+-- Cooldown of the ability in this run, docked above the spell icon: two decimals below 1 s, one below 10 s, then whole seconds.
+local function CooldownText(value)
+	if not Number(value) or value <= 0 then return "" end
+	local text
+	if value < 1 then
+		text = string.format("%.2f", value)
+		if text == "1.00" then text = "1.0" end
+	elseif value < 10 then
+		text = string.format("%.1f", value)
+		if text == "10.0" then text = "10" end
+	else text = string.format("%.0f", value) end
+	return text
+end
 local function Normalize(name)
 	name = string.gsub(name or "", "|c%x%x%x%x%x%x%x%x", "")
 	name = string.gsub(name, "|r", "")
@@ -385,6 +402,18 @@ local function Cell(pool, index)
 	SetFont(cell.rank,10)
 	cell.rank:SetTextColor(1, 0.82, 0)
 	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -3, 2)
+	-- A dark chamfered tab docks into the icon rim; the strip reserves its height.
+	local cooltext = CreateFrame("Frame", nil, cell)
+	cooltext:SetWidth(ICON); cooltext:SetHeight(14)
+	cooltext:SetPoint("BOTTOM", cell, "TOP", 0, -1)
+	cooltext:SetFrameLevel(cell:GetFrameLevel() + 2)
+	cooltext:EnableMouse(false)
+	KeijinUI.Chamfer(cooltext,2,{0.025,0.025,0.03,0.98},{0.48,0.44,0.34,1})
+	cell.cooldownPlate = cooltext
+	cell.runCooldown = cooltext:CreateFontString(nil, "OVERLAY")
+	SetFont(cell.runCooldown,9)
+	cell.runCooldown:SetPoint("CENTER", cooltext, "CENTER", 0, 0)
+	cooltext:Hide()
 	cell:SetScript("OnEnter", function()
 		if not this.row or this.row.kind == "emptySpell" then return end
 		hovered = this
@@ -399,7 +428,7 @@ local function Cell(pool, index)
 	pool[index] = cell
 	return cell
 end
-local function Paint(pool, rows, top)
+local function Paint(pool, rows, top, pitch)
 	for index = 1, table.getn(rows) do
 		local row = rows[index]
 		local cell = Cell(pool, index)
@@ -417,7 +446,7 @@ local function Paint(pool, rows, top)
 		cell:ClearAllPoints()
 		local columns = pool == spellCells and COLUMNS or 5
 		local start = ROWSTART
-		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*PITCH)
+		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*(pitch or PITCH))
 		if row.kind == "emptySpell" then
 			cell.icon:SetTexture(nil); cell.icon:Hide()
 		else
@@ -441,6 +470,12 @@ local function Paint(pool, rows, top)
 		else
 			cell.rank:Hide(); cell.rankBackground:Hide()
 		end
+		local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
+		cell.runCooldown:SetText(cooldown)
+		if cooldown ~= "" then cell.cooldownPlate:Show() else cell.cooldownPlate:Hide() end
+		-- Gold below one second: about where more cooldown reduction stops paying off.
+		if Number(row.cdmax) and row.cdmax < 1 then cell.runCooldown:SetTextColor(1, 0.82, 0)
+		else cell.runCooldown:SetTextColor(0.86, 0.86, 0.88) end
 		if hovered == cell and not empty then
 			cell.border:SetBackdropBorderColor(1, 0.82, 0, 1)
 		else
@@ -458,12 +493,14 @@ local function Paint(pool, rows, top)
 end
 local function BuildLayout(spells)
 	local spellRows = math.max(1, math.ceil(table.getn(spells) / COLUMNS))
-	local spellTop, itemTop = 8, 8 + spellRows * PITCH + 6
+	-- Each spell row gets a strip above it for the cooldown numbers; without them the original size.
+	local strip = CooldownStrip()
+	local spellTop, itemTop = 8 + strip, 8 + spellRows * (PITCH + strip) + 6
 	panel:SetHeight(itemTop + ICON + 10)
 	spellsLabel:ClearAllPoints(); spellsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); spellsLabel:Show()
 	itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10)); itemsLabel:Show()
 	divider:ClearAllPoints(); divider:SetPoint("TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); divider:Show()
-	return spellTop, itemTop
+	return spellTop, itemTop, PITCH + strip
 end
 -- Cooldown style of the action bar: clockwise sweep (default, like stock action buttons) or the
 -- older shade that shrinks from top to bottom.
@@ -506,22 +543,14 @@ local function ActionCell(index)
 	return cell
 end
 local function PaintActions(rows)
-    local activeOnly=KeijinUI.DB().cooldownsOnly==true
-    if activeOnly then
-        local filtered={}
-        for _,row in ipairs(rows) do if Number(row.cd) and row.cd>0 then table.insert(filtered,row) end end
-        rows=filtered
-    end
 	local total = table.getn(rows)
 	local racial = total > 0 and rows[total] or nil
 	local normal = total > 0 and total - 1 or 0
 	local count = math.max(NORMAL_SLOTS, normal) + 1
-	if activeOnly then count=total; normal=total; racial=nil end
 	for index = 1, count do
 		local row, cell = nil, ActionCell(index)
 		if index == count then row = racial elseif index <= normal then row = rows[index] end
 		cell.racial = index == count
-		if activeOnly then row=rows[index]; cell.racial=false end
 		cell:ClearAllPoints()
 		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		cell.row = row
@@ -555,7 +584,6 @@ local function PaintActions(rows)
 	for index = count + 1, table.getn(actionCells) do actionCells[index]:Hide() end
 	skills:SetWidth(16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
 	skills:SetHeight(16 + ACTION_ICON)
-	if activeOnly and count==0 then skills.cooldownsEmpty=true else skills.cooldownsEmpty=nil end
 end
 local function Update()
 	local settings, run = Settings(), AZS_RUN
@@ -568,11 +596,11 @@ local function Update()
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered then GameTooltip:Hide(); hovered = nil end
 		if panelOn then HideNative() else ShowNative() end
-		PaintActions({}); if actionOn and not skills.cooldownsEmpty then skills:Show() end
+		PaintActions({}); if actionOn then skills:Show() end
 		local spells, items = SpellSlots({}), Items()
 		if not items then Release(); return end
-		local spellTop, itemTop = BuildLayout(spells)
-		Paint(spellCells,spells,spellTop); Paint(itemCells,items,itemTop)
+		local spellTop, itemTop, spellPitch = BuildLayout(spells)
+		Paint(spellCells,spells,spellTop,spellPitch); Paint(itemCells,items,itemTop)
 		advice:Hide(); if panelOn then panel:Show() end; return
 	end
 	local book, spells, items = Book(), {}, {}
@@ -605,7 +633,7 @@ local function Update()
 	items = Items()
 	if not items then Release(); return end
 	local displaySpells = SpellSlots(spells)
-	local spellTop, itemTop = BuildLayout(displaySpells)
+	local spellTop, itemTop, spellPitch = BuildLayout(displaySpells)
 	advice:ClearAllPoints()
 	advice:SetPoint("TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
 	if KeijinUI.ModuleOn("advisor") and KeijinBuildAdvisor then
@@ -626,17 +654,18 @@ local function Update()
 		if hovered == advice then hovered = nil; GameTooltip:Hide() end
 		advice:Hide()
 	end
-	Paint(spellCells, displaySpells, spellTop)
+	Paint(spellCells, displaySpells, spellTop, spellPitch)
 	Paint(itemCells, items, itemTop)
 	PaintActions(spells)
 	if panelOn then HideNative() else ShowNative() end
 	-- Both parts stay built when hidden, so frames anchored to the action bar keep their place.
 	if panelOn then panel:Show() else panel:Hide(); if hovered then GameTooltip:Hide(); hovered = nil end end
-	if actionOn and not skills.cooldownsEmpty then skills:Show() else skills:Hide() end
+	if actionOn then skills:Show() else skills:Hide() end
 end
 
 -- One setting shared by the menu and /kbb; restore the native HUD on disable.
 KeijinUI.buildBar={}
+KeijinUI.buildBar.CooldownText=CooldownText
 -- "Zauber & Schmuck" (panel) and "Aktionsleiste" (skills) are independent since 3.4.0. The native build bar returns
 -- only when both are off.
 function KeijinUI.buildBar.On() return Settings().enabled and true or false end

@@ -13,15 +13,18 @@ function K.SetFontChoice(key)
         v[1]:SetFont(K.font,size or v[2],flags or "OUTLINE")
     end
     if K.lang=="zh" then
-        for i=1,30 do
-            for _,side in ipairs({"Left","Right"}) do
-                local fs=getglobal("GameTooltipText"..side..i)
-                if fs and fs.GetFont then
-                    local old,size,flags=fs:GetFont()
-                    fs:SetFont(K.font,size or 11,flags or "")
-                end
+        -- Only with the Chinese interface chosen: tooltip and chat fonts get the CJK font, size and flags are kept.
+        local function Cjk(fs,defaultSize,defaultFlags)
+            if fs and fs.GetFont and fs.SetFont then
+                local old,size,flags=fs:GetFont()
+                fs:SetFont(K.font,size or defaultSize,flags or defaultFlags)
             end
         end
+        for _,name in ipairs({"GameTooltipText","GameTooltipHeaderText","GameTooltipTextSmall","ChatFontNormal"}) do Cjk(getglobal(name),11,"") end
+        for i=1,30 do
+            for _,side in ipairs({"Left","Right"}) do Cjk(getglobal("GameTooltipText"..side..i),11,"") end
+        end
+        for i=1,NUM_CHAT_WINDOWS or 7 do Cjk(getglobal("ChatFrame"..i),14,"") end
     end
 end
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.SetFontChoice(K.FontChoice()) end end)

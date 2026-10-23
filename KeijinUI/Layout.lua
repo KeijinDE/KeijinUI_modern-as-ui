@@ -7,8 +7,10 @@ local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 
 -- A frame handed back to the game (module off) keeps the game's own place and scale.
 local function Off(entry) return entry.options.inactive and entry.options.inactive() end
 -- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
+-- options.keepBottom keeps the bottom edge as well but, unlike grow, still allows docking (build panel).
 local function Up(entry)
     if entry.dock then return entry.dock.edge=="above" end
+    if entry.options.keepBottom then return true end
     return entry.options.grow and entry.options.grow() and true or false
 end
 local function ValidDock(dock)
@@ -86,7 +88,8 @@ local function Save(entry)
     local edge=entry.options.edge
     local ox,oy=0,0
     if edge then ox,oy=edge(); if up then oy=0 end end
-    K.DB().layout[entry.key]={x=(x+ox)*ratio/K.UIWidth(),y=(y-oy)*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale,dock=entry.dock,ref=edge and "bar" or nil}
+    K.DB().layout[entry.key]={x=(x+ox)*ratio/K.UIWidth(),y=(y-oy)*ratio/K.UIHeight(),scale=f:GetScale()/entry.baseScale,dock=entry.dock,ref=edge and "bar" or nil,
+        bottom=entry.options.legacyHeight and up and true or nil}
 end
 -- Standard layout (3.1.2, 300 point panels): only scales. Positions come from each frame's own anchor
 -- (minimap top right, run overview below it, loot below that, statistics/meter/crits top left, unit frames
@@ -129,6 +132,12 @@ local function Apply(entry)
         if saved and entry.options.edge and p.ref~="bar" then
             if p.ref==nil then p.x=p.x+ox/ratio/K.UIWidth() end
             p.y=p.y-oy/ratio/K.UIHeight(); p.ref="bar"
+        end
+        -- options.legacyHeight: the frame grew downwards before (build panel up to 3.7.0) and its older
+        -- positions hold the top edge. Convert once to the bottom edge at that height (the build panel's
+        -- one-row size at login and run start), so the panel sits exactly as before and grows upwards.
+        if saved and up and entry.options.legacyHeight and not p.bottom and not ValidDock(p.dock) then
+            p.y=p.y-entry.options.legacyHeight/ratio/K.UIHeight(); p.bottom=true
         end
         if saved and entry.options.edge and ValidDock(p.dock) and p.dock.ref~="bar" then
             p.dock.x=p.dock.x+ox/ratio; p.dock.ref="bar"

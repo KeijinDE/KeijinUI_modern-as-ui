@@ -1,6 +1,5 @@
 -- Azeroth Survivors 0.87.0 emits completed achievements as SYSTEM chat.
 -- No progress estimates, invented unlocks or changes to the account save.
-local FONT = KeijinUI.lang=="zh" and "Interface\\AddOns\\KeijinUI\\media\\fonts\\KeijinCJK.ttf" or "Fonts\\FRIZQT__.TTF"
 local DEFAULT_ICON = "Interface\\Icons\\INV_Jewelry_Talisman_07"
 local DURATION, FADE_IN, FADE_OUT = 6, 0.3, 0.7
 local queue, seen = {}, {}
@@ -137,7 +136,7 @@ end
 
 local function Label(text, x, y, width, height, size, r, g, b, justify)
     local label = popup:CreateFontString(nil, "OVERLAY")
-    label:SetFont(FONT, size, "OUTLINE")
+    label:SetFont(KeijinUI.font, size, "OUTLINE")
     KeijinUI.fontStrings=KeijinUI.fontStrings or {}; table.insert(KeijinUI.fontStrings,{label,size})
     label:SetPoint("TOPLEFT", popup, "TOPLEFT", x, y)
     label:SetWidth(width)

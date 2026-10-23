@@ -5,6 +5,13 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.7.1 (2026-10-23, release v3.7.1)
+
+* **Cooldown on the icon (requested by JayMasta):** the build overview now shows each spell's cooldown in this run in a dark, chamfered tab docked to the top of its icon, in seconds (two decimals below 1 s, one decimal below 10 s). Values below one second are gold. The window grows a few pixels upwards for it (downwards only while it is attached below another window) and returns to its original size when the option is off. Its bottom edge now stays in place, also when a second spell row appears; saved positions are taken over without a jump. That way you see at a glance how low a cooldown already is, without hovering. Switch: Layout & Display, "Cooldown on the icon". It is on by default.
+* **Active cooldowns only removed:** the option "Active cooldowns only" for the action bar is gone. The new number on the icon replaces it, and the action bar always shows all spells again.
+* **Chinese font in tooltips and chat:** with the Chinese interface, the game's tooltips (title, text and small text) and the chat now use the bundled CJK font too, so KeijinUI messages and Chinese names are readable there.
+* **Short damage summary is back:** with section titles switched off, the Run damage summary shows the short form again (total and DPS) instead of the long text.
+
 ### 3.7.0-beta.1 (2026-10-23, release v3.7.0-beta.1)
 
 * **Build panel position:** dragging the panel, its icons or its advice area now uses the same saved layout as the layout handle. The saved edge stays fixed when the panel changes height, and releasing Alt completes the move even if a drag-stop event is missed.
@@ -514,6 +521,13 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.7.1 (2026-10-23, Release v3.7.1)
+
+* **Abklingzeit am Symbol (auf Wunsch von JayMasta):** Die Buildübersicht zeigt jetzt die Abklingzeit jedes Zaubers im Run in einem dunklen, abgeschrägten Plättchen an der Oberkante seines Symbols, in Sekunden (unter 1 s zwei, unter 10 s eine Nachkommastelle). Werte unter einer Sekunde sind golden. Das Fenster wird dafür ein paar Pixel nach oben größer (nach unten nur, solange es unter einem anderen Fenster angedockt ist) und hat bei ausgeschalteter Option wieder seine Originalgröße. Seine Unterkante bleibt jetzt fest, auch wenn eine zweite Zauberreihe dazukommt; gespeicherte Positionen werden ohne Sprung übernommen. So siehst du ohne Hover, wie niedrig eine Abklingzeit schon ist. Schalter: Layout & Anzeige, "Abklingzeit am Symbol". Standardmäßig an.
+* **"Nur laufende Abklingzeiten" entfernt:** Die Option für die Aktionsleiste gibt es nicht mehr. Die neue Zahl am Symbol ersetzt sie, die Aktionsleiste zeigt wieder immer alle Zauber.
+* **Chinesische Schrift in Tooltips und Chat:** Bei chinesischer Oberfläche nutzen auch die Tooltips des Spiels (Titel, Text und kleiner Text) und der Chat die mitgelieferte CJK Schrift. KeijinUI Meldungen und chinesische Namen sind dort lesbar.
+* **Kurzform der Schadenszusammenfassung wieder da:** Bei ausgeblendeten Überschriften zeigt die Zusammenfassung im Reiter Run wieder die Kurzform (Gesamtschaden und DPS) statt des langen Textes.
 
 ### 3.7.0-beta.1 (2026-10-23, Release v3.7.0-beta.1)
 

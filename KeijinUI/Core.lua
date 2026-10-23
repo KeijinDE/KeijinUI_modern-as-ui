@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.7.0-beta.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "3.7.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -64,6 +64,7 @@ function K.DB()
     if db.snap == nil then db.snap = true end
     if db.lang ~= "de" and db.lang ~= "en" and db.lang ~= "zh" then db.lang = "en" end
     db.detectedLang = nil
+    db.cooldownsOnly = nil
     if db.schema ~= 2 then
         for _,key in ipairs({"player","target","skills","build","tally","xp"}) do db.layout[key]=nil end
         db.schema=2

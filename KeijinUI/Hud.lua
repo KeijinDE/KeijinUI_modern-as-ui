@@ -547,7 +547,7 @@ local function MoveStock()
     if KeijinBuildBarFrame then
         K.layout.Register("build",KeijinBuildBarFrame,"Zauber, Schmuck und Buildtipps",function(f)
             f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,42)
-        end)
+        end,{keepBottom=true,legacyHeight=82})
     end
     if KeijinAchievementsFrame then
         K.layout.Register("achievements",KeijinAchievementsFrame,"Erfolgsmeldung",function(f)

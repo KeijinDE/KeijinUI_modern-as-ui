@@ -135,7 +135,7 @@ local text={
  ["Spells & jewelry"]="技能与饰品", ["Spells & items"]="技能与物品", ["Spells, jewelry and action bar"]="技能、饰品与冷却栏",
  ["Empty neck slot"]="空项链栏", ["Empty ring slot"]="空戒指栏", ["Empty trinket slot"]="空饰品栏",
  ["Rank in run: %.0f"]="本局等级：%.0f", ["Cooldown in run: %.1fs"]="本局冷却：%.1f秒", ["Cooldown"]="冷却时间",
- ["Clockwise"]="顺时针", ["Top to bottom"]="从上到下", ["Active cooldowns only"]="仅显示冷却中的技能",
+ ["Clockwise"]="顺时针", ["Top to bottom"]="从上到下", ["Cooldown on the icon"]="图标上的冷却时间", ["Shows the ability's cooldown in this run at the top left of its icon, in seconds."]="在技能图标左上角显示本局冷却时间（秒）。",
  ["Bar enabled."]="技能栏已开启。", ["Bar disabled."]="技能栏已关闭。", ["Waiting for the spell data from the game."]="正在等待游戏技能数据。",
  ["Build overview with ranks and tooltips, plus a separate action bar with cooldowns."]="显示技能等级与提示，并提供独立的冷却技能栏。",
  ["Build overview with ranks and tooltips. Jewelry effects and cooldowns appear on the item icon."]="显示技能等级与提示，饰品图标上显示效果与冷却。",

@@ -354,7 +354,7 @@ local function Update()
         end
         meter.runAverage=duration>0 and total/duration or 0
         local ready=sorted[1] and K.liveDPS.Rate(sorted[1].name)~=nil
-        summary:SetText(K.T("%s gesamt · %s DPS",K.Short(total),ready and K.Short(liveTotal) or "?"))
+        Summary(K.T("%s gesamt · %s DPS",K.Short(total),ready and K.Short(liveTotal) or "?"),total,ready and liveTotal or nil)
         meter:Show(); K.Native("meter",true)
     else
         K.NativeFollow("meter",not K.DB().hidden.meter)

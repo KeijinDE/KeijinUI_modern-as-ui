@@ -1,7 +1,11 @@
--- Two languages, chosen by hand: English (default) or German.
+-- UI languages chosen by hand: English (default), German or Simplified Chinese.
 -- Source texts in the code are German; K.EN holds the English text for each of them.
 local K=KeijinUI
 K.EN={}
+K.EN["Run"]="Run"
+K.EN["Reset"]="Reset"
+K.EN["Chinesisch (vereinfacht)"]="Chinese (Simplified)"
+K.ZH={}
 K.lang="en"
 local live,hooks={},{}
 
@@ -9,6 +13,7 @@ local live,hooks={},{}
 function K.T(text,a1,a2,a3,a4,a5,a6)
     local out=text
     if K.lang~="de" then out=K.EN[text] or text end
+    if K.lang=="zh" then out=K.ZH[text] or out end
     if a1~=nil then return string.format(out,a1,a2,a3,a4,a5,a6) end
     return out
 end
@@ -28,9 +33,10 @@ function K.RefreshLang()
     for _,fn in ipairs(hooks) do fn() end
 end
 
--- The language is chosen by hand: "en" (default) or "de". GetLocale() is fixed to "enUS" in this client and
+-- The language is chosen by hand: "en" (default), "de" or "zh". GetLocale() is fixed to "enUS" in this client and
 -- the game data may still be English after a language change, so there is no detection.
 function K.EffectiveLang()
+    if K.DB().lang=="zh" then return "zh" end
     return K.DB().lang=="de" and "de" or "en"
 end
 -- Applies the setting to the texts that can change at once.
@@ -43,7 +49,7 @@ function K.UpdateLang()
 end
 -- Stores the language and reloads the interface when it changed, so that every text is set again.
 function K.SetLang(value)
-    if value~="de" and value~="en" then return false end
+    if value~="de" and value~="en" and value~="zh" then return false end
     if K.DB().lang==value and K.lang==value then return false end
     K.DB().lang=value
     K.UpdateLang()
@@ -641,3 +647,14 @@ K.EN["Empfehlung passend zu deinem Build in der Zauberübersicht. Aus: keine Emp
 K.EN["Levelaufstiege sammeln und später gesammelt auswählen. Aus: Das Spiel zeigt die Levelauswahl sofort wie gewohnt."]="Collect level-ups and choose them later. Off: the game offers the level choice at once as usual."
 K.EN["Erfolgsfenster beim Freischalten eines Erfolgs. Aus: kein Fenster, die Chatmeldung bleibt."]="Achievement window when you unlock an achievement. Off: no window, the chat line stays."
 K.EN["Cursortracker (Ring um den Mauszeiger) und die Taste für Automatisch laufen. Aus: kein Ring, deine Laufbelegung ist inaktiv; die Spielbelegung bleibt unverändert."]="Cursor tracker (ring around the pointer) and the auto run key. Off: no ring, your run key is inactive; the game's key bindings stay unchanged."
+K.EN["%s gesamt · %s DPS"]="%s total · %s DPS"
+K.EN["Durchschnitt seit Runbeginn oder Reset: %s DPS"]="Average since run start or reset: %s DPS"
+K.EN["DPS: letzte 10 Spielsekunden, ohne Pausen."]="DPS: last 10 run seconds, excluding pauses."
+K.EN["DPS (10 s): %s\nDPS oben: letzte 10 Spielsekunden. Durchschnitt: seit Runbeginn oder Reset."]="DPS (10 s): %s\nDisplayed DPS: last 10 run seconds. Average: since run start or reset."
+K.EN["Account Pace: %s"]="Account pace: %s"
+K.EN["Alle lokal gespeicherten Klassen, gleiche Zone, Schwierigkeit und Modifikatoren."]="All locally stored classes, same zone, difficulty and modifiers."
+K.EN["Nächster Endlosboss"]="Next endless boss"
+K.EN["Nur laufende Abklingzeiten"]="Active cooldowns only"
+K.EN["Rückkehrzeit unter Hortmarkern"]="Respawn timer below lair markers"
+K.EN["Account Pace zusätzlich anzeigen"]="Also show account pace"
+K.EN["Run: DPS der letzten 10 Spielsekunden. Gesamtschaden und Reihenfolge bleiben runbezogen. Der Durchschnitt seit Runbeginn oder Reset steht im Tooltip."]="Run: DPS over the last 10 run seconds. Total damage and ordering cover the run. Average DPS since run start or reset is in the tooltip."

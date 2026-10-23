@@ -66,8 +66,9 @@ paceRow:SetWidth(272); paceRow:SetHeight(16); paceRow:EnableMouse(true)
 paceRow.text=K.Text(paceRow,"",11,"LEFT",0,0,272)
 paceRow:SetScript("OnEnter",function()
     GameTooltip:SetOwner(this,"ANCHOR_LEFT"); GameTooltip:SetText(K.T("Pace-Indikator"),1,.82,.28)
-    GameTooltip:AddLine(K.T("Vergleicht dieselbe Klasse, Zone, Schwierigkeit und Modifikatoren zur gleichen Spielzeit. Grün ab 90%, Gelb ab 70%, sonst Rot."),.94,.91,.82,true)
-    local d=K.pace.Details()
+    if not this.account then GameTooltip:AddLine(K.T("Vergleicht dieselbe Klasse, Zone, Schwierigkeit und Modifikatoren zur gleichen Spielzeit. Grün ab 90%, Gelb ab 70%, sonst Rot."),.94,.91,.82,true) end
+    local d=K.pace.Details(this.account)
+    if this.account then GameTooltip:AddLine(K.T("Alle lokal gespeicherten Klassen, gleiche Zone, Schwierigkeit und Modifikatoren."),.94,.91,.82,true) end
     if d.ratio then
         GameTooltip:AddLine(K.T("Gegner: %s / %s · %s%%",K.Short(d.kills),K.Short(d.refKills),math.floor(d.killRatio*100+.5)),.94,.91,.82)
         if d.dpsRatio then
@@ -80,6 +81,11 @@ paceRow:SetScript("OnEnter",function()
     GameTooltip:Show()
 end)
 paceRow:SetScript("OnLeave",function() GameTooltip:Hide() end)
+local accountRow=CreateFrame("Frame",nil,tracker)
+accountRow:SetWidth(272); accountRow:SetHeight(16); accountRow:EnableMouse(true); accountRow.account=true
+accountRow.text=K.Text(accountRow,"",11,"LEFT",0,0,272)
+accountRow:SetScript("OnEnter",paceRow:GetScript("OnEnter"))
+accountRow:SetScript("OnLeave",paceRow:GetScript("OnLeave"))
 local paceExtra=0
 local function TrackerPoint(child,point,x,y)
     if tracker.headerPoints[child] then tracker.headerPoints[child][3]=y end
@@ -411,12 +417,14 @@ local function DrawBosses(phase)
     bosses:SetHeight(top+10); bosses:Show()
 end
 local function Update()
-    paceExtra=K.pace.On() and 18 or 0
+    paceExtra=K.pace.On() and (K.pace.AccountOn() and 36 or 18) or 0
     TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra)
     TrackerPoint(headBoss,"TOPLEFT",14,-105-paceExtra)
     TrackerPoint(head84,"TOPRIGHT",-84,-105-paceExtra)
     TrackerPoint(head14,"TOPRIGHT",-14,-105-paceExtra)
     TrackerPoint(paceRow,"TOPLEFT",14,-83)
+    TrackerPoint(accountRow,"TOPLEFT",14,-101)
+    accountRow:Hide()
     local r=AZS_RUN
     local phase=AZS_GetPhase and AZS_GetPhase()
     local seconds=AZS_GetRunTime and AZS_GetRunTime()
@@ -429,13 +437,25 @@ local function Update()
             paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%"..(d.mode=="kills" and (" · "..K.T("nur Gegner")) or "")) or ""))
             paceRow.text:SetTextColor(K.pace.Color(d.status)); paceRow:Show()
         else paceRow:Hide() end
+        if K.pace.AccountOn() then
+            local d=K.pace.Details(true)
+            accountRow.text:SetText(K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            accountRow.text:SetTextColor(K.pace.Color(d.status)); accountRow:Show()
+        end
         zone:SetText((AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
         time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
+        if r.endl==1 then time:SetText(K.Clock(seconds).." · "..K.T("Endlos")) end
         progress:SetValue(math.min(1,seconds/duration))
         local schedule=K.Schedule()
-        local count=math.min(8,table.getn(schedule))
+        local endless=r.endl==1
+        local count=endless and 1 or math.min(8,table.getn(schedule))
         for i=1,count do
             local v=schedule[i]; local row=ScheduleRow(i)
+            if endless then
+                local left=K.Number(r.nb) and r.nb>=0 and r.nb or nil
+                if left and K.Number(r.t) then left=math.max(0,left-math.max(0,seconds-r.t)) end
+                v={name=K.T("Nächster Endlosboss"),at=left and seconds+left}
+            end
             TrackerPoint(row,"TOPLEFT",14,-123-(i-1)*18-paceExtra)
             row.tint:Hide()
             row.name:SetText(v.name or "?")
@@ -467,7 +487,7 @@ local function Update()
             row:Show()
         end
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
-        DrawMarks(schedule,count,duration)
+        DrawMarks(schedule,endless and 0 or count,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
         local guardians=K.guardians.Draw(tracker,-127-count*18-paceExtra+K.HeaderOffset(tracker))
         tracker:SetHeight(136+count*18+guardians+paceExtra)

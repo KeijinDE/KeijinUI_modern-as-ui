@@ -1,5 +1,8 @@
 -- WoW 1.12 API. Only AZS_SPELLS decides which spells belong to this run.
-local FONT = "Fonts\\FRIZQT__.TTF"
+local function SetFont(fs,size)
+    fs:SetFont(KeijinUI.font,size,"OUTLINE")
+    KeijinUI.fontStrings=KeijinUI.fontStrings or {}; table.insert(KeijinUI.fontStrings,{fs,size})
+end
 local FLAT = "Interface\\ChatFrame\\ChatFrameBackground"
 local ICON, PITCH, COLUMNS, WIDTH, ROWSTART = 28, 30, 11, 400, 58
 -- Action bar (cooldown display only), one row: normal skills, then the racial ability at the far right.
@@ -72,7 +75,7 @@ divider:SetWidth(WIDTH - 12)
 
 local function Label(text, r, g, b)
 	local label = panel:CreateFontString(nil, "OVERLAY")
-	label:SetFont(FONT, 9, "OUTLINE")
+	SetFont(label,9)
 	label:SetText(text)
 	label:SetTextColor(r, g, b)
 	return label
@@ -92,31 +95,18 @@ local function Settings()
 	if focus ~= "balanced" and focus ~= "damage" and focus ~= "boss" and focus ~= "survival" then KeijinUIBuildDB.focus = "balanced" end
 	return KeijinUIBuildDB
 end
-local POINTS = { TOP=true, TOPLEFT=true, TOPRIGHT=true, CENTER=true,
-	LEFT=true, RIGHT=true, BOTTOM=true, BOTTOMLEFT=true, BOTTOMRIGHT=true }
-local function Coordinate(value)
-	return type(value) == "number" and value == value and math.abs(value) <= 100000
-end
 local function ApplyPosition()
     if KeijinUI.layout.entries.build then KeijinUI.layout.Place("build")
     else panel:ClearAllPoints(); panel:SetPoint("BOTTOM",UIParent,"BOTTOM",0,42) end
 end
-local function SavePosition()
-	local point, relative, relativePoint, x, y = panel:GetPoint()
-	if (not relative or relative == UIParent) and POINTS[point] and POINTS[relativePoint]
-		and Coordinate(x) and Coordinate(y) then
-		Settings().position = {point=point, relativePoint=relativePoint, x=x, y=y}
-	end
-end
 local function DragStart()
 	if IsAltKeyDown() then
 		if hovered then GameTooltip:Hide(); hovered = nil end
-		panel:StartMoving()
+		KeijinUI.layout.BeginMove("build")
 	end
 end
 local function DragStop()
-	panel:StopMovingOrSizing()
-	SavePosition()
+	KeijinUI.layout.EndMove("build")
 end
 panel:SetScript("OnDragStart", DragStart)
 panel:SetScript("OnDragStop", DragStop)
@@ -217,14 +207,14 @@ advice:RegisterForDrag("LeftButton")
 advice:SetScript("OnDragStart", DragStart)
 advice:SetScript("OnDragStop", DragStop)
 advice.heading = advice:CreateFontString(nil, "OVERLAY")
-advice.heading:SetFont(FONT, 9, "OUTLINE")
+SetFont(advice.heading,9)
 advice.heading:SetPoint("TOPLEFT", advice, "TOPLEFT", 0, -2)
 advice.heading:SetWidth(116)
 advice.heading:SetHeight(12)
 advice.heading:SetJustifyH("LEFT")
 advice.heading:SetTextColor(0.75, 0.75, 0.78)
 advice.title = advice:CreateFontString(nil, "OVERLAY")
-advice.title:SetFont(FONT, 10, "OUTLINE")
+SetFont(advice.title,10)
 advice.title:SetPoint("TOPLEFT", advice, "TOPLEFT", 0, -17)
 advice.title:SetWidth(116)
 advice.title:SetHeight(13)
@@ -392,7 +382,7 @@ local function Cell(pool, index)
 	cell.rankBackground:SetHeight(13)
 	cell.rankBackground:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 2)
     cell.rank = cell:CreateFontString(nil, "OVERLAY")
-	cell.rank:SetFont(FONT, 10, "OUTLINE")
+	SetFont(cell.rank,10)
 	cell.rank:SetTextColor(1, 0.82, 0)
 	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -3, 2)
 	cell:SetScript("OnEnter", function()
@@ -510,20 +500,28 @@ local function ActionCell(index)
 	local text = CreateFrame("Frame", nil, cell)
 	text:SetAllPoints(cell); text:SetFrameLevel(cell:GetFrameLevel() + 2)
 	cell.cooldown = text:CreateFontString(nil, "OVERLAY")
-	cell.cooldown:SetFont(FONT, 14, "OUTLINE")
+	SetFont(cell.cooldown,14)
 	cell.cooldown:SetPoint("CENTER", cell, "CENTER", 0, 0)
 	actionCells[index] = cell
 	return cell
 end
 local function PaintActions(rows)
+    local activeOnly=KeijinUI.DB().cooldownsOnly==true
+    if activeOnly then
+        local filtered={}
+        for _,row in ipairs(rows) do if Number(row.cd) and row.cd>0 then table.insert(filtered,row) end end
+        rows=filtered
+    end
 	local total = table.getn(rows)
 	local racial = total > 0 and rows[total] or nil
 	local normal = total > 0 and total - 1 or 0
 	local count = math.max(NORMAL_SLOTS, normal) + 1
+	if activeOnly then count=total; normal=total; racial=nil end
 	for index = 1, count do
 		local row, cell = nil, ActionCell(index)
 		if index == count then row = racial elseif index <= normal then row = rows[index] end
 		cell.racial = index == count
+		if activeOnly then row=rows[index]; cell.racial=false end
 		cell:ClearAllPoints()
 		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		cell.row = row
@@ -555,8 +553,9 @@ local function PaintActions(rows)
 		cell:Show()
 	end
 	for index = count + 1, table.getn(actionCells) do actionCells[index]:Hide() end
-	skills:SetWidth(16 + (count - 1) * ACTION_PITCH + ACTION_ICON)
+	skills:SetWidth(16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
 	skills:SetHeight(16 + ACTION_ICON)
+	if activeOnly and count==0 then skills.cooldownsEmpty=true else skills.cooldownsEmpty=nil end
 end
 local function Update()
 	local settings, run = Settings(), AZS_RUN
@@ -569,7 +568,7 @@ local function Update()
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered then GameTooltip:Hide(); hovered = nil end
 		if panelOn then HideNative() else ShowNative() end
-		PaintActions({}); if actionOn then skills:Show() end
+		PaintActions({}); if actionOn and not skills.cooldownsEmpty then skills:Show() end
 		local spells, items = SpellSlots({}), Items()
 		if not items then Release(); return end
 		local spellTop, itemTop = BuildLayout(spells)
@@ -633,7 +632,7 @@ local function Update()
 	if panelOn then HideNative() else ShowNative() end
 	-- Both parts stay built when hidden, so frames anchored to the action bar keep their place.
 	if panelOn then panel:Show() else panel:Hide(); if hovered then GameTooltip:Hide(); hovered = nil end end
-	if actionOn then skills:Show() else skills:Hide() end
+	if actionOn and not skills.cooldownsEmpty then skills:Show() else skills:Hide() end
 end
 
 -- One setting shared by the menu and /kbb; restore the native HUD on disable.

@@ -5,6 +5,16 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 3.7.0-beta.1 (2026-10-23, release v3.7.0-beta.1)
+
+* **Build panel position:** dragging the panel, its icons or its advice area now uses the same saved layout as the layout handle. The saved edge stays fixed when the panel changes height, and releasing Alt completes the move even if a drag-stop event is missed.
+* **DPS:** the Run damage meter now shows damage per second over the last 10 run seconds, excluding pauses. Total damage, bars and ordering still cover the run or the period since Reset. The tooltip keeps average DPS; the Boss and Healing tabs keep their native fight or run averages. Measurement starts with fresh observations and restarts after missing reports.
+* **Endless bosses:** the run overview shows the game's countdown to the next endless boss instead of keeping the finished normal boss schedule on screen. Missing countdowns show a question mark.
+* **Account pace:** an optional second pace line compares all locally recorded classes under the same zone, difficulty and modifiers. Class pace remains separate. Up to 120 reference runs are kept; existing recorded samples can be used immediately.
+* **Guardian return timers:** optional countdowns below lair markers on the minimap use the same return data as the run overview. Stale data shows a question mark. Enabled by default, with a switch under Guardians.
+* **Active cooldowns:** the existing action bar can show only spells with a running cooldown, hiding the bar while all spells are ready. The full action bar remains the default.
+* **Simplified Chinese:** choose 简体中文 in General or use `/kui lang zh`. Adds translated interface texts and ability names from game data, with a bundled CJK and Latin font. Unrecognized names stay as supplied by the game. Chinese wording and the new displays still need in-game validation.
+
 ### 3.6.1 (2026-10-23, release v3.6.1)
 
 * **Tooltips for abilities outside the spellbook:** abilities that have no spellbook entry, such as **Call of Flame**, now show the game's own description when you hover them in the spell list. KeijinUI finds the matching action slot by name in every game language.
@@ -504,6 +514,16 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 3.7.0-beta.1 (2026-10-23, Release v3.7.0-beta.1)
+
+* **Position des Buildpanels:** Verschieben über das Panel, seine Symbole oder den Tippbereich verwendet jetzt denselben Layoutspeicher wie der Layoutgriff. Die gespeicherte Kante bleibt bei Höhenänderungen fest. Loslassen von Alt beendet das Verschieben auch bei fehlendem Abschlussereignis.
+* **DPS:** Der Reiter Run zeigt jetzt den Schaden pro Sekunde der letzten 10 Spielsekunden, ohne Pausen. Gesamtschaden, Balken und Reihenfolge beziehen sich weiterhin auf den Run oder die Zeit seit Reset. Der Tooltip behält die durchschnittlichen DPS. Boss und Heilung behalten ihre nativen Kampfwerte beziehungsweise Rundendurchschnitte. Die Messung beginnt mit neuen Beobachtungen und startet nach Datenlücken erneut.
+* **Endlosbosse:** Die Runübersicht zeigt den Spielcountdown bis zum nächsten Endlosboss statt des abgeschlossenen normalen Bossplans. Bei fehlendem Countdown erscheint ein Fragezeichen.
+* **Account Pace:** Eine optionale zweite Zeile vergleicht alle lokal gespeicherten Klassen bei gleicher Zone, Schwierigkeit und gleichen Modifikatoren. Der Klassenvergleich bleibt getrennt. Bis zu 120 Referenzrunden werden behalten; vorhandene Messpunkte können sofort verwendet werden.
+* **Rückkehrzeit der Wächter:** Optionale Timer unter den Hortmarkern auf der Minimap verwenden dieselben Rückkehrdaten wie die Runübersicht. Veraltete Daten zeigen ein Fragezeichen. Standardmäßig aktiv, abschaltbar unter Wächter.
+* **Laufende Abklingzeiten:** Die vorhandene Aktionsleiste kann nur Zauber mit laufender Abklingzeit zeigen. Sind alle bereit, wird sie ausgeblendet. Standard bleibt die vollständige Leiste.
+* **Vereinfachtes Chinesisch:** Unter Allgemein 简体中文 wählen oder `/kui lang zh` verwenden. Übersetzte Oberflächentexte und Fähigkeitsnamen aus den Spieldaten sowie eine mitgelieferte Schrift für chinesische und lateinische Zeichen. Unbekannte Namen bleiben wie vom Spiel geliefert. Übersetzung und neue Anzeigen müssen noch im Spiel geprüft werden.
 
 ### 3.6.1 (2026-10-23, Release v3.6.1)
 

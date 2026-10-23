@@ -24,6 +24,12 @@ local function Age()
     return math.max(0,GetTime()-AZS_LAIRS_UPDATED)
 end
 -- The guardian unit of a held lair, by id, for its health. Units from the run before do not count.
+function G.Countdown(lair)
+    if not lair or lair.state~="empty" then return "" end
+    local left=Left(lair)
+    if not K.Number(left) or (left>0 and Age() and Age()>5) then return "?" end
+    return K.Clock(math.ceil(left))
+end
 local function Unit(lair)
     if type(AZS_UNITS)~="table" or not K.Fresh(AZS_UNITS_UPDATED) then return nil end
     if not K.Number(lair.id) or lair.id==0 then return nil end

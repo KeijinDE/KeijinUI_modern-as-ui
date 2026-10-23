@@ -1,6 +1,18 @@
 # Herkunft
 
-Seit Version 0.6.0 besteht KeijinUI vollständig aus eigener Arbeit.
+## Schrift für vereinfachtes Chinesisch
+
+`media/fonts/KeijinCJK.ttf` kombiniert Droid Sans und Droid Sans Fallback aus
+dem Android Open Source Project, Apache License 2.0. Die Schrift wurde mit
+FontTools zusammengeführt und auf einheitliche Maße skaliert. Sie wird nur für
+die chinesische Oberfläche verwendet. Lizenz und Copyright Hinweise stehen
+in `DroidSansFallback-LICENSE.md`.
+
+Quellen und reproduzierbarer Aufbau: `development/keijinui/prepare_chinese_font.py`.
+Upstream: https://android.googlesource.com/platform/frameworks/base/+/ecf4015032e9/data/fonts/
+
+Lua Code und erzeugte Grafiken von KeijinUI sind seit Version 0.6.0 eigene Arbeit.
+Die separat lizenzierte Schrift ist oben beschrieben.
 
 * Der Leser für Kampfnachrichten in `CombatParser.lua` ist eine eigene
   Implementierung. Er leitet die Zeilenformen zur Laufzeit aus den Kampftexten

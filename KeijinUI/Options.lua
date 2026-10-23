@@ -116,12 +116,12 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="reload" then ReloadUI()
     elseif command=="lang" or string.find(command,"^lang%s") then
         local _,_,value=string.find(command,"^lang%s+(%S+)$")
-        if value=="de" or value=="en" then
+        if value=="de" or value=="en" or value=="zh" then
             K.SetLang(value)
-            K.Say(K.T("Sprache")..": "..(value=="de" and "Deutsch" or "English"))
+            K.Say(K.T("Sprache")..": "..(value=="de" and "Deutsch" or (value=="zh" and "简体中文" or "English")))
             RefreshAll()
         else
-            K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or "English"))
+            K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or (K.lang=="zh" and "简体中文" or "English")))
         end
     else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, size, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
 end

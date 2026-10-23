@@ -16,6 +16,15 @@ rows[table.getn(rows)].line:Hide()
 local meter=K.Panel("KeijinUIDamage","Schaden",K.PANEL_WIDTH,235)
 K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end)
 local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,K.PANEL_WIDTH-26)
+local summaryHover=CreateFrame("Frame",nil,meter)
+summaryHover:SetAllPoints(summary); summaryHover:EnableMouse(true)
+summaryHover:SetScript("OnEnter",function()
+    if K.MeterView()~="run" or not meter.runAverage then return end
+    GameTooltip:SetOwner(this,"ANCHOR_LEFT"); GameTooltip:SetText(K.T("Schaden"),1,.82,.28)
+    GameTooltip:AddLine(K.T("Durchschnitt seit Runbeginn oder Reset: %s DPS",K.Short(meter.runAverage)),.94,.91,.82,true)
+    GameTooltip:AddLine(K.T("DPS: letzte 10 Spielsekunden, ohne Pausen."),.7,.7,.67,true); GameTooltip:Show()
+end)
+summaryHover:SetScript("OnLeave",function() GameTooltip:Hide() end)
 local meterRows,baseline={},{}
 local meterStart,offset,critOffset=0,0,0
 local MAX_ROWS=8
@@ -52,15 +61,15 @@ meter:EnableMouseWheel(true)
 meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -1 or 1)) end)
 local reset=CreateFrame("Button",nil,meter)
 reset:SetWidth(44); reset:SetHeight(20); reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6)
-reset.text=K.Text(reset,"Reset",9,"CENTER",0,0)
+reset.text=K.LText(reset,"Reset",9,"CENTER",0,0)
 -- Run/Boss/Healing share one meter. Automatic Boss is temporary; Run and Healing choices stay explicit.
 local autoView,bossWasAlive,autoWasOn,awaitingBossRun
 local tabRun=CreateFrame("Button","KeijinUIMeterTabRun",meter)
 local tabBoss=CreateFrame("Button","KeijinUIMeterTabBoss",meter)
 local tabHeal=CreateFrame("Button","KeijinUIMeterTabHeal",meter)
 for _,tab in ipairs({tabRun,tabBoss}) do tab:SetWidth(34); tab:SetHeight(20) end
-tabRun.text=K.Text(tabRun,"Run",9,"CENTER",0,0)
-tabBoss.text=K.Text(tabBoss,"Boss",9,"CENTER",0,0)
+tabRun.text=K.LText(tabRun,"Run",9,"CENTER",0,0)
+tabBoss.text=K.LText(tabBoss,"Boss",9,"CENTER",0,0)
 tabHeal:SetWidth(44); tabHeal:SetHeight(20); tabHeal.text=K.LText(tabHeal,"Heilung",9,"CENTER",0,0)
 function K.MeterView()
     if autoView then return autoView end
@@ -110,6 +119,7 @@ local function Summary(full,total,rate)
     summary:SetText(K.headers.Mode()=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
 end
 local function ResetMeter()
+    K.liveDPS.Reset()
     baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0
     local lines=AZS_GetMeter and AZS_GetMeter()
     for _,v in ipairs(lines or {}) do if K.Number(v.dmg) then baseline[v.name]=v.dmg end end
@@ -145,6 +155,7 @@ local function ReadHealing(valid)
     return sorted,total,hps,true
 end
 local function ResetRun(waitForRun)
+    K.liveDPS.Reset()
     baseline={}; meterStart=0; offset=0; critData={}; critOffset=0
     if K.DB().meterAutoBoss==true and K.DB().meterView=="boss" then K.DB().meterView=nil end
     autoView=nil; bossWasAlive=nil; autoWasOn=nil; awaitingBossRun=waitForRun==true
@@ -293,6 +304,9 @@ local function Update()
     else stats:Hide() end
     AutoSwitch(); PaintTabs()
     local lines=AZS_GetMeter and AZS_GetMeter()
+    if phase=="playing" and K.Number(AZS_RUN_UPDATED) and GetTime()-AZS_RUN_UPDATED>5 then
+        K.liveDPS.Reset()
+    elseif valid and not awaitingBossRun then K.liveDPS.Observe(reported or seconds,lines) end
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
     local bossView=K.MeterView()=="boss"
     local healingView=K.MeterView()=="healing"
@@ -315,26 +329,32 @@ local function Update()
         local visible=(meter.headerHeight-56)/22
         offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
         local duration=seconds-meterStart
+        local liveTotal=0
+        for _,v in ipairs(sorted) do liveTotal=liveTotal+(K.liveDPS.Rate(v.name) or 0) end
         for i,row in ipairs(meterRows) do
             local v=sorted[i+offset]
             if v and i<=visible then
                 -- Same run clock and reset baseline as the summary and tooltip;
                 -- do not mix native run DPS with damage measured since Reset.
-                local dps=duration>0 and v.dmg/duration or 0
+                local average=duration>0 and v.dmg/duration or 0
+                local dps=K.liveDPS.Rate(v.name)
                 UpdateSpellIcon(row,v.name)
                 row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
-                row.dps:SetText(K.Short(dps).." DPS")
+                row.dps:SetText(dps and (K.Short(dps).." DPS") or "?")
                 row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
                 local red,green,blue=K.SourceColor(v.name)
                 row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=K.DisplayName(v.name)
                 row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
-                    K.Short(dps),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+                    K.Short(average),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+                row.detail=row.detail.."\n"..K.T("DPS (10 s): %s\nDPS oben: letzte 10 Spielsekunden. Durchschnitt: seit Runbeginn oder Reset.",K.Short(dps))
                 row.detail=row.detail..K.combatDetails.Detail(v.name)
                 row:Show()
             else row:Hide() end
         end
-        Summary(K.T("%s gesamt   ·   %s / s",K.Short(total),K.Short(duration>0 and total/duration or 0)),total,duration>0 and total/duration or 0)
+        meter.runAverage=duration>0 and total/duration or 0
+        local ready=sorted[1] and K.liveDPS.Rate(sorted[1].name)~=nil
+        summary:SetText(K.T("%s gesamt · %s DPS",K.Short(total),ready and K.Short(liveTotal) or "?"))
         meter:Show(); K.Native("meter",true)
     else
         K.NativeFollow("meter",not K.DB().hidden.meter)

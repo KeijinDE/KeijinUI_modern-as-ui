@@ -77,7 +77,9 @@ local function Save(entry)
     local x,y=f:GetLeft(),up and f:GetBottom() or f:GetTop()
     if not Finite(x) or not Finite(y) then return end
     -- Keep the bottom edge as the anchor, so a later change of the height does not move it.
-    if up and f:GetPoint()~="BOTTOMLEFT" then f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",x,y) end
+    if not entry.dock then
+        f:ClearAllPoints(); f:SetPoint(up and "BOTTOMLEFT" or "TOPLEFT",UIParent,"BOTTOMLEFT",x,y)
+    end
     -- options.edge: distance from the frame's left edge and top edge to the corner of the bar that stays put
     -- when the frame's geometry changes. Such an entry stores that corner (ref="bar") instead of the frame corner.
     -- (A frame anchored by its bottom keeps the bottom, which is the same in both styles.)
@@ -209,6 +211,18 @@ local function Stop()
     active.frame:StopMovingOrSizing(); Snap(active); Save(active); active=nil
     if L.SyncFollowers then L.SyncFollowers() end
 end
+-- Both the layout handle and a panel's own drag regions use this lifecycle.
+function L.BeginMove(key)
+    local e=L.entries[key]
+    if not e or Off(e) or (not editing and not IsAltKeyDown()) then return end
+    if e.options.locked and e.options.locked() then return end
+    if active and active~=e then Stop() end
+    if e.options.beforeMove then e.options.beforeMove() end
+    Detach(e); active=e; e.frame:StartMoving()
+end
+function L.EndMove(key)
+    if active and active.key==key then Stop() end
+end
 -- Grid overlay: thin textures every STEP units from the screen centre, shown only while editing.
 -- Lines hang from the centre and run edge to edge with two anchors, so the middle line stays in the screen
 -- centre even if the reported UIParent size and the drawn area differ (game 0.101).
@@ -268,11 +282,7 @@ function L.Register(key,frame,name,anchor,options)
     K.Live(handle.label,function() return K.T(name).." | "..K.T("Mausrad: Größe") end)
     handle:EnableMouse(true); handle:EnableMouseWheel(true); handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart",function()
-        if Off(e) or (not editing and not IsAltKeyDown()) then return end
-        if e.options.locked and e.options.locked() then return end
-        if e.options.beforeMove then e.options.beforeMove() end
-        Detach(e)
-        active=e; frame:StartMoving()
+        L.BeginMove(key)
     end)
     handle:SetScript("OnDragStop",Stop)
     handle:SetScript("OnMouseWheel",function()

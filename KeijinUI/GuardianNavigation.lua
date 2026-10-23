@@ -9,6 +9,8 @@ local PATH="Interface\\AddOns\\KeijinUI\\media\\caches\\Arrow.tga"
 local rows={}
 function G.On() return K.ModuleOn("guardians") and K.DB().guardianGuide~=false end
 function G.PinsOn() return K.ModuleOn("guardians") and K.DB().guardianPins~=false end
+function G.TimersOn() return G.PinsOn() and K.DB().guardianTimers~=false end
+function G.SetTimers(on) K.DB().guardianTimers=on and true or false; G.Update() end
 function G.Set(on) K.DB().guardianGuide=on and true or false; G.Update() end
 function G.SetPins(on) K.DB().guardianPins=on and true or false; G.Update() end
 -- Lair markers: one symbol per lair for the whole run, on the minimap and before the name in the overview.
@@ -232,6 +234,9 @@ local function Pin(i)
         -- Number plate of the skull style: same place as the symbol, above it, below the badge frame.
         pin.digit=pin:CreateTexture(nil,"ARTWORK"); pin.digit:SetWidth(14); pin.digit:SetHeight(14)
         pin.digit:SetPoint("CENTER",pin,"CENTER",0,0); pin.digit:Hide()
+        pin.timer=K.Text(pin,"",10,"TOP",0,-18,48)
+        pin.timer:ClearAllPoints(); pin.timer:SetPoint("TOP",pin,"BOTTOM",0,1)
+        pin.timer:SetJustifyH("CENTER"); pin.timer:SetHeight(14)
         pin.badge=CreateFrame("Frame",nil,pin); pin.badge:SetAllPoints(pin); pin.badge:SetFrameLevel(pin:GetFrameLevel()+1)
         -- Tiny FontStrings are clipped/wrapped by this client. Draw one complete transparent
         -- symbol instead, straddling the lower-right corner rather than floating beside it.
@@ -336,6 +341,7 @@ function G.Update()
                         pin:ClearAllPoints(); pin:SetPoint("CENTER",Minimap,"CENTER",x,y)
                         pin.glideX=nil
                         Paint(pin,v.lair.state,G.Slot(v.lair,v.index))
+                        pin.timer:SetText(G.TimersOn() and K.guardians.Countdown(v.lair) or "")
                         Fade(pin,x,y,edge); pin:Show()
                     end
                 end

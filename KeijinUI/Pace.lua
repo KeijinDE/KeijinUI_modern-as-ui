@@ -4,6 +4,12 @@ local P={}
 K.pace=P
 function P.On() return K.ModuleOn("analysis") and K.DB().pace~=false end
 function P.Set(on) K.DB().pace=on and true or false end
+function P.AccountOn() return P.On() and K.DB().paceAccount~=false end
+function P.SetAccount(on) K.DB().paceAccount=on and true or false end
+local function AccountKey(key)
+    if type(key)~="string" then return nil end
+    return string.gsub(key,"^([^:]*):[^:]*:","%1:all:")
+end
 local function Key(z,class)
     z=z or {}
     return tostring(z.zone)..":"..tostring(class)..":"..tostring(z.diff or "?")..":"..tostring(z.mods or "?")
@@ -23,7 +29,7 @@ function P.Record(open)
     local samples={}; for key,v in pairs(open.paceSamples) do samples[key]={t=v.t,kills=v.kills,dealt=v.dealt} end
     local db=K.DB(); if type(db.paceHistory)~="table" then db.paceHistory={} end
     table.insert(db.paceHistory,{key=open.paceKey,samples=samples,won=open.won and true or false,snapshotId=open.snapshotId})
-    while table.getn(db.paceHistory)>30 do table.remove(db.paceHistory,1) end
+    while table.getn(db.paceHistory)>120 do table.remove(db.paceHistory,1) end
     open.paceRecorded=true
 end
 local function Reference(samples,t,field)
@@ -53,7 +59,7 @@ local function DamageRate(samples,t,total)
     local middle=Reference(samples,t-15,"dealt")
     if K.Number(first) and K.Number(middle) and K.Number(last) and last>=middle and middle>=first then return (last-first)/30 end
 end
-function P.Details()
+function P.Details(account)
     local out={status="Wird erfasst",refs=0,mode="kills"}
     local r=AZS_RUN or {}; local phase=AZS_GetPhase and AZS_GetPhase()
     if r.endl==1 then out.status="Endlos"; return out end
@@ -69,7 +75,9 @@ function P.Details()
     if type(open)=="table" and open.paceKey==key and K.Number(r.dealt) then out.dps=DamageRate(open.paceSamples,r.t,r.dealt) end
     for _,entry in ipairs(K.DB().paceHistory or {}) do
         local self=type(open)=="table" and open.snapshotId and entry.snapshotId==open.snapshotId
-        local value=not self and entry.key==key and Reference(entry.samples,r.t)
+        local matches=entry.key==key
+        if account then matches=AccountKey(entry.key)==AccountKey(key) end
+        local value=not self and matches and Reference(entry.samples,r.t)
         if K.Number(value) and value>0 then
             table.insert(values,value)
             local rate=out.dps and DamageRate(entry.samples,r.t)

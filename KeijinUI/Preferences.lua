@@ -1,6 +1,6 @@
--- Compact headers only for the HUD panels (run tracker, statistics, damage, crits, loot, character stats), never dialogs or untitled groups.
+-- Compact headers only for the HUD panels (run tracker, statistics, damage, crits, loot, character stats, party), never dialogs or untitled groups.
 local K=KeijinUI
-local H={panels={},eligible={KeijinUITracker=true,KeijinUIStatistics=true,KeijinUIDamage=true,KeijinUICrits=true,KeijinUILoot=true,KeijinUICharacterStats=true}}
+local H={panels={},eligible={KeijinUITracker=true,KeijinUIStatistics=true,KeijinUIDamage=true,KeijinUICrits=true,KeijinUILoot=true,KeijinUICharacterStats=true,KeijinUIParty=true}}
 K.headers=H
 function H.Mode()
     local mode=K.DB().panelHeaders

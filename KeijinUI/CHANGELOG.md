@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.0.1 (2026-10-24, release v4.0.1)
+
+* **Party window follows the header style:** with section titles set to small or off, the party window's header now shrinks or disappears like the other windows, and the window gets shorter accordingly.
+
 ### 4.0.0 (2026-10-24, release v4.0.0)
 
 * **All game languages:** besides English, German and Simplified Chinese, KeijinUI can now be shown in French, Spanish, Portuguese, Polish, Czech, Romanian, Turkish, Russian, Ukrainian, Japanese and Korean. Choose it under General, Language, or with `/kui lang <code>`. Ability names follow the game's own translations (Turkish keeps the English names, as the game does).
@@ -529,6 +533,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.0.1 (2026-10-24, Release v4.0.1)
+
+* **Partyfenster folgt dem Überschriftenstil:** Sind die Überschriften auf klein oder aus gestellt, wird der Kopf des Partyfensters jetzt wie bei den anderen Fenstern kleiner oder ausgeblendet, und das Fenster wird entsprechend flacher.
 
 ### 4.0.0 (2026-10-24, Release v4.0.0)
 

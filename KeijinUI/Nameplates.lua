@@ -6,6 +6,7 @@ local K=KeijinUI
 local plates,known={},{}
 K.nameplates=plates
 local BORDER="interface\\tooltips\\nameplate-border"
+local RAID_ATLAS="interface\\targetingframe\\ui-raidtargetingicons"
 local nativeShow,nativeHide=ShowNameplates,HideNameplates
 local scanned,scanErrors,lastError=0,0,nil
 local function Mode()
@@ -67,6 +68,13 @@ local function Mask(p,hidden)
         if hidden then p.plate:DisableDrawLayer(layer); p.health:DisableDrawLayer(layer)
         else p.plate:EnableDrawLayer(layer); p.health:EnableDrawLayer(layer) end
     end
+    -- The native raid texture belongs to this plate, even for duplicate names.
+    -- Keep its ARTWORK layer alive, masking the other regions individually.
+    -- Never Show/Hide the marker: the client owns its index and removal state.
+    if p.raidMarker then
+        if hidden then p.plate:EnableDrawLayer("ARTWORK") end
+        for _,entry in ipairs(p.maskRegions) do entry.region:SetAlpha(hidden and 0 or entry.alpha) end
+    end
     p.health:SetAlpha(hidden and 0 or p.healthAlpha)
 end
 -- Clicks go through the hit rectangle only: freelook toggles the mouse flag itself.
@@ -105,8 +113,12 @@ end
 local function Skin(plate,how)
     local health=plate:GetChildren()
     if not health or not health.GetMinMaxValues then return end
-    local name
-    for _,r in ipairs({plate:GetRegions()}) do if r:GetObjectType()=="FontString" then name=r; break end end
+    local name,raidMarker
+    local regions={plate:GetRegions()}
+    for _,r in ipairs(regions) do
+        if r:GetObjectType()=="FontString" and not name then name=r end
+        if r:GetObjectType()=="Texture" and Norm(r:GetTexture())==RAID_ATLAS then raidMarker=r end
+    end
     if not name then return end
     local f=CreateFrame("Frame",nil,plate)
     f:SetAllPoints(plate); f:EnableMouse(false)
@@ -116,13 +128,19 @@ local function Skin(plate,how)
     K.MetalBar(bar,bar)
     local textLayer=CreateFrame("Frame",nil,bar); textLayer:SetAllPoints(bar); textLayer:SetFrameLevel(bar:GetFrameLevel()+3)
     local label=K.Text(textLayer,"",9,"BOTTOM",0,13)
+    label:ClearAllPoints(); label:SetPoint("BOTTOM",bar,"TOP",0,2)
     local value=K.Text(textLayer,"",8,"RIGHT",-3,0)
     -- Debuffs of the current target only (UnitDebuff exists for the target, not for any plate).
     local debuffs=K.DebuffRow(f,14,true)
     debuffs:SetPoint("TOP",bar,"BOTTOM",0,-2)
     local left,right,top,bottom=plate:GetHitRectInsets()
     local p={plate=plate,health=health,nativeName=name,frame=f,bar=bar,label=label,value=value,debuffs=debuffs,how=how,
-        healthAlpha=health:GetAlpha() or 1,insets={left or 0,right or 0,top or 0,bottom or 0}}
+        raidMarker=raidMarker,maskRegions={},healthAlpha=health:GetAlpha() or 1,insets={left or 0,right or 0,top or 0,bottom or 0}}
+    if raidMarker then
+        for _,r in ipairs(regions) do
+            if r~=raidMarker then table.insert(p.maskRegions,{region=r,alpha=r:GetAlpha()}) end
+        end
+    end
     known[plate]=p; table.insert(plates,p)
 end
 local function Discover()
@@ -160,6 +178,13 @@ local function Run()
                 local width=kind=="boss" and 154 or ((kind=="elite" or kind=="rare") and 124 or 100)
                 local height=kind=="boss" and 14 or 10
                 if p.cWidth~=width then p.cWidth=width; p.bar:SetWidth(width) end
+                -- Native marker is anchored RIGHT to the plate's LEFT (nameplate.rs).
+                -- Grow wider bars to the right while marked, leaving that native area clear.
+                local offset=p.raidMarker and p.raidMarker:IsShown() and math.max(0,(width-p.plate:GetWidth())/2+4) or 0
+                if p.cOffset~=offset then
+                    p.cOffset=offset; p.bar:ClearAllPoints(); p.bar:SetPoint("CENTER",p.frame,"CENTER",offset,-4)
+                end
+                p.label:SetWidth(width)
                 if p.cHeight~=height then p.cHeight=height; p.bar:SetHeight(height) end
                 if p.cShare~=share then
                     p.cShare=share; p.bar:SetValue(share)

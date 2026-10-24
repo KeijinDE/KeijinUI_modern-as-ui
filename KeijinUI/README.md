@@ -1,4 +1,4 @@
-# KeijinUI 4.0.2
+# KeijinUI 4.1.0-beta.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui

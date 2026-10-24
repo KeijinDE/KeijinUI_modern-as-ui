@@ -5,6 +5,14 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.1.0-beta.1 (2026-10-24, release v4.1.0-beta.1)
+
+* **Game 0.115.0 test version:** talent timers from `AZS_GetTimers()` join the existing cooldown bar, including Butcher and Pact of the Annihilan. Values come from the game and freeze during pauses and card choices. Hover a timer for its name and remaining time. Older clients without this API keep their existing bar.
+* **Co-op roster:** after the client has supplied real party units, departed teammates cannot return through historical damage entries. The Party damage view includes current members and recalculates its totals when historical entries are excluded.
+* **Revive display:** the native revive HUD is hidden only while our party window shows the corresponding progress. It returns when needed, when the module is disabled, and on logout. Your own revive progress can appear even without other member rows.
+* **Markers and friendly targets:** player and target frames show native raid markers. Nameplates preserve the game's own markers. Friendly pets and totems use the game's relationship colours; selected player class colours still take priority.
+* **Beta validation:** real co-op testing is still required, especially disconnects, mixed factions, revival during level-ups, markers and translated names. This is not the stable release.
+
 ### 4.0.2 (2026-10-24, release v4.0.2)
 
 * **Chat window size (issue #1):** the General tab keeps its native fade and right click menu. Unlock the chat through the tab, then drag an edge or the new small grip at the bottom right to change its width and height. The frame and background follow the size immediately while dragging, and resizing ends when the mouse button is released. The size and position survive a reload; Alt and the mouse wheel still change the scale. The jump to newest button sits beside the grip.
@@ -537,6 +545,14 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.1.0-beta.1 (2026-10-24, Release v4.1.0-beta.1)
+
+* **Testversion für Spiel 0.115.0:** Talenttimer aus `AZS_GetTimers()` erscheinen in der vorhandenen Abklingzeitleiste, unter anderem Butcher und Pact of the Annihilan. Die Werte kommen vom Spiel und stehen bei Pausen und Kartenwahl still. Beim Darüberfahren erscheinen Name und Restzeit. Ältere Clients ohne diese API behalten ihre bisherige Leiste.
+* **Koopmitglieder:** Sobald der Client echte Partyeinheiten geliefert hat, erscheinen ausgeschiedene Mitspieler nicht mehr über historische Schadenseinträge im Partyfenster. Der Partyreiter berücksichtigt aktuelle Mitglieder und berechnet seine Summen bei ausgefilterten Einträgen neu.
+* **Wiederbelebung:** Das native Wiederbelebungsfenster wird nur ausgeblendet, wenn unser Partyfenster den zugehörigen Fortschritt zeigt. Es kommt bei Bedarf, beim Abschalten des Moduls und beim Ausloggen zurück. Der eigene Fortschritt kann auch ohne weitere Mitgliederzeilen erscheinen.
+* **Markierungen und freundliche Ziele:** Spieler und Zielrahmen zeigen native Schlachtzugsmarkierungen. Namensplaketten erhalten die Markierungen des Spiels. Freundliche Begleiter und Totems nutzen die Beziehungsfarben des Spiels; gewählte Spielerklassenfarben haben weiterhin Vorrang.
+* **Betaprüfung:** Echte Koopruns müssen insbesondere Verbindungsabbrüche, gemischte Fraktionen, Wiederbelebung beim Levelaufstieg, Markierungen und übersetzte Namen bestätigen. Dies ist keine stabile Veröffentlichung.
 
 ### 4.0.2 (2026-10-24, Release v4.0.2)
 

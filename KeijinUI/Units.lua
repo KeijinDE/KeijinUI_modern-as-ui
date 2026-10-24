@@ -63,6 +63,17 @@ local CLEAN_H=K.PortraitFree.H
 local DEBUFF_X,DEBUFF_Y=4,-2
 -- portraits==false selects the compact frame without portrait; nil and true keep the portrait style.
 local function CleanStyle() return K.DB().portraits==false end
+-- Native 1.12 atlas and getter: FrameXML/TargetFrame.lua, UpdateRaidTargetIcon.
+-- Only real unit tokens are queried; never infer marks from names or AZS unit rows.
+local function UpdateRaidMarker(f)
+    local index=GetRaidTargetIndex and UnitExists(f.unit) and GetRaidTargetIndex(f.unit)
+    if not K.Number(index) or index<1 or index>8 or index~=math.floor(index) then f.raidMarker:Hide(); return end
+    local n=index-1
+    local left=math.mod(n,4)/4
+    local top=math.floor(n/4)/4
+    f.raidMarker:SetTexCoord(left,left+0.25,top,top+0.25)
+    f.raidMarker:Show()
+end
 -- Distance from the frame's left and top edge to the corner of its health bar that stays put when the style changes:
 -- top right corner for the player (portrait on the left), top left corner for the target (portrait on the right).
 -- The bar top sits 29 points below the frame top in the portrait style and HEAD (20) in the compact one.
@@ -83,6 +94,9 @@ local function ApplyStyle(f,clean)
     else f.sets.clean.root:Hide(); f.sets.classic.root:Show() end
     for _,key in ipairs(FIELDS) do f[key]=set[key] end
     f:SetWidth(clean and K.PortraitFree.W or FRAME_W); f:SetHeight(clean and CLEAN_H or FRAME_H)
+    f.raidMarker:ClearAllPoints()
+    if clean then f.raidMarker:SetPoint("BOTTOM",f,"TOP",0,2)
+    else f.raidMarker:SetPoint("BOTTOM",f,"TOPLEFT",f.unit=="player" and BOX/2 or FRAME_W-BOX/2,2) end
     if f.debuffs then f.debuffs:ClearAllPoints(); f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",DEBUFF_X,DEBUFF_Y) end
     local entry=K.layout.entries[f.unit]
     if entry and entry.handle and entry.handle.outline then
@@ -154,6 +168,11 @@ local function Create(unit,mirror)
     clean.label:SetText(f.label:GetText())
     f.clean=false
     f.sets={classic={root=old,label=f.label,level=f.level,health=f.health,percent=f.percent,bar=bar,rim=rim,body=body},clean=clean}
+    f.raidMarker=f:CreateTexture(nil,"OVERLAY")
+    f.raidMarker:SetWidth(18); f.raidMarker:SetHeight(18)
+    f.raidMarker:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+    f.raidMarker:SetPoint("BOTTOM",f,"TOPLEFT",mirror and FRAME_W-BOX/2 or BOX/2,2)
+    f.raidMarker:Hide()
     f:SetScript("OnClick",function()
         if arg1=="RightButton" then if ToggleGameMenu then ToggleGameMenu() end
         elseif UnitExists(unit) and TargetUnit then TargetUnit(unit) end
@@ -182,7 +201,7 @@ local function Create(unit,mirror)
     K.units[unit]=f
 end
 Create("player",false); Create("target",true)
--- Health colour: class colour by default (K.ClassColor); /kui switches back to green and red.
+-- Class colours remain optional; other targets follow the native relationship.
 local function HealthColor(unit)
     if K.DB().classHealth~=false and (unit=="player" or UnitIsPlayer(unit)) then
         local _,token=UnitClass(unit)
@@ -190,6 +209,13 @@ local function HealthColor(unit)
         if r then return r,g,b end
     end
     if unit=="player" then return 0.12,0.88,0.08 end
+    if UnitIsFriend and UnitIsFriend("player",unit) then return 0.12,0.88,0.08 end
+    local reaction=UnitReaction and UnitReaction(unit,"player")
+    if K.Number(reaction) then
+        if reaction>=5 then return 0.12,0.88,0.08 end
+        if reaction==4 then return 1,1,0 end
+        if reaction==3 then return 1,0.5,0 end
+    end
     return 0.85,0.08,0.08
 end
 -- Under the target frame only while no nameplate shows the target's debuffs.
@@ -203,6 +229,7 @@ local function Update()
     HideStock()
     for unit,f in pairs(K.units) do
         ApplyStyle(f,CleanStyle())
+        UpdateRaidMarker(f)
         if UnitExists(unit) then
             local hp,max=UnitHealth(unit),UnitHealthMax(unit)
             local r=unit=="player" and AZS_RUN or AZS_TARGET
@@ -262,7 +289,7 @@ function K.ApplyUnitBackground()
     end
 end
 K.UpdateUnits=function() Update(); K.ApplyUnitBackground() end
-for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE"}) do K.On(ev,Update) end
+for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update) end
 table.insert(K.updates,Update)
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
 -- Saved variables arrive after the files: switch to a saved compact style as soon as they exist.

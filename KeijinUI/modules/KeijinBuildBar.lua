@@ -510,12 +510,41 @@ local function StopClock(cell)
 	if cell.clockStart then CooldownFrame_SetTimer(cell.clock, 0, 0, 0) end
 	cell.clock:Hide(); cell.clockStart, cell.clockFull = nil, nil
 end
+-- Game 0.115: use the run-clock based API directly, never estimate talent intervals.
+local function TalentTimers()
+	if type(AZS_GetTimers)~="function" or type(AZS_GetPhase)~="function" then return {} end
+	local okPhase,phase=pcall(AZS_GetPhase)
+	if not okPhase or (phase~="playing" and phase~="choosing" and phase~="paused") then return {} end
+	local ok,values=pcall(AZS_GetTimers)
+	if not ok or type(values)~="table" then return {} end
+	local rows={}
+	for _,v in ipairs(values) do
+		if type(v)=="table" and type(v.name)=="string" and v.name~="" and Number(v.remaining)
+			and (v.kind=="summon" or v.kind=="cooldown") then
+			table.insert(rows,{kind="talentTimer",name=v.name,timerKind=v.kind,cd=v.remaining,
+				cdmax=Number(v.duration) and v.duration or nil,frozen=phase~="playing",
+				icon=type(v.icon)=="string" and v.icon~="" and v.icon or KeijinUI.SpellIcon(v.name)})
+		end
+	end
+	return rows
+end
+local function TimerTip(cell)
+	local row=cell.row
+	if not row or row.kind~="talentTimer" then return end
+	GameTooltip:SetOwner(cell,"ANCHOR_TOP")
+	GameTooltip:SetText(KeijinUI.DisplayName(row.name),1,.82,.28)
+	GameTooltip:AddLine(row.cd>0 and (T(row.timerKind=="summon" and "Beschwörungen" or "Abklingzeit")..": "..math.ceil(row.cd).." s") or T("Bereit"),1,1,1)
+	GameTooltip:Show()
+end
 -- Action bar slot: classic quickslot look, not clickable, shows only icon and real cooldown data.
 local function ActionCell(index)
 	if actionCells[index] then return actionCells[index] end
 	local cell = CreateFrame("Frame", nil, skills)
 	cell:SetWidth(ACTION_ICON); cell:SetHeight(ACTION_ICON)
 	cell:EnableMouse(false)
+	cell:SetScript("OnEnter",function() this.timerHover=true; TimerTip(this) end)
+	cell:SetScript("OnLeave",function() this.timerHover=nil; GameTooltip:Hide() end)
+	cell:SetScript("OnHide",function() if this.timerHover then this.timerHover=nil; GameTooltip:Hide() end end)
 	KeijinUI.Chamfer(cell,2,{0.02,0.02,0.025,0.85})
 	cell.icon = cell:CreateTexture(nil, "ARTWORK")
 	cell.icon:SetWidth(ACTION_ICON - 4); cell.icon:SetHeight(ACTION_ICON - 4)
@@ -546,14 +575,17 @@ local function PaintActions(rows)
 	local total = table.getn(rows)
 	local racial = total > 0 and rows[total] or nil
 	local normal = total > 0 and total - 1 or 0
-	local count = math.max(NORMAL_SLOTS, normal) + 1
+	local timers=TalentTimers()
+	local count = math.max(NORMAL_SLOTS, normal+table.getn(timers)) + 1
 	for index = 1, count do
 		local row, cell = nil, ActionCell(index)
-		if index == count then row = racial elseif index <= normal then row = rows[index] end
+		if index == count then row = racial elseif index <= normal then row = rows[index] else row=timers[index-normal] end
 		cell.racial = index == count
 		cell:ClearAllPoints()
 		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		cell.row = row
+		cell:EnableMouse(row and row.kind=="talentTimer" and true or false)
+		if cell.timerHover and (not row or row.kind~="talentTimer") then cell.timerHover=nil; GameTooltip:Hide() end
 		if row then
 			cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
 			cell.icon:Show()
@@ -561,7 +593,7 @@ local function PaintActions(rows)
 			local left = Number(row.cd) and row.cd > 0 and row.cd or nil
 			cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
 			local full = Number(row.cdmax) and row.cdmax > 0 and row.cdmax or nil
-			if left and cell.clock and KeijinUI.CooldownClockwise() and full then
+			if left and cell.clock and KeijinUI.CooldownClockwise() and full and not row.frozen then
 				-- Only a new or shifted cooldown restarts the model; the game data counts down in steps.
 				local start = GetTime() - (full - math.min(left, full))
 				if not cell.clockStart or math.abs(start - cell.clockStart) > 0.5 or cell.clockFull ~= full then
@@ -580,6 +612,7 @@ local function PaintActions(rows)
 			cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
 		end
 		cell:Show()
+		if cell.timerHover then TimerTip(cell) end
 	end
 	for index = count + 1, table.getn(actionCells) do actionCells[index]:Hide() end
 	skills:SetWidth(16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
@@ -713,7 +746,7 @@ watcher:SetScript("OnEvent", function()
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		ApplyPosition()
 		Update()
-	elseif arg1 == "AZSSPELLS" or arg1 == "AZSRUN" then elapsed = 0.2 end
+	elseif arg1 == "AZSSPELLS" or arg1 == "AZSRUN" or arg1 == "AZSTIMERS" then elapsed = 0.2 end
 end)
 watcher:SetScript("OnUpdate", function()
 	elapsed = elapsed + arg1

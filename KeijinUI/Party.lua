@@ -32,10 +32,37 @@ local function Revive()
 end
 local function Fraction(v) return K.Number(v) and math.min(1,v) or 0 end
 local function Own(name) return name~=nil and name==UnitName("player") end
+-- Once this client has exposed real party units, damage history is no longer a roster.
+local rosterKnown=false
+function P.Roster()
+    if type(GetNumPartyMembers)~="function" then return nil,false end
+    local count=GetNumPartyMembers()
+    if not K.Number(count) then return nil,false end
+    if count<=0 then return nil,rosterKnown end
+    local names,n={},0
+    local own=UnitName("player")
+    if type(own)=="string" then names[own]=true end
+    for i=1,MAXMEMBERS do
+        local unit="party"..i
+        if UnitExists(unit) then
+            local name=UnitName(unit)
+            if type(name)=="string" and name~="" then names[name]=true; n=n+1 end
+        end
+    end
+    if n>0 then rosterKnown=true; return names,true end
+    return nil,rosterKnown
+end
+local function NativeRevive(replace)
+    -- Older clients silently ignore unknown HUD parts; don't save a fictitious state.
+    if type(AZS_HUD_CVARS)~="table" or type(AZS_HUD_CVARS.revive)~="string" then return end
+    K.Native("revive",replace)
+end
 
 -- Teammates as {name,class,hp,max,dead,offline,health=true|false}. Party units first, otherwise the party meter.
 local function Members(revive)
     local list={}
+    local roster,known=P.Roster()
+    if known and not roster then return list,"units" end
     local reviving=revive and type(revive.reviving)=="string" and revive.reviving~="" and revive.reviving or nil
     if type(GetNumPartyMembers)=="function" and GetNumPartyMembers()>0 then
         for i=1,MAXMEMBERS do
@@ -85,11 +112,13 @@ function P.Refresh()
     local members,mode
     if K.ModuleOn("party") then members,mode=Members(revive) else members={} end
     local n=table.getn(members)
-    if n==0 then
+    local own=K.ModuleOn("party") and revive and (revive.down==1 or revive.down==true)
+    if n==0 and not own then
         for _,row in ipairs(rows) do row:Hide() end
-        hint:Hide(); panel:Hide(); StockFrames(false)
+        hint:Hide(); panel:Hide(); StockFrames(false); NativeRevive(false)
         return
     end
+    local covered=own and K.Number(revive.share) and true or false
     for i,row in ipairs(rows) do
         local m=members[i]
         if not m then row:Hide()
@@ -107,6 +136,7 @@ function P.Refresh()
                     -- The gold bar says "being revived"; the number alone fits beside long names in every language.
                     row.value:SetText(string.format("%d%%",math.floor(reviveShare*100+0.5))); row.value:SetTextColor(1,0.82,0.28)
                     row.bar:SetStatusBarColor(1,0.82,0.28,0.85); row.bar:SetValue(reviveShare)
+                    if not own and K.Number(revive.rshare) then covered=true end
                 else
                     row.value:SetText(K.T("Am Boden")); row.value:SetTextColor(1,0.25,0.2)
                     row.bar:SetValue(0)
@@ -127,7 +157,6 @@ function P.Refresh()
         end
     end
     -- Own hero downed: who revives and how far (shown at the bottom of the window).
-    local own=revive and (revive.down==1 or revive.down==true)
     if own then
         local percent=math.floor(Fraction(revive.share)*100+0.5)
         -- Without the reviver's name: a long hero name would cut the line off in some languages.
@@ -137,10 +166,12 @@ function P.Refresh()
     panel:SetHeight(TOP+n*(ROW+0)+BOTTOM+(own and HINT or 0))
     panel:Show()
     if mode=="units" then StockFrames(true) else StockFrames(false) end
+    NativeRevive(covered)
 end
 function P.Stop()
     for _,row in ipairs(rows) do row:Hide() end
     hint:Hide(); panel:Hide(); StockFrames(false)
+    NativeRevive(false)
 end
 
 -- /kui party debug: what the game hands out for the party, in chat.
@@ -185,6 +216,7 @@ driver:SetScript("OnEvent",function()
     if (event=="UNIT_HEALTH" or event=="UNIT_MAXHEALTH") and not string.find(arg1 or "","^party") then return end
     P.Refresh()
 end)
+K.On("PLAYER_LOGOUT",function() NativeRevive(false) end)
 local elapsed=0
 driver:SetScript("OnUpdate",function()
     elapsed=elapsed+(tonumber(arg1) or 0)

@@ -85,15 +85,20 @@ function K.PartyMeter()
     if type(AZS_GetPartyMeter)~="function" then return nil end
     local ok,lines,total,rate=pcall(AZS_GetPartyMeter)
     if not ok or type(lines)~="table" then return nil end
+    local roster,known
+    if K.party and K.party.Roster then roster,known=K.party.Roster() end
+    if known and not roster then return nil end
     local sorted,sum,sumRate={},0,0
+    local filtered=false
     for _,line in ipairs(lines) do
         if type(line)=="table" and type(line.name)=="string" and line.name~="" and K.Number(line.dmg) then
-            table.insert(sorted,line); sum=sum+line.dmg; sumRate=sumRate+(K.Number(line.dps) and line.dps or 0)
+            if known and not roster[line.name] then filtered=true
+            else table.insert(sorted,line); sum=sum+line.dmg; sumRate=sumRate+(K.Number(line.dps) and line.dps or 0) end
         end
     end
     if table.getn(sorted)==0 then return nil end
     table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
-    return sorted,K.Number(total) and total or sum,K.Number(rate) and rate or sumRate
+    return sorted,not filtered and K.Number(total) and total or sum,not filtered and K.Number(rate) and rate or sumRate
 end
 -- Class key of the game (paladin, ...) -> colour of KeijinUI; grey for unknown ones.
 function K.PartyClassColor(class)

@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.0.2 (2026-10-24, release v4.0.2)
+
+* **Chat window size (issue #1):** the General tab keeps its native fade and right click menu. Unlock the chat through the tab, then drag an edge or the new small grip at the bottom right to change its width and height. The frame and background follow the size immediately while dragging, and resizing ends when the mouse button is released. The size and position survive a reload; Alt and the mouse wheel still change the scale. The jump to newest button sits beside the grip.
+
 ### 4.0.1 (2026-10-24, release v4.0.1)
 
 * **Party window follows the header style:** with section titles set to small or off, the party window's header now shrinks or disappears like the other windows, and the window gets shorter accordingly.
@@ -533,6 +537,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.0.2 (2026-10-24, Release v4.0.2)
+
+* **Chatgröße (Issue #1):** Der Reiter General behält das native Einblenden und Rechtsklickmenü. Den Chat über den Reiter entsperren und dann an einer Kante oder der neuen kleinen Ziehfläche unten rechts Breite und Höhe ändern. Rahmen und Hintergrund folgen der Größe bereits während des Ziehens; beim Loslassen der Maustaste endet die Größenänderung. Größe und Position bleiben nach einem Reload erhalten; Alt und Mausrad ändern weiterhin die Skalierung. Der Knopf für die neuesten Nachrichten sitzt neben der Ziehfläche.
 
 ### 4.0.1 (2026-10-24, Release v4.0.1)
 

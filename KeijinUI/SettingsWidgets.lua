@@ -388,6 +388,28 @@ function O.Toggle(page,key,label,get,set)
     row:SetScript("OnClick",function() O.CloseChoice(); set(not get()); O.Refresh() end)
     return row
 end
+-- Opens below the button; flips above it when the bottom edge would be crossed, otherwise slides to stay fully on screen.
+-- The menu stays anchored to the button, only the offsets change.
+function O.PlaceMenu(menu,button)
+    menu:ClearAllPoints(); menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",0,-3)
+    local bb,bt,br=button:GetBottom(),button:GetTop(),button:GetRight()
+    if type(bb)~="number" or type(bt)~="number" or type(br)~="number" then return end
+    local ratio=button:GetEffectiveScale()/UIParent:GetEffectiveScale()
+    local s=menu:GetEffectiveScale()/UIParent:GetEffectiveScale()
+    local w,h=K.UIWidth(),K.UIHeight()
+    local mh,mw=menu:GetHeight()*s,menu:GetWidth()*s
+    local bottom,top,right=bb*ratio,bt*ratio,br*ratio
+    local y,x=bottom-3*s,right   -- top and right edge of the menu in UIParent units
+    local flipped,dx,dy=false,0,-3
+    if y-mh<8 then
+        if top+3*s+mh<=h-8 then flipped=true; dy=3
+        else dy=-3+(math.max(mh+8,math.min(h-8,y))-y)/s end
+    end
+    dx=(math.max(mw+8,math.min(w-8,x))-x)/s
+    menu:ClearAllPoints()
+    if flipped then menu:SetPoint("BOTTOMRIGHT",button,"TOPRIGHT",dx,dy)
+    else menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",dx,dy) end
+end
 function O.Choice(page,key,label,get,set,items)
     local row=O.Row(page,key,label,34)
     local button=O.Button(row,"",342,-2,170,function() end)
@@ -409,6 +431,7 @@ function O.Choice(page,key,label,get,set,items)
         if was then return end
         for _,m in ipairs(O.menus or {}) do m:Hide() end
         O.openMenu=menu; O.Fit(); shield:SetScale(1); menu:SetScale(panel:GetEffectiveScale()/UIParent:GetEffectiveScale()); shield:Show(); menu:Show()
+        O.PlaceMenu(menu,button)
     end
     O.menus=O.menus or {}; table.insert(O.menus,menu); menu:Hide()
     button:SetScript("OnClick",Open); row:SetScript("OnClick",Open)

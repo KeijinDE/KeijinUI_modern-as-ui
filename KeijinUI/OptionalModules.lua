@@ -1,4 +1,4 @@
--- Modules: 14 features that can be switched off as a whole. A module that is off keeps no scripts, no combat event
+-- Modules: 15 features that can be switched off as a whole. A module that is off keeps no scripts, no combat event
 -- subscriptions and no settings rows; where the game has its own version it comes back. Shared run telemetry stays active.
 -- Core settings (sizes, windows, unit frames, run history, general) are not modules.
 -- Older keys that were merged (damageText, resourceText, guardianNav, cursor, jewelry, insights) map to the new key
@@ -70,4 +70,6 @@ Bind("comfort","Eingabehilfen","Cursortracker (Ring um den Mauszeiger) und die T
     {K.cursor.frame},function() K.cursor.frame:Hide(); K.autoWalk.Suspend() end,function() K.cursor.Apply(); K.autoWalk.Resume() end)
 Bind("summons","Beschwörungen","Leiste mit deinen aktiven Beschwörungen (Dämonen, Begleiter, Treants, Wölfe) mit Anzahl und Restzeit. Aus: keine Leiste.",
     {K.summons.driver},K.summons.Stop,K.summons.Refresh,{CHAT_MSG_ADDON=true,PLAYER_ENTERING_WORLD=true})
+Bind("party","Partyfenster","Fenster mit Leben, Status und Wiederbelebung deiner Mitstreiter im Koop. Aus: kein Fenster, die Partyrahmen des Spiels bleiben.",
+    {K.party.driver},K.party.Stop,K.party.Refresh,{PARTY_MEMBERS_CHANGED=true,UNIT_HEALTH=true,UNIT_MAXHEALTH=true,CHAT_MSG_ADDON=true,PLAYER_ENTERING_WORLD=true})
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then for _,key in ipairs(M.order) do M.Apply(key) end end end)

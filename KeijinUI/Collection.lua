@@ -98,7 +98,7 @@ panel:SetPoint("CENTER",UIParent,"CENTER",0,0); panel:SetFrameStrata("DIALOG"); 
 table.insert(UISpecialFrames,"KeijinUICollection")
 local search=CreateFrame("EditBox",nil,panel); C.search=search
 search:SetPoint("TOPLEFT",panel,"TOPLEFT",14,-38); search:SetWidth(460); search:SetHeight(26)
-search:SetFont(K.font,12,"OUTLINE"); search:SetAutoFocus(false); K.Skin(search,4)
+search:SetFont(K.font,12,"OUTLINE"); search:SetAutoFocus(false); K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{search,12}); K.Skin(search,4)
 search:SetScript("OnTextChanged",function() C.query=search:GetText() or ""; C.offset=0; C.Render() end)
 search:SetScript("OnEscapePressed",function() search:ClearFocus() end)
 local close=CreateFrame("Button",nil,panel); close:SetWidth(28); close:SetHeight(24); close:SetPoint("TOPRIGHT",panel,"TOPRIGHT",-10,-6)

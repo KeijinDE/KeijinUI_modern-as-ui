@@ -5,6 +5,14 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.0.0 (2026-10-24, release v4.0.0)
+
+* **All game languages:** besides English, German and Simplified Chinese, KeijinUI can now be shown in French, Spanish, Portuguese, Polish, Czech, Romanian, Turkish, Russian, Ukrainian, Japanese and Korean. Choose it under General, Language, or with `/kui lang <code>`. Ability names follow the game's own translations (Turkish keeps the English names, as the game does).
+* **Machine translated:** only English and German are checked by hand. All other languages are machine translated and not yet reviewed by native speakers; please report wrong or cut off texts with a screenshot.
+* **Fonts:** French, Spanish and Portuguese use the game's font. Polish, Czech, Romanian, Turkish, Russian, Ukrainian, Chinese, Japanese and Korean use the bundled font, also in tooltips and chat. Romanian uses ş and ţ with a cedilla, because the font has no comma below t.
+* **Run count in other languages:** the message "This is your ... run" shows the plain number instead of an English ending like 3rd.
+* **Co-op (requested by Bersh, Shandrax and Mr8endiix):** the damage meter has a new Party tab with the damage and DPS of every hero in your party (class colours, your own hero framed, strongest spell in the tooltip). A new party window shows up to four teammates with health, offline and downed status and the revive progress, and how far your own revive has come while you are down. Move it with Alt, resize with Alt and the mouse wheel; it can be switched off under Modules. `/kui party debug` lists what the game reports for the party. Not yet tested in a real co-op run: please report what you see.
+
 ### 3.7.1 (2026-10-23, release v3.7.1)
 
 * **Cooldown on the icon (requested by JayMasta):** the build overview now shows each spell's cooldown in this run in a dark, chamfered tab docked to the top of its icon, in seconds (two decimals below 1 s, one decimal below 10 s). Values below one second are gold. The window grows a few pixels upwards for it (downwards only while it is attached below another window) and returns to its original size when the option is off. Its bottom edge now stays in place, also when a second spell row appears; saved positions are taken over without a jump. That way you see at a glance how low a cooldown already is, without hovering. Switch: Layout & Display, "Cooldown on the icon". It is on by default.
@@ -521,6 +529,14 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.0.0 (2026-10-24, Release v4.0.0)
+
+* **Alle Spielsprachen:** neben Englisch, Deutsch und vereinfachtem Chinesisch gibt es KeijinUI jetzt auch auf Französisch, Spanisch, Portugiesisch, Polnisch, Tschechisch, Rumänisch, Türkisch, Russisch, Ukrainisch, Japanisch und Koreanisch. Auswahl unter Allgemein, Sprache, oder mit `/kui lang <Code>`. Fähigkeitsnamen folgen den Übersetzungen des Spiels (Türkisch behält wie das Spiel die englischen Namen).
+* **Maschinell übersetzt:** nur Englisch und Deutsch sind von Hand geprüft. Alle anderen Sprachen sind maschinell übersetzt und noch nicht muttersprachlich geprüft; falsche oder abgeschnittene Texte bitte mit Screenshot melden.
+* **Schriften:** Französisch, Spanisch und Portugiesisch nutzen die Spielschrift. Polnisch, Tschechisch, Rumänisch, Türkisch, Russisch, Ukrainisch, Chinesisch, Japanisch und Koreanisch nutzen die mitgelieferte Schrift, auch in Tooltips und Chat. Rumänisch verwendet ş und ţ mit Cedille, weil der Schrift das t mit Komma fehlt.
+* **Rundenzahl in anderen Sprachen:** die Meldung "Das ist dein ... Lauf" zeigt die reine Zahl statt einer englischen Endung wie 3rd.
+* **Koop (auf Wunsch von Bersh, Shandrax und Mr8endiix):** Die Schadensanzeige hat einen neuen Reiter Party mit Schaden und DPS jedes Helden deiner Party (Klassenfarben, dein eigener Held umrahmt, stärkster Zauber im Tooltip). Ein neues Partyfenster zeigt bis zu vier Mitstreiter mit Leben, Status offline oder am Boden und dem Fortschritt der Wiederbelebung, und wie weit deine eigene Wiederbelebung ist, solange du am Boden liegst. Mit Alt verschieben, mit Alt und Mausrad skalieren; unter Module abschaltbar. `/kui party debug` listet, was das Spiel zur Party meldet. Noch nicht in einer echten Koop Runde getestet: bitte melde, was du siehst.
 
 ### 3.7.1 (2026-10-23, Release v3.7.1)
 

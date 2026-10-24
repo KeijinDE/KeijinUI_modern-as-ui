@@ -1,21 +1,113 @@
--- UI languages chosen by hand: English (default), German or Simplified Chinese.
+-- UI languages chosen by hand: English (default), German and twelve more (see K.Languages).
 -- Source texts in the code are German; K.EN holds the English text for each of them.
+-- Every other language is a table K.L[code][german source text] = translation, filled by K.RegisterLanguage.
 local K=KeijinUI
 K.EN={}
 K.EN["Run"]="Run"
 K.EN["Reset"]="Reset"
 K.EN["Chinesisch (vereinfacht)"]="Chinese (Simplified)"
-K.ZH={}
+K.EN["Tschechisch"]="Czech"
+K.EN["Rumänisch"]="Romanian"
+K.EN["Russisch"]="Russian"
+K.EN["Ukrainisch"]="Ukrainian"
+K.EN["Japanisch"]="Japanese"
+K.EN["Koreanisch"]="Korean"
+K.EN["Übersetzungen außer Deutsch und Englisch sind maschinell erstellt und nicht muttersprachlich geprüft. Fehler bitte melden."]="Translations other than German and English are machine made and not checked by native speakers. Please report mistakes."
+K.EN["Sprachcodes: %s"]="Language codes: %s"
 K.lang="en"
 local live,hooks={},{}
+
+-- Language register. name: the language in its own script. key: the German source text of the entry in the
+-- language choice (equal to name where Friz Quadrata can draw it, otherwise a German name that K.EN and the
+-- language tables translate). wide: the interface needs KeijinCJK.ttf (Friz Quadrata lacks the characters).
+K.WideFont="Interface\\AddOns\\KeijinUI\\media\\fonts\\KeijinCJK.ttf"
+K.Languages={
+    {code="en",name="English",key="English"},
+    {code="de",name="Deutsch",key="Deutsch"},
+    {code="fr",name="Français",key="Français"},
+    {code="es",name="Español",key="Español"},
+    {code="pt",name="Português",key="Português"},
+    {code="pl",name="Polski",key="Polski",wide=true},
+    {code="cs",name="Čeština",key="Tschechisch",wide=true},
+    {code="ro",name="Română",key="Rumänisch",wide=true},
+    {code="tr",name="Türkçe",key="Türkçe",wide=true},
+    {code="ru",name="Русский",key="Russisch",wide=true},
+    {code="uk",name="Українська",key="Ukrainisch",wide=true},
+    {code="zh",name="简体中文",key="Chinesisch (vereinfacht)",wide=true},
+    {code="ja",name="日本語",key="Japanisch",wide=true},
+    {code="ko",name="한국어",key="Koreanisch",wide=true},
+}
+K.L={}
+local info={}
+for _,entry in ipairs(K.Languages) do
+    info[entry.code]=entry
+    if entry.code~="en" and entry.code~="de" then K.L[entry.code]={} end
+end
+K.ZH=K.L.zh
+function K.IsLang(code) return code~=nil and info[code]~=nil end
+function K.NeedsWideFont(code) return info[code]~=nil and info[code].wide==true end
+-- The font file for a language: the wide font where needed, otherwise the given default (may be nil).
+function K.LangFont(code,default)
+    if K.NeedsWideFont(code) then return K.WideFont end
+    return default
+end
+function K.LangCodes()
+    local out
+    for _,entry in ipairs(K.Languages) do out=out and (out..", "..entry.code) or entry.code end
+    return out
+end
+-- Entries of the language choice whose own name the current font cannot draw (Friz Quadrata) get a translated name
+-- from the German key; a language with the wide font shows every language in its own script.
+local function ApplyNames(code)
+    local L=K.L[code]
+    if not L or not K.NeedsWideFont(code) then return end
+    for _,entry in ipairs(K.Languages) do
+        if entry.key~=entry.name then L[entry.key]=entry.name end
+    end
+end
+for code in pairs(K.L) do ApplyNames(code) end
+
+-- Registers a language: text is a table english -> translation, common a table german source -> translation for
+-- short words, extra an optional function(germanSource,english) returning a translation for a text missing in text.
+function K.RegisterLanguage(code,text,common,extra)
+    local L=K.L[code]
+    if not L then return false end
+    for source,english in pairs(K.EN) do
+        local value=text[english]
+        if value==nil and extra then value=extra(source,english) end
+        L[source]=value
+    end
+    for source,value in pairs(common or {}) do L[source]=value end
+    ApplyNames(code)
+    return true
+end
 
 -- Translates a German source text. Missing entries come back unchanged. Extra arguments go through string.format.
 function K.T(text,a1,a2,a3,a4,a5,a6)
     local out=text
-    if K.lang~="de" then out=K.EN[text] or text end
-    if K.lang=="zh" then out=K.ZH[text] or out end
+    local lang=K.lang
+    if lang~="de" then
+        out=K.EN[text] or text
+        local L=K.L[lang]
+        if L and L[text] then out=L[text] end
+    end
     if a1~=nil then return string.format(out,a1,a2,a3,a4,a5,a6) end
     return out
+end
+-- The name of a language as the choice and /kui lang show it in the current interface language.
+function K.LangName(code)
+    local entry=info[code]
+    return entry and K.T(entry.key) or tostring(code)
+end
+-- A game ability name in the interface language (non English/German), or nil: callers then use the English name.
+function K.AbilityName(key)
+    local lang=K.lang
+    if lang=="en" or lang=="de" then return nil end
+    local names=KeijinGameAbilityLang and KeijinGameAbilityLang[lang]
+    local name=names and names[key]
+    if name then return name end
+    if lang=="zh" and K.AbilityChinese then return K.AbilityChinese(key) end
+    return nil
 end
 -- A text that is set now and again whenever the language changes.
 function K.Live(fs,fn)
@@ -33,11 +125,11 @@ function K.RefreshLang()
     for _,fn in ipairs(hooks) do fn() end
 end
 
--- The language is chosen by hand: "en" (default), "de" or "zh". GetLocale() is fixed to "enUS" in this client and
--- the game data may still be English after a language change, so there is no detection.
+-- The language is chosen by hand: "en" (default) or any code of K.Languages; unknown codes mean "en". GetLocale() is
+-- fixed to "enUS" in this client and the game data may still be English after a language change, so there is no detection.
 function K.EffectiveLang()
-    if K.DB().lang=="zh" then return "zh" end
-    return K.DB().lang=="de" and "de" or "en"
+    local value=K.DB().lang
+    return K.IsLang(value) and value or "en"
 end
 -- Applies the setting to the texts that can change at once.
 function K.UpdateLang()
@@ -49,7 +141,7 @@ function K.UpdateLang()
 end
 -- Stores the language and reloads the interface when it changed, so that every text is set again.
 function K.SetLang(value)
-    if value~="de" and value~="en" and value~="zh" then return false end
+    if not K.IsLang(value) then return false end
     if K.DB().lang==value and K.lang==value then return false end
     K.DB().lang=value
     K.UpdateLang()
@@ -659,3 +751,17 @@ K.EN["Zeigt die Abklingzeit der Fähigkeit im Run oben links am Symbol, in Sekun
 K.EN["Rückkehrzeit unter Hortmarkern"]="Respawn timer below lair markers"
 K.EN["Account Pace zusätzlich anzeigen"]="Also show account pace"
 K.EN["Run: DPS der letzten 10 Spielsekunden. Gesamtschaden und Reihenfolge bleiben runbezogen. Der Durchschnitt seit Runbeginn oder Reset steht im Tooltip."]="Run: DPS over the last 10 run seconds. Total damage and ordering cover the run. Average DPS since run start or reset is in the tooltip."
+
+-- 3.8.0: co-op.
+K.EN["Party"]="Party"
+K.EN["Partyfenster"]="Party window"
+K.EN["Fenster mit Leben, Status und Wiederbelebung deiner Mitstreiter im Koop. Aus: kein Fenster, die Partyrahmen des Spiels bleiben."]="Window with health, status and revive progress of your co-op teammates. Off: no window, the game's party frames stay."
+K.EN["Zeigt bis zu 4 Mitstreiter mit Leben, Status und Wiederbelebung. Alt halten zum Verschieben, Alt + Mausrad ändert die Größe."]="Shows up to 4 teammates with health, status and revive progress. Hold Alt to move, Alt + mouse wheel changes the size."
+K.EN["Party: %s gesamt · %s DPS"]="Party: %s total · %s DPS"
+K.EN["Stärkster Zauber: %s (%s DPS)"]="Strongest spell: %s (%s DPS)"
+K.EN["Am Boden"]="Downed"
+K.EN["Offline"]="Offline"
+K.EN["Belebung: %d%%"]="Revive: %d%%"
+K.EN["%s belebt dich: %d%%"]="%s is reviving you: %d%%"
+K.EN["Du wirst belebt: %d%%"]="You are being revived: %d%%"
+K.EN["/kui party debug: Partyfenster und Partydaten prüfen."]="/kui party debug: check the party window and party data."

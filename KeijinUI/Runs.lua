@@ -107,6 +107,8 @@ function R.SetMessage(on) K.DB().runsMessage=on and true or false end
 -- English ordinal numbers: 1st, 2nd, 3rd, 4th, 11th to 13th.
 function R.Ordinal(n)
     if K.lang=="de" then return n.."." end
+    -- English suffixes only in English; the other languages word their sentence around the plain number.
+    if K.lang~="en" then return tostring(n) end
     local rest=math.mod(n,100)
     local last=math.mod(n,10)
     local suffix="th"

@@ -63,6 +63,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="plates debug" then K.PlateDebug()
     elseif command=="bosses debug" then K.BossDebug()
     elseif command=="heal" or command=="heal debug" then K.HealDebug()
+    elseif command=="party debug" then K.party.Debug()
     elseif command=="resources debug" then K.ResourceDebug()
     elseif command=="pace debug" then K.pace.Debug()
     elseif command=="navigation debug" then K.navigation.Debug()
@@ -116,12 +117,15 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="reload" then ReloadUI()
     elseif command=="lang" or string.find(command,"^lang%s") then
         local _,_,value=string.find(command,"^lang%s+(%S+)$")
-        if value=="de" or value=="en" or value=="zh" then
+        if K.IsLang(value) then
             K.SetLang(value)
-            K.Say(K.T("Sprache")..": "..(value=="de" and "Deutsch" or (value=="zh" and "简体中文" or "English")))
+            K.Say(K.T("Sprache")..": "..K.LangName(value))
             RefreshAll()
         else
-            K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.lang=="de" and "Deutsch" or (K.lang=="zh" and "简体中文" or "English")))
+            K.Say(K.T("/kui lang de|en. Aktuell: %s.",K.LangName(K.lang)).." "..K.T("Sprachcodes: %s",K.LangCodes()))
         end
-    else K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, size, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge.")) end
+    else
+        K.Say(K.T("/kui party debug: Partyfenster und Partydaten prüfen."))
+        K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, size, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."))
+ end
 end

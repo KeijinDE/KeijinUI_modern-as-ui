@@ -111,6 +111,9 @@ O.Help(p,"Zweite Reihe in der Anzeige für Kills, Gold und Caches. Rerolls zeige
 O.Toggle(p,"xpRate","XP Rate und Levelschätzung",function() return K.DB().xpRate==true end,function(on) K.DB().xpRate=on end)
 O.Help(p,"Benötigt mindestens drei XP Zuwächse und zehn Spielsekunden. Bei Messlücken erscheint ein Fragezeichen.")
 
+O.Section(p,"Partyfenster","party")
+O.Help(p,"Zeigt bis zu 4 Mitstreiter mit Leben, Status und Wiederbelebung. Alt halten zum Verschieben, Alt + Mausrad ändert die Größe.")
+
 O.Section(p,"Zurücksetzen")
 O.Pair(p,"Layout zurücksetzen",K.layout.Reset,"Tooltip zurücksetzen",K.ResetTooltip)
 O.Pair(p,"UI Größen zurücksetzen",function() O.SetMenuScale(.8); O.SetUIScale(.9) end)
@@ -200,7 +203,10 @@ O.Finish(p)
 
 p=O.Page("general","Allgemein","Sprache, Rundenhistorie und Oberfläche.")
 O.Section(p,"Sprache")
-O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,{{"en","English"},{"de","Deutsch"},{"zh","Chinesisch (vereinfacht)"}})
+local languageItems={}
+for _,entry in ipairs(K.Languages) do table.insert(languageItems,{entry.code,entry.key}) end
+O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,languageItems)
+O.Help(p,"Übersetzungen außer Deutsch und Englisch sind maschinell erstellt und nicht muttersprachlich geprüft. Fehler bitte melden.")
 O.Section(p,"Gespeicherte Level","storedLevels")
 O.Requires(O.Toggle(p,"storeLevels","Levelaufstiege speichern",K.storedLevels.Storing,K.storedLevels.SetStoring),K.storedLevels.CanStore)
 O.Help(p,"Der Kampf läuft weiter. Gespeicherte Auswahlen per Button öffnen. Ausschalten bietet wartende Auswahlen sofort an.")

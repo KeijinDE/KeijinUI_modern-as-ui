@@ -2,6 +2,8 @@
 local K=KeijinUI
 local text={
  ["Run"]="冒险", ["Chinese (Simplified)"]="简体中文",
+ ["Translations other than German and English are machine made and not checked by native speakers. Please report mistakes."]="除德语和英语外，其他语言均为机器翻译，未经母语者校对。如发现错误，请反馈。",
+ ["Language codes: %s"]="语言代码：%s",
  ["Average since run start or reset: %s DPS"]="本局开始或重置以来的平均值：%s DPS",
  ["DPS: last 10 run seconds, excluding pauses."]="DPS：最近10秒游戏时间，不计暂停。",
  ["%s: %s (%.1f%%)"]="%s：%s（%.1f%%）", ["+"]="+", ["−"]="−", ["×"]="×", ["Icons"]="图标", ["Show on the HUD"]="在HUD显示",
@@ -261,16 +263,21 @@ local text={
  ["Collect level-ups and choose them later. Off: the game offers the level choice at once as usual."]="暂存升级选择以供稍后处理。关闭时按游戏原样立即提供选择。",
  ["Damage numbers in the KeijinUI style with preview, plus healing and incoming combat text. Off: the game shows its own combat text."]="带预览的KeijinUI伤害数字，以及治疗与承伤文字。关闭时使用游戏原有战斗文字。",
  ["Cursor tracker (ring around the pointer) and the auto run key. Off: no ring, your run key is inactive; the game's key bindings stay unchanged."]="指针圆环与自动奔跑按键。关闭时隐藏圆环并停用自定义奔跑键，游戏按键绑定不变。",
+ ["Party"]="队伍", ["Party window"]="队伍窗口",
+ ["Window with health, status and revive progress of your co-op teammates. Off: no window, the game's party frames stay."]="显示合作队友的生命、状态和复活进度。关闭时不显示窗口，保留游戏自带的队伍框架。",
+ ["Shows up to 4 teammates with health, status and revive progress. Hold Alt to move, Alt + mouse wheel changes the size."]="最多显示4名队友的生命、状态和复活进度。按住Alt拖动移动，Alt+鼠标滚轮调整大小。",
+ ["Party: %s total · %s DPS"]="队伍：共%s · %s DPS", ["Strongest spell: %s (%s DPS)"]="最强技能：%s（%s DPS）",
+ ["Downed"]="倒地", ["Offline"]="离线", ["Revive: %d%%"]="复活：%d%%", ["%s is reviving you: %d%%"]="%s正在复活你：%d%%",
+ ["You are being revived: %d%%"]="你正在被复活：%d%%",
+ ["/kui party debug: check the party window and party data."]="/kui party debug：检查队伍窗口和队伍数据。",
 }
-for source,english in pairs(K.EN) do
-    K.ZH[source]=text[english]
-    if not K.ZH[source] and string.find(english,"^/kui, /kui edit") then
-        K.ZH[source]="/kui 设置；/kui edit 布局；/kui reset 重置；/kui runs 记录；/kui lang de|en|zh 语言；/kui reload 重新加载。/kbb 流派建议，/kachi 成就。"
-    end
-end
 -- Untranslated diagnostic commands and symbols remain readable in English.
 local common={Boss="首领",Gold="金币",Cache="宝箱",Kills="击杀",Items="物品",Item="物品",Spells="技能",Minimap="小地图",Tooltip="提示框",Buffs="增益",Chat="聊天",["in"]="还有"}
-for source,value in pairs(common) do K.ZH[source]=value end
+K.RegisterLanguage("zh",text,common,function(source,english)
+    if string.find(english,"^/kui, /kui edit") then
+        return "/kui 设置；/kui edit 布局；/kui reset 重置；/kui runs 记录；/kui lang de|en|zh 语言；/kui reload 重新加载。/kbb 流派建议，/kachi 成就。"
+    end
+end)
 function K.AbilityChinese(key)
     for _,label in ipairs((KeijinGameAbilityNames or {})[key] or {}) do
         -- Chinese precedes Japanese/Korean in the game's generated name lists.

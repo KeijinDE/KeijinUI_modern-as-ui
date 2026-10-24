@@ -1,4 +1,4 @@
-# KeijinUI 3.7.1
+# KeijinUI 4.0.0
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -15,8 +15,10 @@ run statistics, damage meter and critical hits on the left, your own player and 
 cooldowns (mana is not shown), a build overview, modern nameplates, damage numbers in the world, loot notice,
 achievement popup and one chat window in the KeijinUI frame.
 
-English is the default. German and Simplified Chinese can be chosen in General or with
-`/kui lang de` and `/kui lang zh`. Chinese includes a bundled CJK and Latin font under Apache License 2.0.
+English is the default. Every language of the game client can be chosen in General or with `/kui lang <code>`
+(de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Only English and German are checked by hand; all other languages are machine translated and not yet
+reviewed by native speakers, please report mistakes. Polish, Czech, Romanian, Turkish, Russian, Ukrainian, Chinese,
+Japanese and Korean use a bundled font under Apache License 2.0.
 
 The Run meter shows live DPS over the last 10 run seconds; total damage and ordering remain run based.
 Average DPS stays in the tooltip. The run overview includes endless boss countdowns and optional account pace.
@@ -76,7 +78,7 @@ settings can stay. After changing the enabled addons, restart the game completel
 
 * `/kui`: open the settings window with tabs (movable, remembers its position; it opens on Layout & Display).
 * `/kui edit`: open or close layout editing. `/kui reset`: reset positions and sizes. `/kui grid`: grid and snapping on or off.
-* `/kui lang de|en|zh`: language. `/kui lang` shows the current language. `/kui reload`: reload the interface.
+* `/kui lang <code>`: language. `/kui lang` shows the current language. `/kui reload`: reload the interface.
 * `/kui guardians on|off`: guardian lairs in the run overview.
 * `/kui runs`: open or close the run overview. `/kui runs msg`: the start message on or off.
 * `/kui button on|off`: the minimap button on or off (without argument: toggle).
@@ -91,9 +93,9 @@ settings can stay. After changing the enabled addons, restart the game completel
 
 ## Language
 
-English is the default. `GetLocale()` returns a fixed value in this client and the game data can still be English after a language change in the game, so KeijinUI does not detect the language. Choose it in the settings window (General tab) or with `/kui lang de`, `/kui lang en` or `/kui lang zh`. `/kui lang` shows the current language. Changing the language updates KeijinUI labels; existing layout and options remain. Old settings with `auto` become English.
+English is the default. `GetLocale()` returns a fixed value in this client and the game data can still be English after a language change in the game, so KeijinUI does not detect the language. Choose it in the settings window (General tab) or with `/kui lang <code>` (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). `/kui lang` shows the current language. Changing the language updates KeijinUI labels; existing layout and options remain. Old settings with `auto` become English.
 
-Ability names (recommendation title, tooltips, meter) follow the language: German names in German, English names otherwise. Names that come from the game itself (boss names, items, achievement names, chat) are not translated. The parser for combat messages works the same in every language.
+Ability names (recommendation title, tooltips, meter) follow the language and come from the game's own translations; where the game has none (Turkish), the English name stays. Names that come from the game itself (boss names, items, achievement names, chat) are not translated. The parser for combat messages works the same in every language.
 
 ## Data
 
@@ -143,8 +145,10 @@ Minimap, Runstatistiken, Schadensanzeige und kritische Treffer links, eigene Spi
 Aktionsleiste mit Rängen und Abklingzeiten (Mana wird nicht angezeigt), eine Buildübersicht, moderne Namensplaketten,
 Schadenszahlen in der Spielwelt, Beutemeldung, Erfolgsmeldung und ein einzelnes Chatfenster im KeijinUI Rahmen.
 
-Englisch ist der Standard. Deutsch und vereinfachtes Chinesisch wählst du unter Allgemein oder mit
-`/kui lang de` und `/kui lang zh`. Chinesisch verwendet eine mitgelieferte Schrift unter Apache License 2.0.
+Englisch ist der Standard. Jede Sprache des Spielclients wählst du unter Allgemein oder mit `/kui lang <Code>`
+(de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Nur Englisch und Deutsch sind von Hand geprüft; alle anderen Sprachen sind maschinell übersetzt und noch
+nicht muttersprachlich geprüft, Fehler bitte melden. Polnisch, Tschechisch, Rumänisch, Türkisch, Russisch,
+Ukrainisch, Chinesisch, Japanisch und Koreanisch verwenden eine mitgelieferte Schrift unter Apache License 2.0.
 
 Der Reiter Run zeigt Live DPS der letzten 10 Spielsekunden. Gesamtschaden und Reihenfolge bleiben runbezogen,
 der Durchschnitt steht im Tooltip. Die Runübersicht ergänzt Endlosbosstimer und optional Account Pace.
@@ -202,7 +206,7 @@ neu starten. Das Kameraaddon ist ein eigenes Paket.
 
 * `/kui`: Einstellungsfenster mit Tabs öffnen (verschiebbar, merkt sich Position und letzten Tab).
 * `/kui edit`: Bearbeitung öffnen oder schließen. `/kui reset`: Positionen und Größen zurücksetzen. `/kui grid`: Raster und Einrasten ein oder aus.
-* `/kui lang de|en|zh`: Sprache. `/kui lang` zeigt die aktuelle Sprache. `/kui reload`: Oberfläche neu laden.
+* `/kui lang <Code>`: Sprache. `/kui lang` zeigt die aktuelle Sprache. `/kui reload`: Oberfläche neu laden.
 * `/kui runs`: Rundenübersicht öffnen oder schließen. `/kui runs msg`: Startmeldung ein oder aus.
 * `/kui button on|off`: Minimapknopf ein oder aus (ohne Angabe: umschalten).
 * `/kui meter reset`: Schadensanzeige ab jetzt neu beginnen (die Runstatistik bleibt vollständig). `/kui crits reset`: beobachtete kritische Treffer zurücksetzen.
@@ -216,9 +220,9 @@ neu starten. Das Kameraaddon ist ein eigenes Paket.
 
 ## Sprache
 
-Englisch ist der Standard. `GetLocale()` liefert in diesem Client einen festen Wert, und die Spieldaten können nach einem Sprachwechsel im Spiel noch englisch sein, deshalb erkennt KeijinUI die Sprache nicht. Wähle sie im Optionsfenster (Tab Allgemein) oder mit `/kui lang de`, `/kui lang en` oder `/kui lang zh`. `/kui lang` zeigt die aktuelle Sprache. Ein Sprachwechsel lädt die Oberfläche neu, damit alle Texte umgestellt sind. Alte Einstellungen mit `auto` werden zu Englisch.
+Englisch ist der Standard. `GetLocale()` liefert in diesem Client einen festen Wert, und die Spieldaten können nach einem Sprachwechsel im Spiel noch englisch sein, deshalb erkennt KeijinUI die Sprache nicht. Wähle sie im Optionsfenster (Tab Allgemein) oder mit `/kui lang <Code>` (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). `/kui lang` zeigt die aktuelle Sprache. Ein Sprachwechsel lädt die Oberfläche neu, damit alle Texte umgestellt sind. Alte Einstellungen mit `auto` werden zu Englisch.
 
-Fähigkeitsnamen (Titel der Empfehlung, Tooltips, Meter) folgen der Sprache: deutsche Namen auf Deutsch, sonst englische. Namen aus dem Spiel selbst (Bossnamen, Gegenstände, Erfolgsnamen, Chat) werden nicht übersetzt. Der Parser für Kampfnachrichten arbeitet in jeder Sprache gleich.
+Fähigkeitsnamen (Titel der Empfehlung, Tooltips, Meter) folgen der Sprache und stammen aus den Übersetzungen des Spiels; wo das Spiel keine hat (Türkisch), bleibt der englische Name. Namen aus dem Spiel selbst (Bossnamen, Gegenstände, Erfolgsnamen, Chat) werden nicht übersetzt. Der Parser für Kampfnachrichten arbeitet in jeder Sprache gleich.
 
 ## Daten
 

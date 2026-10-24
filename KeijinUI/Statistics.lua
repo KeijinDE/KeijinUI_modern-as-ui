@@ -37,7 +37,13 @@ local function AddSpellIcon(row,size)
     row.icon:SetPoint("LEFT",row,"LEFT",5,0)
     row.icon:SetTexCoord(.08,.92,.08,.92); row.icon:Hide()
 end
+-- Party rows colour name and rim; every other view starts from the plain look again.
+local function PlainRow(row)
+    row.label:SetTextColor(0.94,0.91,0.82)
+    if row.rim then for _,t in ipairs(row.rim) do t:SetVertexColor(0.62,0.57,0.43,0.95) end end
+end
 local function UpdateSpellIcon(row,name)
+    PlainRow(row)
     local enabled=K.DB().meterIcons==true
     local inset=enabled and row.iconSize+3 or 0
     row.label:ClearAllPoints(); row.label:SetPoint("LEFT",row.label:GetParent(),"LEFT",5+inset,0)
@@ -67,23 +73,49 @@ local autoView,bossWasAlive,autoWasOn,awaitingBossRun
 local tabRun=CreateFrame("Button","KeijinUIMeterTabRun",meter)
 local tabBoss=CreateFrame("Button","KeijinUIMeterTabBoss",meter)
 local tabHeal=CreateFrame("Button","KeijinUIMeterTabHeal",meter)
+local tabParty=CreateFrame("Button","KeijinUIMeterTabParty",meter)
+tabParty:SetWidth(38); tabParty:SetHeight(20); tabParty.text=K.LText(tabParty,"Party",9,"CENTER",0,0); tabParty:Hide()
 for _,tab in ipairs({tabRun,tabBoss}) do tab:SetWidth(34); tab:SetHeight(20) end
 tabRun.text=K.LText(tabRun,"Run",9,"CENTER",0,0)
 tabBoss.text=K.LText(tabBoss,"Boss",9,"CENTER",0,0)
 tabHeal:SetWidth(44); tabHeal:SetHeight(20); tabHeal.text=K.LText(tabHeal,"Heilung",9,"CENTER",0,0)
+-- Party data of the co-op patch: AZS_GetPartyMeter() -> lines, total, rate (empty outside of a party, absent in older versions).
+-- Returns the valid lines sorted by damage, or nil.
+function K.PartyMeter()
+    if type(AZS_GetPartyMeter)~="function" then return nil end
+    local ok,lines,total,rate=pcall(AZS_GetPartyMeter)
+    if not ok or type(lines)~="table" then return nil end
+    local sorted,sum,sumRate={},0,0
+    for _,line in ipairs(lines) do
+        if type(line)=="table" and type(line.name)=="string" and line.name~="" and K.Number(line.dmg) then
+            table.insert(sorted,line); sum=sum+line.dmg; sumRate=sumRate+(K.Number(line.dps) and line.dps or 0)
+        end
+    end
+    if table.getn(sorted)==0 then return nil end
+    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    return sorted,K.Number(total) and total or sum,K.Number(rate) and rate or sumRate
+end
+-- Class key of the game (paladin, ...) -> colour of KeijinUI; grey for unknown ones.
+function K.PartyClassColor(class)
+    local r,g,b=K.ClassColor(type(class)=="string" and string.upper(class) or nil)
+    if r then return r,g,b end
+    return 0.62,0.62,0.62
+end
+local partyReady=false   -- set by Update: the Party view exists only while the game reports party lines
 function K.MeterView()
     if autoView then return autoView end
     local view=K.DB().meterView
+    if view=="party" and partyReady then return "party" end
     return (view=="boss" or view=="healing") and view or "run"
 end
 local function PaintTabs()
     local view=K.MeterView()
     local function Paint(tab,on) if on then tab.text:SetTextColor(1,0.82,0.28) else tab.text:SetTextColor(0.62,0.6,0.54) end end
-    Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss"); Paint(tabHeal,view=="healing")
+    Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss"); Paint(tabHeal,view=="healing"); Paint(tabParty,view=="party")
 end
 function K.SetMeterView(view)
     if autoView and view==autoView then offset=0; PaintTabs(); return end
-    K.DB().meterView=(view=="boss" or view=="healing") and view or nil
+    K.DB().meterView=(view=="boss" or view=="healing" or view=="party") and view or nil
     autoView=nil   -- Manual Run/Healing choices remain until the next fight.
     offset=0; PaintTabs()
 end
@@ -91,10 +123,17 @@ function K.SetMeterAuto(on) K.DB().meterAutoBoss=on and true or nil end
 tabRun:SetScript("OnClick",function() K.SetMeterView("run") end)
 tabBoss:SetScript("OnClick",function() K.SetMeterView("boss") end)
 tabHeal:SetScript("OnClick",function() K.SetMeterView("healing") end)
+tabParty:SetScript("OnClick",function() K.SetMeterView("party") end)
+local headerMode="normal"
+local function LayoutSummary()
+    if headerMode=="off" then summary:SetWidth(meter:GetWidth()-160-(tabParty:IsShown() and 40 or 0))
+    else summary:SetWidth(meter:GetWidth()-26) end
+end
 meter.headerExtra=function(mode)
     reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 16 or 20)
-    tabRun:ClearAllPoints(); tabBoss:ClearAllPoints(); tabHeal:ClearAllPoints()
+    tabRun:ClearAllPoints(); tabBoss:ClearAllPoints(); tabHeal:ClearAllPoints(); tabParty:ClearAllPoints()
     tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20); tabHeal:SetHeight(mode=="thin" and 16 or 20)
+    tabParty:SetHeight(mode=="thin" and 16 or 20); tabParty:SetWidth(38)
     tabRun:SetWidth(mode=="off" and 24 or 34); tabBoss:SetWidth(mode=="off" and 28 or 34); tabHeal:SetWidth(mode=="off" and 38 or 44)
     reset:SetWidth(mode=="off" and 28 or 44); reset.text:SetFont(K.font,mode=="off" and 8 or 9,"OUTLINE")
     summary:SetFont(K.font,mode=="off" and 9 or 10,"OUTLINE")
@@ -104,15 +143,16 @@ meter.headerExtra=function(mode)
         tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
         tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
-        summary:SetWidth(meter:GetWidth()-160)
+        tabParty:SetPoint("RIGHT",tabRun,"LEFT",-2,0)
     else
         if mode=="thin" then reset:SetPoint("RIGHT",meter.strip,"RIGHT",-3,0)
         else reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6) end
         tabHeal:SetPoint("RIGHT",reset,"LEFT",-4,0)
         tabBoss:SetPoint("RIGHT",tabHeal,"LEFT",-2,0)
         tabRun:SetPoint("RIGHT",tabBoss,"LEFT",-2,0)
-        summary:SetWidth(meter:GetWidth()-26)
+        tabParty:SetPoint("RIGHT",tabRun,"LEFT",-2,0)
     end
+    headerMode=mode; LayoutSummary()
     PaintTabs()
 end
 local function Summary(full,total,rate)
@@ -271,6 +311,37 @@ local function UpdateHealing(lines,total,hps,supported)
     Summary(K.T("Heilung: %s gesamt   ·   %s HPS",K.Short(total),K.Short(hps)),total,hps)
     meter:Show()
 end
+-- Co-op: damage of all heroes of the party (AZS_GetPartyMeter), class coloured, own hero framed in gold.
+local function UpdateParty(sorted,total,rate)
+    meter:SetHeight(K.MeterMaxHeight())
+    local visible=(meter.headerHeight-56)/22
+    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    local me=UnitName("player")
+    for i,row in ipairs(meterRows) do
+        local v=sorted[i+offset]
+        if v and i<=visible then
+            local dps=K.Number(v.dps) and v.dps or 0
+            local own=me~=nil and v.name==me
+            local red,green,blue=K.PartyClassColor(v.class)
+            -- No spell icon in this view: the label returns to the left edge.
+            row.label:ClearAllPoints(); row.label:SetPoint("LEFT",row.label:GetParent(),"LEFT",5,0)
+            if row.icon then row.label:SetWidth(row.labelWidth); row.icon:Hide() end
+            row.label:SetText(v.name); row.label:SetTextColor(red,green,blue)
+            row.value:SetText(K.Short(v.dmg)); row.dps:SetText(K.Short(dps).." DPS")
+            row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
+            row.bar:SetStatusBarColor(red,green,blue,own and 0.95 or 0.65)
+            for _,t in ipairs(row.rim) do if own then t:SetVertexColor(1,0.82,0.28,1) else t:SetVertexColor(0.62,0.57,0.43,0.95) end end
+            row.tip=v.name
+            row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,K.Short(dps),total>0 and v.dmg/total*100 or 0,"")
+            if type(v.top)=="string" and v.top~="" then
+                row.detail=row.detail.."\n"..K.T("Stärkster Zauber: %s (%s DPS)",K.DisplayName(v.top),K.Short(K.Number(v.topdps) and v.topdps or 0))
+            end
+            row:Show()
+        else row:Hide() end
+    end
+    Summary(K.T("Party: %s gesamt · %s DPS",K.Short(total),K.Short(rate)),total,rate)
+    meter:Show()
+end
 local previousReported
 local function Update()
     local phase=AZS_GetPhase and AZS_GetPhase()
@@ -302,6 +373,12 @@ local function Update()
         end
         stats:Show()
     else stats:Hide() end
+    local party,partyTotal,partyRate=K.PartyMeter()
+    if (party~=nil)~=partyReady then
+        partyReady=party~=nil
+        if partyReady then tabParty:Show() else tabParty:Hide() end
+        LayoutSummary()
+    end
     AutoSwitch(); PaintTabs()
     local lines=AZS_GetMeter and AZS_GetMeter()
     if phase=="playing" and K.Number(AZS_RUN_UPDATED) and GetTime()-AZS_RUN_UPDATED>5 then
@@ -310,9 +387,10 @@ local function Update()
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
     local bossView=K.MeterView()=="boss"
     local healingView=K.MeterView()=="healing"
-    if bossView or healingView then reset:Hide() else reset:Show() end
+    local partyView=K.MeterView()=="party"
+    if bossView or healingView or partyView then reset:Hide() else reset:Show() end
     local sorted,total={},0
-    if meterValid and not bossView and not healingView then
+    if meterValid and not bossView and not healingView and not partyView then
         for _,v in ipairs(lines) do
             if type(v.name)~="string" or not K.Number(v.dmg) then meterValid=false; break end
             local value=math.max(0,v.dmg-(baseline[v.name] or 0))
@@ -323,6 +401,8 @@ local function Update()
         UpdateHealing(healing,healTotal,healRate,healSupported); K.Native("meter",true)
     elseif bossView and not K.DB().hidden.meter then
         UpdateBoss(); K.Native("meter",true)
+    elseif partyView and not K.DB().hidden.meter then
+        UpdateParty(party,partyTotal,partyRate); K.Native("meter",true)
     elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
         meter:SetHeight(K.MeterMaxHeight())

@@ -1,4 +1,4 @@
-KeijinUI = { version = "3.7.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.0.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
@@ -62,7 +62,7 @@ function K.DB()
     if type(db.native) ~= "table" then db.native = {} end
     if type(db.hidden) ~= "table" then db.hidden = {} end
     if db.snap == nil then db.snap = true end
-    if db.lang ~= "de" and db.lang ~= "en" and db.lang ~= "zh" then db.lang = "en" end
+    if db.lang ~= "de" and db.lang ~= "en" and not (K.IsLang and K.IsLang(db.lang)) then db.lang = "en" end
     db.detectedLang = nil
     db.cooldownsOnly = nil
     if db.schema ~= 2 then
@@ -192,10 +192,8 @@ end
 function K.DisplayName(name)
     local key=K.SourceKey(name)
     if key=="melee" then return K.T("Nahkampf") end
-    if K.lang=="zh" and K.AbilityChinese then
-        local label=K.AbilityChinese(key)
-        if label then return label end
-    end
+    local label=K.AbilityName and K.AbilityName(key)
+    if label then return label end
     local names=K.lang=="de" and KeijinBuildBarGerman or KeijinBuildBarNames
     return names and names[key] or name
 end

@@ -37,8 +37,8 @@ end
 A.Canonical = Canonical
 -- Recommendation titles in the interface language: the spell book may report names of another language.
 local function Label(row)
-    if KeijinUI and KeijinUI.lang=="zh" and KeijinUI.AbilityChinese then
-        local label=KeijinUI.AbilityChinese(row.key or Canonical(row.name or ""))
+    if KeijinUI and KeijinUI.AbilityName then
+        local label=KeijinUI.AbilityName(row.key or Canonical(row.name or ""))
         if label then return label end
     end
 	local german = KeijinUI and KeijinUI.lang ~= "de" and KeijinBuildBarNames or KeijinBuildBarGerman or {}

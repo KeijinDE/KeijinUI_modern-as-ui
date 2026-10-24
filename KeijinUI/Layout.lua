@@ -100,6 +100,7 @@ L.defaults={
     loot={scale=0.9},
     meter={scale=0.9},
     minimap={scale=0.8},
+    party={scale=0.9},
     skills={scale=0.9},
     statistics={scale=0.9},
     summons={scale=0.9},

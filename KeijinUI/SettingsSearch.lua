@@ -53,6 +53,7 @@ local aliases={
     module_achievements="erfolg erfolge achievement achievements popup",
     module_comfort="cursor mauszeiger autorun autowalk automatisch laufen eingabehilfen",
     module_summons="beschwoerungen summons pets begleiter daemonen demons hexenmeister warlock treants wolf",
+    module_party="party partyfenster gruppe koop coop co-op wiederbelebung revive",
 }
 local links={
     ["Werte wählen…"]=true,["Module verwalten…"]=true,
@@ -111,7 +112,7 @@ bar:SetWidth(516); bar:SetHeight(28); bar:SetPoint("TOPLEFT",panel,"TOPLEFT",218
 K.Chamfer(bar,4,{.035,.035,.045,1},{.62,.57,.43,1})
 local edit=CreateFrame("EditBox","KeijinUISettingsSearch",bar)
 edit:SetWidth(470); edit:SetHeight(22); edit:SetPoint("LEFT",bar,"LEFT",10,0)
-edit:SetFont(K.font,11,"OUTLINE"); edit:SetAutoFocus(false); edit:SetMaxLetters(120)
+edit:SetFont(K.font,11,"OUTLINE"); edit:SetAutoFocus(false); edit:SetMaxLetters(120); K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{edit,11})
 edit:SetTextColor(.94,.91,.82); edit:SetText("")
 local hint=K.LText(bar,"Einstellungen suchen…",11,"LEFT",10,0,464)
 hint:SetTextColor(.6,.59,.54)

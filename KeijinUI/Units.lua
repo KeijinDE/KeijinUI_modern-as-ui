@@ -174,7 +174,7 @@ local function Create(unit,mirror)
     f.raidMarker:SetPoint("BOTTOM",f,"TOPLEFT",mirror and FRAME_W-BOX/2 or BOX/2,2)
     f.raidMarker:Hide()
     f:SetScript("OnClick",function()
-        if arg1=="RightButton" then if ToggleGameMenu then ToggleGameMenu() end
+        if arg1=="RightButton" then K.marks.Open(unit,this)
         elseif UnitExists(unit) and TargetUnit then TargetUnit(unit) end
     end)
     f:SetScript("OnEnter",function()

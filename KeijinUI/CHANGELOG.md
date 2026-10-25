@@ -5,6 +5,13 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.2.1 (2026-10-25, release v4.2.1)
+
+* **Raid markers by right click:** right click the target frame, your own frame or a party row to open a small marker menu with the eight markers and a remove button. The current marker is highlighted, the name appears on hover, and clicking the same marker again removes it. Escape or a click outside closes the menu. This replaces the game menu that used to open on right click there.
+* **Slash command and key bindings:** `/kui mark 1-8` sets a marker on your target, `/kui mark 0` removes it. Under Key Bindings, KeijinUI lists one binding per marker and one to remove it.
+* **No error popup for an incomplete install:** if the minimap mask file is missing or damaged, the minimap falls back to a plain square texture from the game instead of showing a Lua error, so it keeps its shape. Reinstalling the full ZIP is still recommended.
+* **Group hint:** if the game ignores a marker because you are not in a group, a short chat message says so.
+
 ### 4.2.0 (2026-10-25, release v4.2.0)
 
 * **Separate effects bar:** talent and item timers now have their own bar, keeping the action bar short with the racial ability at the far right. Timers use the game's native values and freeze during pauses and card choices. Older clients without the timer API keep their existing bar.
@@ -557,6 +564,13 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.2.1 (2026-10-25, Release v4.2.1)
+
+* **Raidmarker per Rechtsklick:** Rechtsklick auf Zielfenster, eigenes Fenster oder eine Partyzeile öffnet ein kleines Markermenü mit den acht Markern und einer Schaltfläche zum Entfernen. Der aktuelle Marker ist hervorgehoben, der Name erscheint beim Darüberfahren, und derselbe Marker erneut entfernt ihn. Escape oder ein Klick daneben schließt das Menü. Es ersetzt das Spielmenü, das dort bisher per Rechtsklick aufging.
+* **Slashbefehl und Tastenbelegungen:** `/kui mark 1-8` setzt einen Marker auf dein Ziel, `/kui mark 0` entfernt ihn. Unter Tastenbelegung führt KeijinUI je Marker eine Belegung und eine zum Entfernen.
+* **Kein Fehlerfenster bei unvollständiger Installation:** Fehlt die Maskendatei der Minikarte oder ist sie beschädigt, nutzt die Minikarte statt eines Lua Fehlers eine schlichte eckige Textur des Spiels und behält so ihre Form. Eine vollständige Neuinstallation des ZIPs bleibt empfohlen.
+* **Gruppenhinweis:** Ignoriert das Spiel einen Marker, weil du nicht in einer Gruppe bist, weist eine kurze Chatmeldung darauf hin.
 
 ### 4.2.0 (2026-10-25, Release v4.2.0)
 

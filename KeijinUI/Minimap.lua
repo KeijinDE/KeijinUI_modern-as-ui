@@ -13,6 +13,15 @@ local K=KeijinUI
 local PANEL_W,PANEL_H=K.PANEL_WIDTH,K.PANEL_WIDTH+18
 local MASK="Interface\\AddOns\\KeijinUI\\media\\MinimapMask.tga"
 local DEFAULT_MASK="Textures\\MinimapMask"
+-- A missing or damaged mask file (incomplete install) must not raise an error popup (the client throws from
+-- SetMaskTexture). First fallback: the game's plain white texture, square like our mask, so pins and the button
+-- keep matching the map; the game's round mask only as the last resort.
+local SQUARE_MASK="Interface\\ChatFrame\\ChatFrameBackground"
+local function SetMask(map,path)
+    if not map or not map.SetMaskTexture then return end
+    if pcall(map.SetMaskTexture,map,path) or path==DEFAULT_MASK then return end
+    if not pcall(map.SetMaskTexture,map,SQUARE_MASK) then pcall(map.SetMaskTexture,map,DEFAULT_MASK) end
+end
 local NATIVE={"MinimapBorderTop","MinimapBorder","MinimapBackdrop","MinimapToggleButton","MinimapZoneTextButton","GameTimeFrame"}
 local CLOCK_W=40
 local saved,styled,panel,zone,lastZone,clock,lastClock
@@ -89,7 +98,7 @@ local function Enable()
     zone:SetWidth(width-26-CLOCK_W)
     map:ClearAllPoints(); map:SetPoint("TOPLEFT",cluster,"TOPLEFT",10,-28)
     map:SetWidth(size); map:SetHeight(size)
-    if map.SetMaskTexture then map:SetMaskTexture(MASK) end
+    SetMask(map,MASK)
     map:EnableMouseWheel(true); map:SetScript("OnMouseWheel",Wheel)
     styled=true
     panel:Show(); panel.inner:Show()
@@ -105,7 +114,7 @@ local function Disable()
     map:ClearAllPoints()
     local p=saved.point
     if p[1] then map:SetPoint(p[1],p[2] or cluster,p[3] or p[1],p[4] or 0,p[5] or 0) else map:SetPoint("CENTER",cluster,"TOP",9,-92) end
-    if map.SetMaskTexture then map:SetMaskTexture(DEFAULT_MASK) end
+    SetMask(map,DEFAULT_MASK)
     map:EnableMouseWheel(false); map:SetScript("OnMouseWheel",nil)
     for name in pairs(hidden) do
         local f=getglobal(name)

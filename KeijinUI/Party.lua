@@ -15,9 +15,14 @@ K.layout.Register("party",panel,"Partyfenster",function(f)
     f:ClearAllPoints(); f:SetPoint("LEFT",UIParent,"LEFT",332,0)
 end,{hidden=true,inactive=function() return not K.ModuleOn("party") end})
 local rows={}
+-- Right click on a row with a real party unit opens the raid marker menu; rows from the party meter have no unit.
+local function RowMouseUp()
+    if arg1=="RightButton" and this.unit then K.marks.Open(this.unit,this) end
+end
 for i=1,MAXMEMBERS do
     local row=K.ListBarRow(panel,i,ROW-2)
     row.label:SetWidth(WIDTH-105)
+    row:SetScript("OnMouseUp",RowMouseUp)
     row:Hide()
     rows[i]=row
 end
@@ -75,7 +80,7 @@ local function Members(revive)
                 local dead=type(UnitIsDeadOrGhost)=="function" and UnitIsDeadOrGhost(unit) and true or false
                 if K.Number(max) and max>0 and K.Number(hp) and hp<=0 then dead=true end
                 if reviving and name==reviving then dead=true end
-                table.insert(list,{name=name,class=token,hp=hp,max=max,dead=dead,offline=offline and true or false,health=true})
+                table.insert(list,{unit=unit,name=name,class=token,hp=hp,max=max,dead=dead,offline=offline and true or false,health=true})
             end
         end
     end
@@ -114,13 +119,14 @@ function P.Refresh()
     local n=table.getn(members)
     local own=K.ModuleOn("party") and revive and (revive.down==1 or revive.down==true)
     if n==0 and not own then
-        for _,row in ipairs(rows) do row:Hide() end
+        for _,row in ipairs(rows) do row.unit=nil; row:Hide() end
         hint:Hide(); panel:Hide(); StockFrames(false); NativeRevive(false)
         return
     end
     local covered=own and K.Number(revive.share) and true or false
     for i,row in ipairs(rows) do
         local m=members[i]
+        row.unit=m and m.unit or nil
         if not m then row:Hide()
         else
             local red,green,blue=K.PartyClassColor(m.class)
@@ -169,7 +175,7 @@ function P.Refresh()
     NativeRevive(covered)
 end
 function P.Stop()
-    for _,row in ipairs(rows) do row:Hide() end
+    for _,row in ipairs(rows) do row.unit=nil; row:Hide() end
     hint:Hide(); panel:Hide(); StockFrames(false)
     NativeRevive(false)
 end

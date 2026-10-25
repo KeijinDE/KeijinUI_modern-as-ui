@@ -1,0 +1,29 @@
+<Bindings>
+	<Binding name="KEIJINUI_MARK1" header="KEIJINUI">
+		KeijinUI.marks.Set("target", 1);
+	</Binding>
+	<Binding name="KEIJINUI_MARK2">
+		KeijinUI.marks.Set("target", 2);
+	</Binding>
+	<Binding name="KEIJINUI_MARK3">
+		KeijinUI.marks.Set("target", 3);
+	</Binding>
+	<Binding name="KEIJINUI_MARK4">
+		KeijinUI.marks.Set("target", 4);
+	</Binding>
+	<Binding name="KEIJINUI_MARK5">
+		KeijinUI.marks.Set("target", 5);
+	</Binding>
+	<Binding name="KEIJINUI_MARK6">
+		KeijinUI.marks.Set("target", 6);
+	</Binding>
+	<Binding name="KEIJINUI_MARK7">
+		KeijinUI.marks.Set("target", 7);
+	</Binding>
+	<Binding name="KEIJINUI_MARK8">
+		KeijinUI.marks.Set("target", 8);
+	</Binding>
+	<Binding name="KEIJINUI_MARK0">
+		KeijinUI.marks.Set("target", 0);
+	</Binding>
+</Bindings>

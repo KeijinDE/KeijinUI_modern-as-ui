@@ -69,6 +69,9 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="navigation debug" then K.navigation.Debug()
     elseif command=="levels debug" then K.storedLevels.Debug()
     elseif command=="menu" or command=="menu debug" then MenuDebug()
+    elseif command=="mark" or string.find(command,"^mark%s") then
+        local _,_,value=string.find(command,"^mark%s+(%S+)$")
+        K.marks.Command(value)
     elseif command=="collection" then K.collection.Toggle()
     elseif command=="chat copy" then K.chatCopy.Open()
     elseif command=="caches" or string.find(command,"^caches%s") then
@@ -138,6 +141,7 @@ SlashCmdList.KEIJINUI=function(message)
     else
         K.Say(K.T("/kui party debug: Partyfenster und Partydaten prüfen."))
         K.Say(K.T("/kui font: Schrift anzeigen oder wählen."))
+        K.Say(K.T("/kui mark <1-8|0>: Raidmarker auf das Ziel setzen (0 entfernt)."))
         K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, size, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."))
  end
 end

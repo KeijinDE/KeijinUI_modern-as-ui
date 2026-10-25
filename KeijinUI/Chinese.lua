@@ -270,6 +270,13 @@ local text={
  ["Downed"]="倒地", ["Offline"]="离线", ["Revive: %d%%"]="复活：%d%%", ["%s is reviving you: %d%%"]="%s正在复活你：%d%%",
  ["You are being revived: %d%%"]="你正在被复活：%d%%",
  ["/kui party debug: check the party window and party data."]="/kui party debug：检查队伍窗口和队伍数据。",
+ ["Effects"]="效果", ["Effects as separate bar"]="效果显示在独立栏",
+ ["Talent counters (summons and cooldowns) appear in their own bar next to the action bar. Off: they return to the action bar before the racial ability."]="天赋计时（召唤和冷却）显示在技能冷却栏旁的独立栏中。关闭：它们回到技能冷却栏，位于种族技能之前。",
+ ["Font"]="字体",
+ ["This font lacks some characters in your language. A fallback font is used."]="此字体未包含当前语言的全部字符，将使用备用字体。",
+ ["Adventure 123 · Damage 456"]="冒险 123 · 伤害 456",
+ ["/kui font <name>. Current: %s. Available: %s."]="/kui font <名称>。当前：%s。可用：%s。",
+ ["/kui font: view or choose the font."]="/kui font：查看或选择字体。",
 }
 -- Untranslated diagnostic commands and symbols remain readable in English.
 local common={Boss="首领",Gold="金币",Cache="宝箱",Kills="击杀",Items="物品",Item="物品",Spells="技能",Minimap="小地图",Tooltip="提示框",Buffs="增益",Chat="聊天",["in"]="还有"}

@@ -25,7 +25,7 @@ local function Apply(f)
     if mode=="off" then f.title:Hide(); f.strip:Hide()
     else
         f.title:Show(); f.strip:Show()
-        f.title:SetFont(K.font,mode=="thin" and 10 or 12,"OUTLINE")
+        K.SetFontSize(f.title,mode=="thin" and 10 or 12)
         f.title:ClearAllPoints()
         if mode=="thin" then
             f.title:SetHeight(14); f.title:SetJustifyV("MIDDLE")

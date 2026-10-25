@@ -115,6 +115,17 @@ SlashCmdList.KEIJINUI=function(message)
             K.Say(K.T("/kui text off|compact|scroll|rise|game. Aktuell: %s.",K.T(MODE_NAMES[K.CombatTextMode()])))
         end
     elseif command=="reload" then ReloadUI()
+    elseif command=="font" or string.find(command,"^font%s") then
+        local _,_,value=string.find(command,"^font%s+(%S+)$")
+        if value and K.SetFontChoice(value) then
+            K.Say(K.T("Schrift")..": "..K.FontName(value))
+            RefreshAll()
+        else
+            local keys
+            for _,item in ipairs(K.fontChoices) do keys=keys and (keys..", "..item[1]) or item[1] end
+            K.Say(K.T("/kui font <Name>. Aktuell: %s. Verfügbar: %s.",K.FontName(K.FontChoice()),keys))
+        end
+        if K.FontSubstituted() then K.Say(K.T("Die gewählte Schrift enthält nicht alle Zeichen dieser Sprache. Es wird eine Ersatzschrift verwendet.")) end
     elseif command=="lang" or string.find(command,"^lang%s") then
         local _,_,value=string.find(command,"^lang%s+(%S+)$")
         if K.IsLang(value) then
@@ -126,6 +137,7 @@ SlashCmdList.KEIJINUI=function(message)
         end
     else
         K.Say(K.T("/kui party debug: Partyfenster und Partydaten prüfen."))
+        K.Say(K.T("/kui font: Schrift anzeigen oder wählen."))
         K.Say(K.T("/kui, /kui edit, /kui reset, /kui grid (Raster und Einrasten), /kui text off|compact|scroll|rise|game, /kui plates all|bosses|off|debug, /kui bosses debug, /kui heal debug, /kui caches icons, edge, arrow, msg, size, source, debug, /kui runs (Rundenübersicht), /kui runs msg, /kui guardians on|off|debug (Wächter), /kui loot clear|debug (Beuteliste), /kui button on|off (Minimapknopf), /kui tooltip reset, /kui meter reset, /kui crits reset, /kui lang de|en (Sprache), /kui reload (Oberfläche neu laden). /kbb für Buildtipps, /kachi für Erfolge."))
  end
 end

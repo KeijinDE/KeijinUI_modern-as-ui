@@ -34,7 +34,7 @@ table.insert(UISpecialFrames,"KeijinUIChatCopy")
 local scroll=CreateFrame("ScrollFrame","KeijinUIChatCopyScroll",panel,"UIPanelScrollFrameTemplate")
 scroll:SetPoint("TOPLEFT",panel,"TOPLEFT",14,-38); scroll:SetWidth(585); scroll:SetHeight(350)
 local edit=CreateFrame("EditBox",nil,scroll); edit:SetWidth(580); edit:SetHeight(350)
-edit:SetFont(K.font,11,"OUTLINE"); edit:SetAutoFocus(false); K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{edit,11})
+K.SetFontSize(edit,11); edit:SetAutoFocus(false); K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{edit,11})
 if edit.SetMultiLine then edit:SetMultiLine(true) end
 if edit.SetMaxLetters then edit:SetMaxLetters(200000) end
 scroll:SetScrollChild(edit); C.edit=edit

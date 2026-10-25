@@ -1,4 +1,4 @@
-# KeijinUI 4.1.0-beta.1
+# KeijinUI 4.2.0
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -17,8 +17,7 @@ achievement popup and one chat window in the KeijinUI frame.
 
 English is the default. Every language of the game client can be chosen in General or with `/kui lang <code>`
 (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Only English and German are checked by hand; all other languages are machine translated and not yet
-reviewed by native speakers, please report mistakes. Polish, Czech, Romanian, Turkish, Russian, Ukrainian, Chinese,
-Japanese and Korean use a bundled font under Apache License 2.0.
+reviewed by native speakers, please report mistakes. General, Font offers seven interface fonts with a preview and a language fallback, including Expressway. Chat and game tooltips keep their language fonts. Font origins and licenses are listed in `third_party/NOTICE.md`.
 
 The Run meter shows live DPS over the last 10 run seconds; total damage and ordering remain run based.
 Average DPS stays in the tooltip. The run overview includes endless boss countdowns and optional account pace.
@@ -148,7 +147,7 @@ Schadenszahlen in der Spielwelt, Beutemeldung, Erfolgsmeldung und ein einzelnes 
 Englisch ist der Standard. Jede Sprache des Spielclients wählst du unter Allgemein oder mit `/kui lang <Code>`
 (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Nur Englisch und Deutsch sind von Hand geprüft; alle anderen Sprachen sind maschinell übersetzt und noch
 nicht muttersprachlich geprüft, Fehler bitte melden. Polnisch, Tschechisch, Rumänisch, Türkisch, Russisch,
-Ukrainisch, Chinesisch, Japanisch und Koreanisch verwenden eine mitgelieferte Schrift unter Apache License 2.0.
+Ukrainisch, Chinesisch, Japanisch und Koreanisch verwenden bei Bedarf die mitgelieferte Ersatzschrift. Unter Allgemein, Schrift stehen sieben UI Schriften einschließlich Expressway mit Vorschau zur Wahl. Chat und Spieltooltips behalten ihre sprachabhängige Schrift. Herkunft und Lizenzen stehen in `third_party/NOTICE.md`.
 
 Der Reiter Run zeigt Live DPS der letzten 10 Spielsekunden. Gesamtschaden und Reihenfolge bleiben runbezogen,
 der Durchschnitt steht im Tooltip. Die Runübersicht ergänzt Endlosbosstimer und optional Account Pace.

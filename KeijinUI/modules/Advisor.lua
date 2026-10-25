@@ -266,7 +266,7 @@ function A.Evaluate(spells, run, stats, focus, window)
 	result.alternatives = eligible
 	table.insert(result.reasons, T("%.0f%% des Gesamtschadens in den letzten %.0f Kampfsekunden.", best.share*100, window.seconds))
 	if best.gain then
-		table.insert(result.reasons, T("Vergleichsmodell: +10 Prozentpunkte lokaler Schadensbonus ≈ +%.1f%% Gesamtschaden.", best.gain*100))
+		table.insert(result.reasons, T("Vergleichsmodell: +10 Prozentpunkte lokaler Schadensbonus ergibt etwa +%.1f%% Gesamtschaden.", best.gain*100))
 		table.insert(result.reasons, T("Das ist ein hypothetischer Vergleich, keine erkannte Karte."))
 		if table.getn(eligible) < table.getn(candidates) and focus ~= "boss" then
 			result.heading, result.confidence = T("Modellhinweis"), T("Teilmodell")

@@ -5,6 +5,18 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.2.0 (2026-10-25, release v4.2.0)
+
+* **Separate effects bar:** talent and item timers now have their own bar, keeping the action bar short with the racial ability at the far right. Timers use the game's native values and freeze during pauses and card choices. Older clients without the timer API keep their existing bar.
+* **Move and resize effects:** hold Alt to drag, or Alt and the mouse wheel to scale. The layout editor and Alt show placeholders even without active timers. The default position looks for free space around the action bar. Turn off the separate bar option to put timers back before the racial ability.
+* **Seven UI fonts:** choose Friz Quadrata, Arial Narrow, Droid Sans, PT Sans, PT Sans Narrow, Fira Sans or Expressway under General, Font. The dropdown includes previews, saves your choice and uses a fallback where characters are missing. This changes the addon interface; chat and game tooltips keep their existing language fonts.
+* **Item order and icons:** the item row now shows two rings, two trinkets and the amulet at the right. Fixed blank effect icons caused by short icon names being used as full texture paths.
+* **Co-op roster and totals:** departed teammates cannot return through historical damage entries after the game has supplied real party units. The Party damage view follows current members and recalculates its totals.
+* **Revive display:** the game's revive HUD is hidden only while our party window shows the corresponding progress, and returns when needed or when the module is disabled. Your own revive progress can appear even without other member rows.
+* **Raid markers and friendly targets:** player and target frames show raid target markers, nameplates preserve the native markers, and friendly pets and totems use the game's relationship colours. Selected player class colours keep priority.
+
+The author reports that the UI is working in both single-player and co-op on their setup. Please report any issues with your addon version and a screenshot.
+
 ### 4.1.0-beta.1 (2026-10-24, release v4.1.0-beta.1)
 
 * **Game 0.115.0 test version:** talent timers from `AZS_GetTimers()` join the existing cooldown bar, including Butcher and Pact of the Annihilan. Values come from the game and freeze during pauses and card choices. Hover a timer for its name and remaining time. Older clients without this API keep their existing bar.
@@ -545,6 +557,18 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.2.0 (2026-10-25, Release v4.2.0)
+
+* **Eigene Effektleiste:** Talent und Gegenstandstimer stehen jetzt in einer eigenen Leiste. Die Aktionsleiste bleibt dadurch kurz, mit dem Volksbonus ganz rechts. Die Timer verwenden die nativen Werte des Spiels und pausieren bei Pausen und Kartenauswahlen. Ältere Clients ohne Timer API behalten ihre bisherige Leiste.
+* **Effekte verschieben und skalieren:** Alt halten und ziehen, zum Skalieren Alt und Mausrad nutzen. Im Layoutmodus und bei gedrückter Alt Taste erscheinen auch ohne aktive Timer Platzhalter. Die Standardposition sucht freien Platz neben der Aktionsleiste. Die Option für eine eigene Leiste lässt sich abschalten; dann stehen die Timer wieder vor dem Volksbonus.
+* **Sieben UI Schriften:** Unter Allgemein, Schrift stehen Friz Quadrata, Arial Narrow, Droid Sans, PT Sans, PT Sans Narrow, Fira Sans und Expressway zur Auswahl. Das Dropdown zeigt Vorschauen, speichert die Auswahl und nutzt bei fehlenden Zeichen eine Ersatzschrift. Die Auswahl gilt für die Addonoberfläche; Chat und Spieltooltips behalten ihre bisherigen sprachabhängigen Schriften.
+* **Itemreihenfolge und Symbole:** Die Reihe zeigt jetzt zwei Ringe, zwei Schmuckstücke und das Amulett ganz rechts. Leere Effektsymbole durch kurze Symbolnamen statt vollständiger Texturpfade wurden behoben.
+* **Koop Besetzung und Summen:** Hat das Spiel echte Partyeinheiten gemeldet, kehren ausgeschiedene Mitstreiter nicht durch historische Schadenseinträge zurück. Die Partyansicht folgt den aktuellen Mitgliedern und berechnet ihre Summen neu.
+* **Wiederbelebung:** Die native Anzeige wird nur ausgeblendet, während unser Partyfenster den passenden Fortschritt zeigt. Bei Bedarf oder beim Abschalten des Moduls kehrt sie zurück. Der eigene Fortschritt erscheint auch ohne weitere Mitgliederzeilen.
+* **Raidmarker und freundliche Ziele:** Spieler und Zielrahmen zeigen Raidmarker, Namensplaketten behalten die nativen Marker, und freundliche Begleiter und Totems verwenden die Beziehungsfarben des Spiels. Gewählte Klassenfarben behalten Vorrang.
+
+Beim Autor funktioniert die UI sowohl im Einzelspieler als auch im Koop. Bitte Fehler mit Addonversion und Screenshot melden.
 
 ### 4.1.0-beta.1 (2026-10-24, Release v4.1.0-beta.1)
 

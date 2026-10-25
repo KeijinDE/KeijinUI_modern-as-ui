@@ -1,8 +1,20 @@
-KeijinUI = { version = "4.1.0-beta.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.2.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
 K.font = "Fonts\\FRIZQT__.TTF"
+-- Size factor of the chosen font (Fonts.lua) and the unscaled size of each font string that was set through SetFontSize.
+K.fontFactor = 1
+K.fontBase = {}
+K.fontOverrides = {}
+function K.FontSize(size)
+    if K.fontFactor == 1 then return size end
+    return math.max(1, math.floor(size * K.fontFactor + 0.5))
+end
+function K.SetFontSize(fs, size, flags)
+    K.fontBase[fs] = size
+    fs:SetFont(K.fontOverrides[fs] or K.font, K.fontOverrides[fs] and size or K.FontSize(size), flags or "OUTLINE")
+end
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end
 -- Game 0.101 can report a K.UIWidth()/GetHeight() that differs from the area it actually covers;
@@ -222,7 +234,7 @@ function K.Short(n)
 end
 function K.Text(frame, text, size, point, x, y, width)
     local fs = frame:CreateFontString(nil, "OVERLAY")
-    fs:SetFont(K.font, size or 11, "OUTLINE")
+    K.SetFontSize(fs, size or 11)
     K.fontStrings=K.fontStrings or {}; table.insert(K.fontStrings,{fs,size or 11})
     fs:SetTextColor(0.94, 0.91, 0.82)
     fs:SetPoint(point or "TOPLEFT", frame, point or "TOPLEFT", x or 0, y or 0)

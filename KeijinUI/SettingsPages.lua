@@ -33,6 +33,8 @@ O.Help(p,"Zeigt die Abklingzeit der Fähigkeit im Run oben links am Symbol, in S
 O.Toggle(p,"actionBar","Aktionsleiste",K.buildBar.ActionOn,K.buildBar.SetAction)
 O.Requires(O.Choice(p,"cooldownStyle","Abklingzeit",function() return K.CooldownClockwise() and "clock" or "down" end,K.SetCooldownStyle,{{"clock","Im Uhrzeigersinn"},{"down","Von oben nach unten"}}),K.buildBar.ActionOn)
 O.Help(p,"Leiste mit den Abklingzeiten deiner Zauber. Ist eines unserer Fenster aus, erscheint das passende des Spiels.")
+O.Requires(O.Toggle(p,"effectsBar","Effekte als eigene Leiste",K.buildBar.EffectsOn,K.buildBar.SetEffects),K.buildBar.ActionOn)
+O.Help(p,"Talentzähler (Beschwörungen und Abklingzeiten) stehen in einer eigenen Leiste neben der Aktionsleiste. Aus: sie erscheinen wieder in der Aktionsleiste vor dem Volksbonus.")
 
 O.Section(p,"Einheitenrahmen")
 O.Choice(p,"healthColor","Lebensbalken",function() return K.DB().classHealth~=false end,function(on) K.DB().classHealth=on end,{{true,"Klassenfarbe"},{false,"Grün / Rot"}})
@@ -205,8 +207,19 @@ p=O.Page("general","Allgemein","Sprache, Rundenhistorie und Oberfläche.")
 O.Section(p,"Sprache")
 local languageItems={}
 for _,entry in ipairs(K.Languages) do table.insert(languageItems,{entry.code,entry.key}) end
-O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,languageItems)
+local languageChoice=O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,languageItems)
+-- This menu includes native CJK language names even when the rest of a Russian
+-- interface uses a Cyrillic-only font. Keep those names in the universal font.
+O.Watch(function()
+    for _,option in ipairs(languageChoice.options) do
+        K.fontOverrides[option.text]=K.NeedsWideFont(K.lang) and K.WideFont or nil
+        K.SetFontSize(option.text,11)
+    end
+end)
 O.Help(p,"Übersetzungen außer Deutsch und Englisch sind maschinell erstellt und nicht muttersprachlich geprüft. Fehler bitte melden.")
+O.FontChoice(p)
+local fontHint=O.Help(p,"Die gewählte Schrift enthält nicht alle Zeichen dieser Sprache. Es wird eine Ersatzschrift verwendet.")
+O.Watch(function() fontHint:SetAlpha(K.FontSubstituted() and 1 or 0) end)
 O.Section(p,"Gespeicherte Level","storedLevels")
 O.Requires(O.Toggle(p,"storeLevels","Levelaufstiege speichern",K.storedLevels.Storing,K.storedLevels.SetStoring),K.storedLevels.CanStore)
 O.Help(p,"Der Kampf läuft weiter. Gespeicherte Auswahlen per Button öffnen. Ausschalten bietet wartende Auswahlen sofort an.")

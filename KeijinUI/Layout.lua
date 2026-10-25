@@ -97,6 +97,7 @@ end
 L.defaults={
     buffs={scale=0.9},
     crits={scale=0.9},
+    effects={scale=0.9},
     loot={scale=0.9},
     meter={scale=0.9},
     minimap={scale=0.8},

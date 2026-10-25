@@ -9,7 +9,7 @@ O.panel=panel
 panel:SetFrameStrata("DIALOG"); panel:SetBackdropColor(0.045,0.045,0.05,1); panel.noOpacity=true
 panel.strip:SetHeight(30)
 panel.title:ClearAllPoints(); panel.title:SetPoint("TOP",panel,"TOP",0,-12)
-panel.title:SetFont(K.font,14,"OUTLINE"); panel.title:SetWidth(680); panel.title:SetHeight(22); panel.title:SetJustifyH("CENTER")
+K.SetFontSize(panel.title,14); panel.title:SetWidth(680); panel.title:SetHeight(22); panel.title:SetJustifyH("CENTER")
 K.Live(panel.title,function() return K.title.." · "..K.version.." · "..K.T("Einstellungen") end)
 local function Rule(parent,x,y,width,height)
     local t=parent:CreateTexture(nil,"BORDER"); t:SetTexture(K.flat); t:SetVertexColor(.62,.53,.34,.45)
@@ -269,7 +269,7 @@ function O.Navigation(items)
         local b=O.Button(panel,v[2],12,-57,172,function() O.ShowPage(key) end)
         b:SetHeight(34); b.text:ClearAllPoints(); b.text:SetPoint("LEFT",b,"LEFT",14,0)
         b.text:SetWidth(136); b.text:SetHeight(22); b.text:SetJustifyH("LEFT"); b.text:SetJustifyV("MIDDLE")
-        b.text:SetFont(K.font,14,"OUTLINE"); O.nav[key]=b
+        K.SetFontSize(b.text,14); O.nav[key]=b
         b:SetScript("OnEnter",function() b:SetBackdropBorderColor(.94,.74,.37,1) end)
         b:SetScript("OnLeave",O.UpdateNavigation)
         b.disclosure=K.Text(b,">",10,"RIGHT",-10,0,10)
@@ -410,7 +410,7 @@ function O.PlaceMenu(menu,button)
     if flipped then menu:SetPoint("BOTTOMRIGHT",button,"TOPRIGHT",dx,dy)
     else menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",dx,dy) end
 end
-function O.Choice(page,key,label,get,set,items)
+function O.Choice(page,key,label,get,set,items,style)
     local row=O.Row(page,key,label,34)
     local button=O.Button(row,"",342,-2,170,function() end)
     O.Wheel(button)
@@ -418,12 +418,15 @@ function O.Choice(page,key,label,get,set,items)
     local arrow=K.Text(button,"v",9,"RIGHT",-8,0); arrow:SetTextColor(unpack(GOLD))
     row.value=text; row.items=items; row.button=button
     row.searchEntry.items=items
-    local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(170); menu:SetHeight(8+table.getn(items)*27); Skin(menu)
+    local menuWidth,pitch=style and style.width or 170,style and style.pitch or 27
+    local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(menuWidth); menu:SetHeight(8+table.getn(items)*pitch); Skin(menu)
+    row.menu=menu; row.options={}
     menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",0,-3)
     for i,item in ipairs(items) do
         local value=item[1]   -- body local for the closure (see Statistics.lua)
-        local option=O.Button(menu,item[2],4,-4-(i-1)*27,162,function() set(value); O.CloseChoice(); O.Refresh() end)
-        option:SetHeight(25)
+        local option=O.Button(menu,item[2],4,-4-(i-1)*pitch,menuWidth-8,function() set(value); O.CloseChoice(); O.Refresh() end)
+        option:SetHeight(pitch-2); option.value=value; table.insert(row.options,option)
+        if style and style.decorate then style.decorate(option,value) end
     end
     local function Open()
         local was=O.openMenu==menu and shield:IsShown()
@@ -432,10 +435,53 @@ function O.Choice(page,key,label,get,set,items)
         for _,m in ipairs(O.menus or {}) do m:Hide() end
         O.openMenu=menu; O.Fit(); shield:SetScale(1); menu:SetScale(panel:GetEffectiveScale()/UIParent:GetEffectiveScale()); shield:Show(); menu:Show()
         O.PlaceMenu(menu,button)
+        if style and style.refresh then style.refresh(row) end
     end
     O.menus=O.menus or {}; table.insert(O.menus,menu); menu:Hide()
     button:SetScript("OnClick",Open); row:SetScript("OnClick",Open)
     O.Watch(function() for _,v in ipairs(items) do if v[1]==get() then text:SetText(K.T(v[2])); return end end; text:SetText("?") end)
+    return row
+end
+-- Font names stay readable in the interface font; the second line shows the
+-- actual candidate for this language, including its fallback where needed.
+function O.FontChoice(page)
+    local function Sample(option,key)
+        local path,factor,substituted=K.ResolveFont(K.lang,key)
+        option.sample:SetFont(path,math.floor(12*factor+.5),"")
+        option.sample:SetText(K.T("Abenteuer 123 · Schaden 456"))
+        option.text:SetText(K.FontName(key)..(substituted and " *" or ""))
+        option.selected:SetAlpha(K.FontChoice()==key and 1 or 0)
+    end
+    local row=O.Choice(page,"font","Schrift",K.FontChoice,K.SetFontChoice,K.fontChoices,{
+        width=286,pitch=48,
+        decorate=function(option,key)
+            option.text:ClearAllPoints(); option.text:SetPoint("TOPLEFT",option,"TOPLEFT",10,-5)
+            option.text:SetWidth(250); option.text:SetHeight(15); option.text:SetJustifyH("LEFT")
+            option.sample=option:CreateFontString(nil,"OVERLAY")
+            option.sample:SetPoint("TOPLEFT",option,"TOPLEFT",10,-25)
+            option.sample:SetWidth(250); option.sample:SetHeight(18); option.sample:SetJustifyH("LEFT")
+            option.sample:SetTextColor(.85,.84,.79)
+            option.selected=option:CreateTexture(nil,"ARTWORK"); option.selected:SetTexture(K.flat)
+            option.selected:SetPoint("TOPLEFT",option,"TOPLEFT",1,-2); option.selected:SetWidth(2); option.selected:SetHeight(42)
+            option.selected:SetVertexColor(1,.82,.28,1)
+            Sample(option,key)
+        end,
+        refresh=function(control) for _,option in ipairs(control.options) do Sample(option,option.value) end end
+    })
+    local preview=CreateFrame("Frame",nil,page); preview:SetWidth(516); preview:SetHeight(65)
+    preview:SetPoint("TOPLEFT",page,"TOPLEFT",0,page.y); Skin(preview)
+    preview.text=K.Text(preview,"",16,"TOPLEFT",12,-8,490); preview.text:SetHeight(23)
+    preview.detail=K.Text(preview,"",10,"TOPLEFT",12,-39,490); preview.detail:SetHeight(18)
+    preview.detail:SetTextColor(.75,.73,.68)
+    O.Track(page,preview,0,page.y); page.y=page.y-73; row.preview=preview
+    O.Watch(function()
+        preview.text:SetText(K.T("Abenteuer 123 · Schaden 456"))
+        local path,factor,substituted=K.ResolveFont(K.lang)
+        preview.text:SetFont(path,math.floor(16*factor+.5),"")
+        local actual=substituted and K.FontName("droid") or K.FontName(K.FontChoice())
+        preview.detail:SetText(K.T("Vorschau")..": "..actual)
+        for _,option in ipairs(row.options) do Sample(option,option.value) end
+    end)
     return row
 end
 -- Preview the percentage during a drag; commit on release so the control does not move under the cursor.

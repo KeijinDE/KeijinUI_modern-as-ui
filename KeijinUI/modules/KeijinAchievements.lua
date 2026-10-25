@@ -136,7 +136,7 @@ end
 
 local function Label(text, x, y, width, height, size, r, g, b, justify)
     local label = popup:CreateFontString(nil, "OVERLAY")
-    label:SetFont(KeijinUI.font, size, "OUTLINE")
+    KeijinUI.SetFontSize(label, size)
     KeijinUI.fontStrings=KeijinUI.fontStrings or {}; table.insert(KeijinUI.fontStrings,{label,size})
     label:SetPoint("TOPLEFT", popup, "TOPLEFT", x, y)
     label:SetWidth(width)

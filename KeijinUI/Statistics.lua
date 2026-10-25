@@ -140,8 +140,8 @@ meter.headerExtra=function(mode)
     tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20); tabHeal:SetHeight(mode=="thin" and 16 or 20)
     tabParty:SetHeight(mode=="thin" and 16 or 20); tabParty:SetWidth(38)
     tabRun:SetWidth(mode=="off" and 24 or 34); tabBoss:SetWidth(mode=="off" and 28 or 34); tabHeal:SetWidth(mode=="off" and 38 or 44)
-    reset:SetWidth(mode=="off" and 28 or 44); reset.text:SetFont(K.font,mode=="off" and 8 or 9,"OUTLINE")
-    summary:SetFont(K.font,mode=="off" and 9 or 10,"OUTLINE")
+    reset:SetWidth(mode=="off" and 28 or 44); K.SetFontSize(reset.text,mode=="off" and 8 or 9)
+    K.SetFontSize(summary,mode=="off" and 9 or 10)
     if mode=="off" then
         -- No title strip: tabs and Reset share the bottom row with the summary.
         reset:SetPoint("BOTTOMRIGHT",meter,"BOTTOMRIGHT",-10,4)

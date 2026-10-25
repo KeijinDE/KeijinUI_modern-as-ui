@@ -1,6 +1,6 @@
 -- WoW 1.12 API. Only AZS_SPELLS decides which spells belong to this run.
 local function SetFont(fs,size)
-    fs:SetFont(KeijinUI.font,size,"OUTLINE")
+    KeijinUI.SetFontSize(fs,size)
     KeijinUI.fontStrings=KeijinUI.fontStrings or {}; table.insert(KeijinUI.fontStrings,{fs,size})
 end
 local FLAT = "Interface\\ChatFrame\\ChatFrameBackground"
@@ -11,7 +11,8 @@ local ICON, PITCH, COLUMNS, WIDTH, ROWSTART = 28, 30, 11, 400, 58
 -- stock interface fills native slots 1-6 plus the permanent slot 12. NORMAL_SLOTS
 -- is that assumption: a longer list makes the bar grow, no spell is ever hidden.
 local NORMAL_SLOTS, ACTION_ICON, ACTION_PITCH = 6, 38, 42
-local JEWELRY = { 2, 11, 12, 13, 14 }
+-- Display rings, trinkets, then the amulet; inventory slot IDs stay unchanged.
+local JEWELRY = { 11, 12, 13, 14, 2 }
 -- Client assets: analysis/patch_list.txt, Interface\PaperDoll\UI-PaperDoll-Slot-*.blp.
 local EMPTY_JEWELRY = {
 	[2] = {"Neck", "Freier Halsplatz"},
@@ -61,6 +62,115 @@ skills:SetScale(KeijinUI.CombatScale()); KeijinUI.Skin(skills)
 KeijinUI.layout.Register("skills",skills,"Aktionsleiste",function(f)
     f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"BOTTOM",0,KeijinUI.UIHeight()*0.4*UIParent:GetEffectiveScale()/f:GetEffectiveScale())
 end,{scale=KeijinUI.CombatScale})
+-- "Effekte": the talent countdowns in their own bar, right aligned below the action bar (default): the sides belong to the
+-- player and target frames, the space above to the summons and stored levels. Same cell look as the skills.
+local effects=CreateFrame("Frame","KeijinUIEffects",UIParent)
+effects:SetWidth(54); effects:SetHeight(54); effects:SetFrameStrata("LOW")
+effects:SetScale(KeijinUI.CombatScale()); KeijinUI.Skin(effects); effects:Hide()
+-- Standard position (no saved one): the first of eight spots around the action bar that overlaps no visible layout window,
+-- planned for four counters; none free: the one with the least overlap. Chosen when the bar appears, after a layout
+-- reset or screen change, and again only when the chosen spot is no longer free (not on every counter change).
+-- Fields per spot: own anchor x/y fraction, action bar anchor x/y fraction, offset direction x/y, points.
+local EF={spot=nil, others={}, count=0, gap=8, reserve=180, ratio=1, push=0}
+EF.spots={
+	{1,1, 1,0, 0,-1, "TOPRIGHT","BOTTOMRIGHT"},
+	{0,1, 1,1, 1,0, "TOPLEFT","TOPRIGHT"},
+	{1,0, 1,1, 0,1, "BOTTOMRIGHT","TOPRIGHT"},
+	{1,1, 0,1, -1,0, "TOPRIGHT","TOPLEFT"},
+	{0,1, 0,0, 0,-1, "TOPLEFT","BOTTOMLEFT"},
+	{0,0, 0,1, 0,1, "BOTTOMLEFT","TOPLEFT"},
+}
+-- Short lived banners and tooltips do not count (same exceptions as the overlap test).
+EF.ignore={effects=true, skills=true, achievements=true, bosses=true, cachearrow=true, combattext=true, healtext=true, takentext=true, tooltip=true}
+function EF.Saved()
+	local layout=KeijinUI.DB().layout
+	local p=type(layout)=="table" and layout.effects
+	return type(p)=="table" and type(p.x)=="number" and type(p.y)=="number" and type(p.scale)=="number" and p.scale>0 and true or false
+end
+function EF.Collect()
+	local ui=UIParent:GetEffectiveScale()
+	EF.count=0
+	for key,entry in pairs(KeijinUI.layout.entries) do
+		local f=entry.frame
+		if not EF.ignore[key] and f:IsShown() then
+			local l,b,w,h=f:GetLeft(),f:GetBottom(),f:GetWidth(),f:GetHeight()
+			if type(l)=="number" and type(b)=="number" and type(w)=="number" and type(h)=="number" and w>0 and h>0 then
+				local ratio=f:GetEffectiveScale()/ui
+				local at=EF.count*4
+				EF.others[at+1],EF.others[at+2]=l*ratio,b*ratio
+				EF.others[at+3],EF.others[at+4]=(l+w)*ratio,(b+h)*ratio
+				EF.count=EF.count+1
+			end
+		end
+	end
+end
+-- Overlap area with the collected windows plus the part outside the screen (0 = free). Spots 7 and 8 are the side spots
+-- (2 and 4) pushed outward past the windows beside the action bar (target or player frame); they also return the shift.
+function EF.Cost(index,sl,sb,sr,st,w,h,gap,sw,sh,fixed)
+	local slide=index>6 and (index==7 and 1 or -1) or 0
+	local s=EF.spots[slide~=0 and (index==7 and 2 or 4) or index]
+	local px,py=sl+s[3]*(sr-sl)+s[5]*gap, sb+s[4]*(st-sb)+s[6]*gap
+	local l,b=px-s[1]*w, py-s[2]*h
+	local shift,cost=0,0
+	if fixed then l,shift,slide=l+fixed,fixed,0 end
+	for pass=1,5 do
+		local r,t=l+w,b+h
+		local edge
+		cost=0
+		for n=0,EF.count-1 do
+			local at=n*4
+			local ox=math.min(r,EF.others[at+3])-math.max(l,EF.others[at+1])
+			local oy=math.min(t,EF.others[at+4])-math.max(b,EF.others[at+2])
+			if ox>0.5 and oy>0.5 then
+				cost=cost+ox*oy
+				if slide==1 and (not edge or EF.others[at+3]+gap>edge) then edge=EF.others[at+3]+gap end
+				if slide==-1 and (not edge or EF.others[at+1]-gap<edge) then edge=EF.others[at+1]-gap end
+			end
+		end
+		if edge and pass<5 then
+			local move=slide==1 and edge-l or edge-(l+w)
+			l,shift=l+move,shift+move
+		else break end
+	end
+	local r,t=l+w,b+h
+	if type(sw)=="number" and type(sh)=="number" then
+		local inside=math.max(0,math.min(r,sw)-math.max(l,0))*math.max(0,math.min(t,sh)-math.max(b,0))
+		if w*h-inside>1 then cost=cost+w*h-inside end
+	end
+	return cost,shift
+end
+function EF.Anchor(f,index,shift)
+	local slide=index>6
+	local s=EF.spots[slide and (index==7 and 2 or 4) or index]
+	EF.spot,EF.push=index,shift
+	f:ClearAllPoints(); f:SetPoint(s[7],skills,s[8],s[5]*EF.gap+(slide and shift/EF.ratio or 0),s[6]*EF.gap)
+end
+-- keep: leave the spot alone while it is still free. Saved positions are never touched.
+function EF.Pick(f,keep)
+	if EF.Saved() then return end
+	local sl,sb,sr,st=skills:GetLeft(),skills:GetBottom(),nil,nil
+	local ui=UIParent:GetEffectiveScale()
+	if type(sl)~="number" or type(sb)~="number" then if not keep then EF.Anchor(f,1,0) end return end
+	local sratio=skills:GetEffectiveScale()/ui
+	sl,sb=sl*sratio,sb*sratio
+	sr,st=sl+skills:GetWidth()*sratio, sb+skills:GetHeight()*sratio
+	local ratio=f:GetEffectiveScale()/ui
+	EF.ratio=ratio
+	local w,h,gap=math.max(f:GetWidth(),EF.reserve)*ratio, f:GetHeight()*ratio, EF.gap*ratio
+	local sw,sh=KeijinUI.UIWidth(),KeijinUI.UIHeight()
+	EF.Collect()
+	if keep and EF.spot and EF.Cost(EF.spot,sl,sb,sr,st,w,h,gap,sw,sh,EF.push)==0 then return end
+	local best,least,push=1,nil,0
+	for index=1,8 do
+		local cost,shift=EF.Cost(index,sl,sb,sr,st,w,h,gap,sw,sh)
+		if not least or cost<least then best,least,push=index,cost,shift end
+		if cost==0 then break end
+	end
+	EF.Anchor(f,best,push)
+end
+KeijinUI.layout.Register("effects",effects,"Effekte",function(f)
+    EF.Pick(f,false)
+end,{scale=KeijinUI.CombatScale,hidden=true,locked=function() return not KeijinUI.buildBar.EffectsOn() or not KeijinUI.buildBar.ActionOn() end})
 
 local function Fill(parent, layer, r, g, b, a)
 	local texture = parent:CreateTexture(nil, layer)
@@ -117,7 +227,7 @@ local function Supported()
 end
 local function Release()
 	panel:Hide()
-	skills:Hide()
+	skills:Hide(); effects:Hide()
 	if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 	if hovered then GameTooltip:Hide(); hovered = nil end
 	-- Ours off, the game's on: the game's spell and jewelry rows come back.
@@ -255,7 +365,7 @@ advice:SetScript("OnEnter", function()
 end)
 advice:SetScript("OnLeave", function() if hovered == this then hovered = nil; GameTooltip:Hide() end end)
 
-local spellCells, itemCells, actionCells = {}, {}, {}
+local spellCells, itemCells, actionCells, effectCells = {}, {}, {}, {}
 -- Abilities whose 1.12 spell is not in the spell book (Call of Flame): GameTooltip:SetAction builds
 -- the tooltip from the action slot's spell id, where the game writes its own ability text. The slot
 -- is found by the tooltip's first line and remembered per ability until it no longer matches.
@@ -511,6 +621,14 @@ local function StopClock(cell)
 	cell.clock:Hide(); cell.clockStart, cell.clockFull = nil, nil
 end
 -- Game 0.115: use the run-clock based API directly, never estimate talent intervals.
+local function TimerIcon(value,name)
+	if type(value)~="string" or value=="" then return KeijinUI.SpellIcon(name) end
+	-- AZS timers can carry the game's bare icon key (e.g. INV_Jewelry_Necklace_12),
+	-- not a texture path. SetTexture needs the Interface path, as inventory icons do.
+	local icon=string.gsub(value,"/","\\")
+	if not string.find(icon,"\\",1,true) then icon="Interface\\Icons\\"..icon end
+	return icon
+end
 local function TalentTimers()
 	if type(AZS_GetTimers)~="function" or type(AZS_GetPhase)~="function" then return {} end
 	local okPhase,phase=pcall(AZS_GetPhase)
@@ -523,7 +641,7 @@ local function TalentTimers()
 			and (v.kind=="summon" or v.kind=="cooldown") then
 			table.insert(rows,{kind="talentTimer",name=v.name,timerKind=v.kind,cd=v.remaining,
 				cdmax=Number(v.duration) and v.duration or nil,frozen=phase~="playing",
-				icon=type(v.icon)=="string" and v.icon~="" and v.icon or KeijinUI.SpellIcon(v.name)})
+				icon=TimerIcon(v.icon,v.name)})
 		end
 	end
 	return rows
@@ -537,9 +655,9 @@ local function TimerTip(cell)
 	GameTooltip:Show()
 end
 -- Action bar slot: classic quickslot look, not clickable, shows only icon and real cooldown data.
-local function ActionCell(index)
-	if actionCells[index] then return actionCells[index] end
-	local cell = CreateFrame("Frame", nil, skills)
+local function MakeCell(store, parent, prefix, index)
+	if store[index] then return store[index] end
+	local cell = CreateFrame("Frame", nil, parent)
 	cell:SetWidth(ACTION_ICON); cell:SetHeight(ACTION_ICON)
 	cell:EnableMouse(false)
 	cell:SetScript("OnEnter",function() this.timerHover=true; TimerTip(this) end)
@@ -558,7 +676,7 @@ local function ActionCell(index)
 	-- Clockwise sweep: the game's own cooldown model (CooldownFrameTemplate, as on every stock action
 	-- button). Template frames need a name in this client. The number sits on a layer above the model.
 	if CooldownFrame_SetTimer then
-		cell.clock = CreateFrame("Model", "KeijinUISkillsCooldown"..index, cell, "CooldownFrameTemplate")
+		cell.clock = CreateFrame("Model", prefix..index, cell, "CooldownFrameTemplate")
 		cell.clock:SetAllPoints(cell.icon)
 		cell.clock:SetFrameLevel(cell:GetFrameLevel() + 1)
 		cell.clock:Hide()
@@ -568,14 +686,87 @@ local function ActionCell(index)
 	cell.cooldown = text:CreateFontString(nil, "OVERLAY")
 	SetFont(cell.cooldown,14)
 	cell.cooldown:SetPoint("CENTER", cell, "CENTER", 0, 0)
-	actionCells[index] = cell
+	store[index] = cell
 	return cell
+end
+local function ActionCell(index) return MakeCell(actionCells, skills, "KeijinUISkillsCooldown", index) end
+local function EffectCell(index) return MakeCell(effectCells, effects, "KeijinUIEffectsCooldown", index) end
+-- Icon, border, countdown number and cooldown model of one cell, for both bars.
+local function PaintCell(cell,row)
+	cell.row = row
+	cell:EnableMouse(row and row.kind=="talentTimer" and true or false)
+	if cell.timerHover and (not row or row.kind~="talentTimer") then cell.timerHover=nil; GameTooltip:Hide() end
+	if row then
+		cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+		cell.icon:Show()
+		cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
+		local left = Number(row.cd) and row.cd > 0 and row.cd or nil
+		cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
+		local full = Number(row.cdmax) and row.cdmax > 0 and row.cdmax or nil
+		if left and cell.clock and KeijinUI.CooldownClockwise() and full and not row.frozen then
+			-- Only a new or shifted cooldown restarts the model; the game data counts down in steps.
+			local start = GetTime() - (full - math.min(left, full))
+			if not cell.clockStart or math.abs(start - cell.clockStart) > 0.5 or cell.clockFull ~= full then
+				cell.clockStart, cell.clockFull = start, full
+				CooldownFrame_SetTimer(cell.clock, start, full, 1)
+			end
+			cell.sweep:Hide()
+		elseif left then
+			if cell.clock then StopClock(cell) end
+			local fraction = full and math.min(1, left / full) or 1
+			cell.sweep:SetHeight(math.max(1, (ACTION_ICON - 4) * fraction)); cell.sweep:Show()
+		else cell.sweep:Hide(); if cell.clock then StopClock(cell) end end
+	else
+		cell.icon:Hide(); cell.sweep:Hide(); cell.cooldown:SetText("")
+		if cell.clock then StopClock(cell) end
+		cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
+	end
+	cell:Show()
+	if cell.timerHover then TimerTip(cell) end
+end
+-- Talent countdowns in their own bar ("Effekte", default) or, with the option off, in the action bar.
+local function EffectsSplit() return Settings().effectsBar ~= false end
+local effectCount, effectShown = 0, 0
+-- Alt held or the layout editor open: the empty bar shows two blank cells so it can be placed and scaled before a run.
+local EFFECT_PLACEHOLDER = 2
+local function Arranging()
+	return (IsAltKeyDown and IsAltKeyDown()) or (KeijinUI.layout.IsEditing and KeijinUI.layout.IsEditing()) and true or false
+end
+local function PaintEffects(timers)
+	effectCount = table.getn(timers)
+	effectShown = effectCount
+	if effectShown == 0 and EffectsSplit() and Arranging() then effectShown = EFFECT_PLACEHOLDER end
+	for index = 1, effectShown do
+		local cell = EffectCell(index)
+		cell:ClearAllPoints()
+		cell:SetPoint("TOPLEFT", effects, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
+		cell.racial = false
+		PaintCell(cell, timers[index])
+	end
+	for index = effectShown + 1, table.getn(effectCells) do
+		effectCells[index].row = nil; effectCells[index]:Hide()
+		if effectCells[index].timerHover then effectCells[index].timerHover=nil; GameTooltip:Hide() end
+	end
+	if effectShown > 0 then
+		effects:SetWidth(16 + (effectShown - 1) * ACTION_PITCH + ACTION_ICON)
+		effects:SetHeight(16 + ACTION_ICON)
+	end
+end
+local function ShowEffects(actionOn)
+	if actionOn and effectShown > 0 then
+		-- Appearing: choose anew; shown: only move when the chosen spot got covered.
+		EF.Pick(effects, effects:IsShown() and true or false)
+		effects:Show()
+	else effects:Hide() end
 end
 local function PaintActions(rows)
 	local total = table.getn(rows)
 	local racial = total > 0 and rows[total] or nil
 	local normal = total > 0 and total - 1 or 0
 	local timers=TalentTimers()
+	local split=EffectsSplit()
+	PaintEffects(split and timers or {})
+	if split then timers={} end
 	local count = math.max(NORMAL_SLOTS, normal+table.getn(timers)) + 1
 	for index = 1, count do
 		local row, cell = nil, ActionCell(index)
@@ -583,36 +774,7 @@ local function PaintActions(rows)
 		cell.racial = index == count
 		cell:ClearAllPoints()
 		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
-		cell.row = row
-		cell:EnableMouse(row and row.kind=="talentTimer" and true or false)
-		if cell.timerHover and (not row or row.kind~="talentTimer") then cell.timerHover=nil; GameTooltip:Hide() end
-		if row then
-			cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-			cell.icon:Show()
-			cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
-			local left = Number(row.cd) and row.cd > 0 and row.cd or nil
-			cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
-			local full = Number(row.cdmax) and row.cdmax > 0 and row.cdmax or nil
-			if left and cell.clock and KeijinUI.CooldownClockwise() and full and not row.frozen then
-				-- Only a new or shifted cooldown restarts the model; the game data counts down in steps.
-				local start = GetTime() - (full - math.min(left, full))
-				if not cell.clockStart or math.abs(start - cell.clockStart) > 0.5 or cell.clockFull ~= full then
-					cell.clockStart, cell.clockFull = start, full
-					CooldownFrame_SetTimer(cell.clock, start, full, 1)
-				end
-				cell.sweep:Hide()
-			elseif left then
-				if cell.clock then StopClock(cell) end
-				local fraction = full and math.min(1, left / full) or 1
-				cell.sweep:SetHeight(math.max(1, (ACTION_ICON - 4) * fraction)); cell.sweep:Show()
-			else cell.sweep:Hide(); if cell.clock then StopClock(cell) end end
-		else
-			cell.icon:Hide(); cell.sweep:Hide(); cell.cooldown:SetText("")
-			if cell.clock then StopClock(cell) end
-			cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
-		end
-		cell:Show()
-		if cell.timerHover then TimerTip(cell) end
+		PaintCell(cell, row)
 	end
 	for index = count + 1, table.getn(actionCells) do actionCells[index]:Hide() end
 	skills:SetWidth(16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
@@ -629,7 +791,7 @@ local function Update()
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered then GameTooltip:Hide(); hovered = nil end
 		if panelOn then HideNative() else ShowNative() end
-		PaintActions({}); if actionOn then skills:Show() end
+		PaintActions({}); if actionOn then skills:Show() end; ShowEffects(actionOn)
 		local spells, items = SpellSlots({}), Items()
 		if not items then Release(); return end
 		local spellTop, itemTop, spellPitch = BuildLayout(spells)
@@ -694,6 +856,7 @@ local function Update()
 	-- Both parts stay built when hidden, so frames anchored to the action bar keep their place.
 	if panelOn then panel:Show() else panel:Hide(); if hovered then GameTooltip:Hide(); hovered = nil end end
 	if actionOn then skills:Show() else skills:Hide() end
+	ShowEffects(actionOn)
 end
 
 -- One setting shared by the menu and /kbb; restore the native HUD on disable.
@@ -704,6 +867,8 @@ KeijinUI.buildBar.CooldownText=CooldownText
 function KeijinUI.buildBar.On() return Settings().enabled and true or false end
 function KeijinUI.buildBar.Set(on) Settings().enabled=on and true or false; Update() end
 function KeijinUI.buildBar.ActionOn() return Settings().actionBar and true or false end
+function KeijinUI.buildBar.EffectsOn() return EffectsSplit() end
+function KeijinUI.buildBar.SetEffects(on) Settings().effectsBar=on and true or false; Update() end
 function KeijinUI.buildBar.SetAction(on) Settings().actionBar=on and true or false; Update() end
 function KeijinUI.buildBar.Refresh() if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end; Update() end
 
@@ -730,7 +895,7 @@ SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 	elseif command == "slots" then
 		SlotDebug()
 	elseif command == "reset" then
-		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills")
+		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills"); KeijinUI.layout.ResetKey("effects")
 		ApplyPosition()
 		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Position zurückgesetzt. Alt halten und ziehen zum Verschieben."))
 	else

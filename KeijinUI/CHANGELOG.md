@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.2.2 (2026-10-26, release v4.2.2)
+
+* **Inspect party members:** the right click menu on a party row or on a friendly player as target now has an Inspect row below the marker buttons. It opens the game's own inspect window, like the right click menu of the standard interface. The row is greyed out while the player is farther away than the game allows (about 10 yards); clicking it then says so in the chat. Your own frame and enemies show no Inspect row.
+
 ### 4.2.1 (2026-10-25, release v4.2.1)
 
 * **Raid markers by right click:** right click the target frame, your own frame or a party row to open a small marker menu with the eight markers and a remove button. The current marker is highlighted, the name appears on hover, and clicking the same marker again removes it. Escape or a click outside closes the menu. This replaces the game menu that used to open on right click there.
@@ -564,6 +568,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.2.2 (2026-10-26, Release v4.2.2)
+
+* **Gruppenmitglieder betrachten:** Das Rechtsklickmenü auf einer Gruppenzeile oder auf einem freundlichen Spieler als Ziel hat jetzt unter den Markern eine Zeile Betrachten. Sie öffnet das Betrachtenfenster des Spiels, wie das Rechtsklickmenü der Standardoberfläche. Ist der Spieler weiter entfernt, als das Spiel erlaubt (etwa 10 Meter), ist die Zeile grau; ein Klick sagt das dann im Chat. Dein eigener Frame und Gegner zeigen keine Zeile Betrachten.
 
 ### 4.2.1 (2026-10-25, Release v4.2.1)
 

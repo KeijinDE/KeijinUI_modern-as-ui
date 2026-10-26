@@ -3,7 +3,7 @@ local K=KeijinUI
 local text={
  ["Run"]="冒险", ["Chinese (Simplified)"]="简体中文",
  ["Star"]="星星", ["Circle"]="圆圈", ["Diamond"]="菱形", ["Triangle"]="三角形", ["Moon"]="月亮", ["Square"]="方块", ["Cross"]="十字", ["Skull"]="骷髅", ["Remove"]="移除",
- ["Raid markers only work in a group."]="团队标记只能在队伍中使用。",
+ ["Raid markers only work in a group."]="团队标记只能在队伍中使用。", ["Inspect"]="观察", ["Too far away to inspect."]="距离太远，无法观察。",
  ["/kui mark <1-8|0>: set a raid marker on the target (0 removes it)."]="/kui mark <1-8|0>：给目标设置团队标记（0为移除）。",
  ["Translations other than German and English are machine made and not checked by native speakers. Please report mistakes."]="除德语和英语外，其他语言均为机器翻译，未经母语者校对。如发现错误，请反馈。",
  ["Language codes: %s"]="语言代码：%s",

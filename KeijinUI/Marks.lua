@@ -15,8 +15,11 @@ local WIDTH=PAD*2+COLS*CELL+(COLS-1)*GAP
 local LABEL_Y,GRID_Y,REMOVE_H=-9,-30,20
 local REMOVE_Y=GRID_Y-2*CELL-GAP-6
 local HEIGHT=-REMOVE_Y+REMOVE_H+PAD
+-- Inspect row below the remove button, only for other players; the menu grows by one row then.
+local INSPECT_Y=REMOVE_Y-REMOVE_H-GAP
+local INSPECT_HEIGHT=HEIGHT+REMOVE_H+GAP
 local CHECK_AFTER=1.0
-M.WIDTH,M.HEIGHT,M.CELL=WIDTH,HEIGHT,CELL
+M.WIDTH,M.HEIGHT,M.CELL,M.INSPECT_HEIGHT=WIDTH,HEIGHT,CELL,INSPECT_HEIGHT
 M.names=NAMES
 
 -- Mark of a unit as 0..8 (0 = none or unknown).
@@ -53,6 +56,27 @@ K.Update("marks",function()
     if Current(check.unit)~=check.want and not InGroup() then K.Say(K.T("Raidmarker gehen nur in einer Gruppe.")) end
 end)
 K.On("RAID_TARGET_UPDATE",function() pending=nil end)
+
+-- Inspect (UnitPopup.lua:552 calls InspectUnit(unit), greyed out unless CheckInteractDistance(unit,1), UnitPopup.lua:470).
+-- InspectUnit loads Blizzard_InspectUI and opens the game's own window (UIParent.lua:223).
+local function Inspectable(unit)
+    if type(InspectUnit)~="function" or not unit or unit=="player" or not UnitExists(unit) then return false end
+    if type(UnitIsUnit)=="function" and UnitIsUnit(unit,"player") then return false end
+    if type(UnitIsPlayer)~="function" or not UnitIsPlayer(unit) then return false end
+    if type(UnitIsFriend)=="function" and not UnitIsFriend("player",unit) then return false end
+    return true
+end
+local function InRange(unit)
+    if type(CheckInteractDistance)~="function" then return true end
+    return CheckInteractDistance(unit,1) and true or false
+end
+M.Inspectable,M.InRange=Inspectable,InRange
+function M.Inspect(unit)
+    if not Inspectable(unit) then return false end
+    if not InRange(unit) then K.Say(K.T("Zu weit entfernt zum Betrachten.")); return false end
+    InspectUnit(unit)
+    return true
+end
 
 -- /kui mark <1-8|0>: marker for the current target.
 function M.Command(value)
@@ -93,6 +117,8 @@ local function Refresh()
         if i==current then cell.sel:Show() else cell.sel:Hide() end
     end
     menu.remove.text:SetTextColor(current>0 and 0.94 or 0.55,current>0 and 0.91 or 0.55,current>0 and 0.82 or 0.55)
+    local near=menu.unit and InRange(menu.unit)
+    menu.inspect.text:SetTextColor(near and 0.94 or 0.55,near and 0.91 or 0.55,near and 0.82 or 0.55)
 end
 function M.Close()
     menu:Hide(); catcher:Hide()
@@ -147,8 +173,35 @@ remove:SetScript("OnClick",CellClick)
 remove:SetScript("OnEnter",function() remove:SetBackdropBorderColor(.94,.74,.37,1); label:SetText(K.T("Entfernen")); label:SetTextColor(1,0.82,0.28) end)
 remove:SetScript("OnLeave",function() remove:SetBackdropBorderColor(.62,.57,.43,1); Default() end)
 menu.remove=remove
+local inspect=CreateFrame("Button","KeijinUIMarkInspect",menu)
+inspect:SetWidth(WIDTH-2*PAD); inspect:SetHeight(REMOVE_H)
+inspect:SetPoint("TOPLEFT",menu,"TOPLEFT",PAD,INSPECT_Y)
+inspect:RegisterForClicks("LeftButtonUp")
+K.Skin(inspect,4)
+inspect.text=K.LText(inspect,"Betrachten",10,"CENTER",0,0)
+inspect:SetScript("OnClick",function()
+    local unit=menu.unit
+    M.Close()
+    if unit then M.Inspect(unit) end
+end)
+inspect:SetScript("OnEnter",function()
+    inspect:SetBackdropBorderColor(.94,.74,.37,1); Refresh()
+    label:SetText(K.T("Betrachten")); label:SetTextColor(1,0.82,0.28)
+end)
+inspect:SetScript("OnLeave",function() inspect:SetBackdropBorderColor(.62,.57,.43,1); Default() end)
+inspect:Hide()
+menu.inspect=inspect
 menu:RegisterEvent("RAID_TARGET_UPDATE")
 menu:SetScript("OnEvent",function() if menu:IsShown() then Refresh() end end)
+-- Distance changes while the menu is open: the inspect row follows it a few times per second.
+local sinceRange=0
+menu:SetScript("OnUpdate",function()
+    if not inspect:IsShown() then return end
+    sinceRange=sinceRange+(arg1 or 0)
+    if sinceRange<0.2 then return end
+    sinceRange=0
+    Refresh()
+end)
 menu:SetScript("OnHide",function() catcher:Hide() end)
 catcher:SetScript("OnMouseDown",function() M.Close() end)
 table.insert(UISpecialFrames,"KeijinUIMarkMenu")
@@ -172,9 +225,12 @@ end
 function M.Open(unit,anchor)
     if type(SetRaidTarget)~="function" then return false end
     if not unit or not UnitExists(unit) then K.Say(K.T("Kein Ziel")); return false end
+    local height=HEIGHT
+    if Inspectable(unit) then height=INSPECT_HEIGHT; inspect:Show() else inspect:Hide() end
+    menu:SetHeight(height)
     local x,y=Origin(anchor)
     local left=math.max(0,math.min(x-12,K.UIWidth()-WIDTH))
-    local top=math.max(HEIGHT,math.min(y+12,K.UIHeight()))
+    local top=math.max(height,math.min(y+12,K.UIHeight()))
     menu.unit=unit
     menu:ClearAllPoints(); menu:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left,top)
     Default(); Refresh()

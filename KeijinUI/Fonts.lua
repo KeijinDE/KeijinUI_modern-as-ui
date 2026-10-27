@@ -42,7 +42,7 @@ end
 function K.FontName(key) return byKey[key] and byKey[key].name or tostring(key) end
 local nativeFonts={}
 -- Sets every registered font string again from its unscaled size (K.fontBase or the registered size), so repeated
--- changes never add up. Tooltip and chat fonts change only in the languages that were switched before (wide fonts).
+-- changes never add up. Native chat fallback belongs only to the enabled chat module.
 function K.ApplyFont()
     local path,factor=K.ResolveFont(K.lang)
     K.font=path; K.fontFactor=factor
@@ -57,25 +57,22 @@ function K.ApplyFont()
         fs:SetFont(fixed or path,fixed and size or K.FontSize(size),flags or "OUTLINE")
     end
     -- Restore native font paths after leaving a language that needed our fallback.
-    -- Keep the current chat/tooltip size, including changes made by the player.
+    -- Keep the current chat size and flags, including changes made by the player.
     local function Native(fs,defaultSize,defaultFlags)
         if fs and fs.GetFont and fs.SetFont then
             local old,size,flags=fs:GetFont()
-            if K.NeedsWideFont(K.lang) then
-                if not nativeFonts[fs] then nativeFonts[fs]=old or FRIZ end
-                -- Chat and game tooltips may contain other players' scripts,
+            if K.ModuleOn("chat") and K.NeedsWideFont(K.lang) then
+                if not nativeFonts[fs] then nativeFonts[fs]={old or FRIZ,size or defaultSize,flags or defaultFlags} end
+                -- Chat may contain other players' scripts,
                 -- not just characters from the chosen interface language.
                 fs:SetFont(K.WideFont,size or defaultSize,flags or defaultFlags)
             elseif nativeFonts[fs] then
-                fs:SetFont(nativeFonts[fs],size or defaultSize,flags or defaultFlags)
+                fs:SetFont(nativeFonts[fs][1],size or defaultSize,flags or defaultFlags)
                 nativeFonts[fs]=nil
             end
         end
     end
-    for _,name in ipairs({"GameTooltipText","GameTooltipHeaderText","GameTooltipTextSmall","ChatFontNormal"}) do Native(getglobal(name),11,"") end
-    for i=1,30 do
-        for _,side in ipairs({"Left","Right"}) do Native(getglobal("GameTooltipText"..side..i),11,"") end
-    end
+    Native(ChatFontNormal,14,"")
     for i=1,NUM_CHAT_WINDOWS or 7 do Native(getglobal("ChatFrame"..i),14,"") end
 end
 -- Stores the choice and applies it at once, without a reload.

@@ -40,6 +40,7 @@ local inWorld=true
 local glowUntil=0
 local GAP=2
 local function Attached() return K.DB().resourceFree~=true end
+local function Inactive() return not K.UnitsActive() end
 local function Anchor(f)
     local player=K.units.player
     f:ClearAllPoints(); f:SetScale(player:GetScale())
@@ -53,11 +54,11 @@ local function Detach()
     frame:ClearAllPoints(); frame:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",x,y)
 end
 K.layout.Register("resources",frame,"Klassenressourcen",Anchor,
-    {scale=K.CombatScale,hidden=true,follow=Attached,locked=Attached})
+    {scale=K.CombatScale,hidden=true,inactive=Inactive,follow=Attached,locked=Attached})
 local playerEntry=K.layout.entries.player
 playerEntry.options.bottom=function()
     -- Gap below the health bar plus the frame height; the bar ends at the player frame's bottom edge.
-    if Attached() and (frame:IsShown() or K.layout.Active()) then return GAP+frame:GetHeight() end
+    if not Inactive() and Attached() and (frame:IsShown() or K.layout.Active()) then return GAP+frame:GetHeight() end
     return 0
 end
 local function Clear(reason)
@@ -141,6 +142,12 @@ local function Read()
     return kind,math.min(100,raw/max*100),raw,max
 end
 function R.Update()
+    if Inactive() then
+        Clear("module disabled")
+        local entry=K.layout.entries.resources
+        if entry and entry.handle then entry.handle:Hide() end
+        return
+    end
     local kind,value,raw,max,label=Read()
     if not kind then Clear(value); return end
     R.text=label
@@ -207,15 +214,15 @@ frame:SetScript("OnEnter",function()
 end)
 frame:SetScript("OnLeave",function() GameTooltip:Hide() end)
 for _,ev in ipairs({"UNIT_MANA","UNIT_ENERGY","UNIT_RAGE","UNIT_MAXMANA","UNIT_MAXENERGY","UNIT_MAXRAGE","UNIT_DISPLAYPOWER","PLAYER_TARGET_CHANGED"}) do
-    K.On(ev,function(_,unit) if not unit or unit=="player" then R.Update() end end)
+    K.On(ev,function(_,unit) if not unit or unit=="player" then R.Update() end end,"units")
 end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSSPELLS" and snap then snap.stale=true end
     if prefix=="AZSRUN" or prefix=="AZSSPELLS" or prefix=="AZSZONE" then R.Update() end
-end)
+end,"units")
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("resources"); R.Update() end end)
 K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; R.Update() end)
 K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; Clear("outside world") end)
 K.On("PLAYER_LOGOUT",function() inWorld=false; Clear("logout") end)
-table.insert(K.updates,R.Update)
+K.Update("units",R.Update)
 R.Update()

@@ -100,6 +100,7 @@ end
 function O.Refresh()
     if O.ModuleSignature()~=O.modulesSignature then O.ReflowAll() end
     for _,fn in ipairs(O.refreshers) do fn() end
+    if O.navOrder then O.UpdateNavigation() end
 end
 function O.Watch(fn) table.insert(O.refreshers,fn); fn() end
 -- Keep the original controls and their source-language labels available to the search.
@@ -174,117 +175,118 @@ function O.Page(key,label,description,parent,module)
     page.sections={}; page.items={}
     page:Hide(); O.pages[key]=page; O.Wheel(page); return page
 end
-function O.Finish(page) page.endY=page.y; page:SetHeight(math.max(376,-page.y+8)) end
+function O.Finish(page) page.endY=page.y; page:SetHeight(math.max(viewport:GetHeight(),-page.y+8)) end
 function O.ShowPage(key)
-    -- Preserve callers using the former categories; there is only one shared UI page.
-    local alias=key=="layout" or key=="units"
-    local page=O.pages[alias and "display" or key] or O.pages.display
+    key=(O.pageAliases and O.pageAliases[key]) or key
+    local page=O.pages[key] or O.pages.display
     -- A page whose module is off has nothing to show: the module page takes over.
     if not O.PageVisible(page) and O.pages.modules then page=O.pages.modules end
     O.CloseChoice()
     for _,p in pairs(O.pages) do p:Hide() end
     O.current=page; K.DB().optionsTab=page.key
+    if O.categoryPage and page.key~="search" then O.categoryPage[page.parentKey]=page.key end
     viewport:SetScrollChild(page); page:Show()
     title:SetText(K.T(page.caption)); subtitle:SetText(K.T(page.description))
     O.UpdateNavigation()
     O.Scroll(page.offset or 0); O.Refresh()
-    if alias then
-        local caption=key=="layout" and "Größe & Position" or "Einheitenrahmen"
-        for i,section in ipairs(page.sections) do if section.caption==caption then O.JumpSection("display",i); break end end
-    end
+
 end
--- Only the current category expands. Section buttons share the headings' live translations.
+-- The sidebar expands page links, never sections of one long document.
+local function GroupVisible(item)
+    for _,key in ipairs(item[3]) do
+        if O.pages[key] and O.PageVisible(O.pages[key]) then return true end
+    end
+    return false
+end
 function O.MarkSections()
-    for key,buttons in pairs(O.navSections) do
-        for i,b in ipairs(buttons) do
-            local selected=O.current==O.pages[key] and O.current.sectionIndex==i
-            b.selected=selected
+    for _,buttons in pairs(O.navSections) do
+        for _,b in ipairs(buttons) do
+            local selected=O.current and O.current.key==b.pageKey
+            b.selected=selected and true or false
             b:SetBackdropColor(.25,.19,.08,selected and .4 or 0)
-            b.text:SetTextColor(selected and 1 or .72,selected and .82 or .70,selected and .4 or .64)
+            b.text:SetTextColor(selected and 1 or .76,selected and .82 or .73,selected and .4 or .67)
             if selected then b.marker:Show() else b.marker:Hide() end
         end
     end
 end
-function O.UpdateSection()
-    local page=O.current
-    if not page then return end
-    local index,last=1,1
-    for i,section in ipairs(page.sections) do
-        if O.SectionVisible(section) then
-            last=i
-            if section.offset<=(page.offset or 0)+1 then index=i end
-        end
-    end
-    local max=math.max(0,page:GetHeight()-viewport:GetHeight())
-    if max>0 and (page.offset or 0)>=max-1 then index=last end
-    page.sectionIndex=index; O.MarkSections()
-end
+function O.UpdateSection() O.MarkSections() end
 function O.JumpSection(key,index)
     local page=O.pages[key]; local section=page and page.sections[index]
     if not section or not O.SectionVisible(section) then return end
     if O.current~=page then O.ShowPage(key) end
-    O.Scroll(section.offset)
-    -- Short final sections cannot reach the viewport top; keep the clicked destination marked.
-    page.sectionIndex=index; O.MarkSections()
+    O.Scroll(section.offset); page.sectionIndex=index; O.MarkSections()
 end
-local function SubVisible(key,index)
-    local section=O.pages[key] and O.pages[key].sections[index]
-    return section and O.SectionVisible(section)
+local function FitLabel(button,size,width)
+    K.SetFontSize(button.text,size)
+    local measured=button.text:GetStringWidth()
+    if measured>width then
+        local path,points,flags=button.text:GetFont()
+        button.text:SetFont(path,math.max(8,points*width/measured),flags)
+    end
 end
 function O.UpdateNavigation()
     local y=-57
-    local currentKey=O.current and O.current.parentKey
-    local count,categories=0,0
-    for i in ipairs(O.navSections[currentKey] or {}) do if SubVisible(currentKey,i) then count=count+1 end end
-    for _,item in ipairs(O.navOrder or {}) do if O.PageVisible(O.pages[item[1]]) then categories=categories+1 end end
-    local step=count>0 and math.min(22,math.floor((455-categories*40-8-math.max(0,categories-1)*3)/count)) or 22
+    local current=O.current and O.current.parentKey
     for _,item in ipairs(O.navOrder or {}) do
         local key=item[1]; local b=O.nav[key]
-        if not O.PageVisible(O.pages[key]) then
+        local visible=GroupVisible(item)
+        if not visible then
             b:Hide(); for _,sub in ipairs(O.navSections[key]) do sub:Hide() end
         else
-            b:Show()
-            local selected=O.current and key==O.current.parentKey
+            b:Show(); FitLabel(b,12,136)
+            local selected=current==key
             b:ClearAllPoints(); b:SetPoint("TOPLEFT",panel,"TOPLEFT",12,y)
             b:SetBackdropColor(selected and .25 or .045,selected and .18 or .045,selected and .075 or .05,1)
             b.selected=selected and true or false
             b:SetBackdropBorderColor(selected and .9 or .48,selected and .71 or .40,selected and .34 or .24,1)
-            b.text:SetTextColor(selected and 1 or .94,selected and .82 or .79,selected and .4 or .47)
             b.disclosure:SetText(selected and "v" or ">")
-            y=y-40
-            for i,sub in ipairs(O.navSections[key]) do
-                if selected and SubVisible(key,i) then
-                    sub:SetHeight(step-2); sub:ClearAllPoints(); sub:SetPoint("TOPLEFT",panel,"TOPLEFT",28,y); sub:Show(); y=y-step
+            y=y-34
+            local count=0
+            for _,sub in ipairs(O.navSections[key]) do
+                FitLabel(sub,11,140)
+                if selected and table.getn(item[3])>1 and O.PageVisible(O.pages[sub.pageKey]) then
+                    sub:ClearAllPoints(); sub:SetPoint("TOPLEFT",panel,"TOPLEFT",24,y); sub:Show(); y=y-22; count=count+1
                 else sub:Hide() end
             end
-            y=y+(selected and -8 or -3)
+            if count>0 then y=y-5 end
         end
     end
     O.MarkSections()
 end
+function O.ShowCategory(key)
+    local remembered=O.categoryPage and O.categoryPage[key]
+    if remembered and O.pages[remembered] and O.PageVisible(O.pages[remembered]) then O.ShowPage(remembered); return end
+    for _,item in ipairs(O.navOrder) do
+        if item[1]==key then
+            for _,pageKey in ipairs(item[3]) do
+                if O.PageVisible(O.pages[pageKey]) then O.ShowPage(pageKey); return end
+            end
+        end
+    end
+end
 function O.Navigation(items)
-    O.navOrder=items
+    O.navOrder=items; O.categoryPage={}
     for _,v in ipairs(items) do
         local key=v[1]
-        local b=O.Button(panel,v[2],12,-57,172,function() O.ShowPage(key) end)
-        b:SetHeight(34); b.text:ClearAllPoints(); b.text:SetPoint("LEFT",b,"LEFT",14,0)
+        local b=O.Button(panel,v[2],12,-57,172,function() O.ShowCategory(key) end)
+        b:SetHeight(30); b.text:ClearAllPoints(); b.text:SetPoint("LEFT",b,"LEFT",12,0)
         b.text:SetWidth(136); b.text:SetHeight(22); b.text:SetJustifyH("LEFT"); b.text:SetJustifyV("MIDDLE")
-        K.SetFontSize(b.text,14); O.nav[key]=b
+        O.nav[key]=b
         b:SetScript("OnEnter",function() b:SetBackdropBorderColor(.94,.74,.37,1) end)
         b:SetScript("OnLeave",O.UpdateNavigation)
-        b.disclosure=K.Text(b,">",10,"RIGHT",-10,0,10)
-        b.disclosure:SetTextColor(.74,.65,.46)
+        b.disclosure=K.Text(b,">",10,"RIGHT",-9,0,10)
         local buttons={}; O.navSections[key]=buttons
-        for i,section in ipairs(O.pages[key].sections) do
-            local index=i
-            local sub=CreateFrame("Button",nil,panel); sub:SetWidth(156); sub:SetHeight(20)
+        for _,pageKey in ipairs(v[3]) do
+            local destination=pageKey
+            local sub=CreateFrame("Button",nil,panel); sub:SetWidth(160); sub:SetHeight(20)
+            sub.pageKey=destination
             sub:SetBackdrop({bgFile=K.flat}); sub:SetBackdropColor(0,0,0,0)
-            sub.text=K.LText(sub,section.caption,10,"LEFT",8,0,148)
-            sub.text:SetHeight(14); sub.text:SetJustifyH("LEFT"); sub.text:SetJustifyV("MIDDLE")
+            sub.text=K.LText(sub,O.pages[destination].caption,11,"LEFT",8,0,140)
+            sub.text:SetHeight(16); sub.text:SetJustifyH("LEFT"); sub.text:SetJustifyV("MIDDLE")
             sub.marker=sub:CreateTexture(nil,"ARTWORK"); sub.marker:SetTexture(K.flat)
             sub.marker:SetWidth(2); sub.marker:SetHeight(12); sub.marker:SetPoint("LEFT",sub,"LEFT",0,0)
             sub.marker:SetVertexColor(1,.82,.28,1); sub.marker:Hide()
-            sub:SetScript("OnClick",function() O.JumpSection(key,index) end)
+            sub:SetScript("OnClick",function() O.ShowPage(destination) end)
             sub:SetScript("OnEnter",function() sub.text:SetTextColor(1,.87,.5) end)
             sub:SetScript("OnLeave",O.MarkSections)
             O.Wheel(sub); sub:Hide(); table.insert(buttons,sub)
@@ -299,7 +301,9 @@ function O.Track(page,obj,x,y,point,relative)
     end
     return obj
 end
-function O.SectionVisible(section) return not section.module or K.ModuleOn(section.module) end
+function O.SectionVisible(section)
+    return not section.module or K.ModuleOn(section.module)
+end
 function O.PageVisible(page)
     if page.module and not K.ModuleOn(page.module) then return false end
     if table.getn(page.sections)==0 then return true end
@@ -309,7 +313,7 @@ end
 function O.EntryVisible(entry)
     local section=entry.sectionRef
     if entry.page.module and not K.ModuleOn(entry.page.module) then return false end
-    return not section or O.SectionVisible(section)
+    return not section or not section.module or K.ModuleOn(section.module)
 end
 function O.Reflow(page)
     if not page.items then return end
@@ -335,7 +339,7 @@ function O.Reflow(page)
             end
         end
     end
-    if page.endY then page:SetHeight(math.max(376,-(page.endY+total)+8)) end
+    if page.endY then page:SetHeight(math.max(viewport:GetHeight(),-(page.endY+total)+8)) end
 end
 function O.ReflowPages() for _,page in pairs(O.pages) do O.Reflow(page) end end
 function O.ReflowAll()
@@ -349,6 +353,7 @@ function O.ReflowAll()
     if O.afterReflow then O.afterReflow() end
 end
 function O.Section(page,text,module)
+    module=module or page.module
     page.searchLast=nil
     local top=page.y
     if page.y<0 then page.y=page.y-12 end

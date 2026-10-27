@@ -15,6 +15,8 @@
 local K=KeijinUI
 local R={}
 K.runs=R
+function R.On() return K.ModuleOn("history") end
+local waitingZone,boundary=false,false
 local ORDER={"elwynn","duskwood","wsg","ab","feralas","arena","av","brm","aq"}
 local RUNNING={playing=true,choosing=true,paused=true,victory=true}
 local WAIT=2          -- seconds to wait for the first run line after a zone line
@@ -35,6 +37,7 @@ local offset=0
 -- Storage ----------------------------------------------------------------------------------------------
 local function Store()
     local db=K.DB()
+    if not R.On() then return type(db.runs)=="table" and db.runs or {keys=3,names={}} end
     if type(db.runs)~="table" or db.runs.keys~=3 then db.runs={keys=3} end
     if type(db.runs.names)~="table" then db.runs.names={} end
     return db.runs
@@ -72,6 +75,7 @@ local function Today()
 end
 -- A short diagnostic trail survives reloads, without adding chat spam or a run per tick.
 local function Trace(kind,open,detail)
+    if not R.On() then return end
     local db=K.DB()
     if type(db.runTrace)~="table" then db.runTrace={} end
     table.insert(db.runTrace,{kind=kind,date=Today(),at=Now(),zone=open and open.zone,
@@ -93,14 +97,15 @@ end
 
 -- Stored name, else the name of the current zone data, else the fixed table, else the key.
 function R.ZoneName(zone)
-    local stored=Store().names[zone]
+    local names=Store().names or {}
+    local stored=names[zone]
     if type(stored)=="string" and stored~="" then return stored end
     local z=AZS_ZONE
     if type(z)=="table" and z.zone==zone and type(z.zname)=="string" and z.zname~="" then return z.zname end
     return ZONE_NAMES[zone] or zone
 end
 
-function R.MessageOn() return K.DB().runsMessage~=false end
+function R.MessageOn() return R.On() and K.DB().runsMessage~=false end
 function R.SetMessage(on) K.DB().runsMessage=on and true or false end
 
 -- Message ----------------------------------------------------------------------------------------------
@@ -283,6 +288,7 @@ local function IsWin(run,phase)
     return phase=="victory" or won==1 or won=="1" or won==true or won=="true"
 end
 local function Update(packet,zone)
+    if not R.On() or waitingZone then return end
     if zoneAt and not gotRun then
         if GetTime()-zoneAt<WAIT then return end
         zoneAt=nil
@@ -300,6 +306,10 @@ local function Update(packet,zone)
     if not key then return end
     local runs=Store()
     local open=runs.open
+    if boundary then
+        boundary=false
+        if open then Finish(open); open=nil end
+    end
     if phase=="ready" then
         if open then Finish(open) end
         if type(z.zname)=="string" and z.zname~="" then runs.names[z.zone]=z.zname end
@@ -336,7 +346,9 @@ R.Update=Update
 
 local lastSignal
 local function Receive(prefix,message)
+    if not R.On() then return end
     if prefix=="AZSZONE" then
+        waitingZone=false
         needZone=false; zoneAt=GetTime(); gotRun=false
         pendingZone=type(AZS_Fields)=="function" and type(message)=="string" and AZS_Fields(message) or nil
     elseif prefix=="AZSRUN" then
@@ -353,6 +365,7 @@ local function Receive(prefix,message)
     end
 end
 local function Save(reason)
+    if not R.On() or waitingZone then return end
     Update()
     local open=type(KeijinUIDB)=="table" and type(KeijinUIDB.runs)=="table" and KeijinUIDB.runs.open
     if type(open)=="table" then Commit(open) end
@@ -364,12 +377,14 @@ R.recorder=recorder
 recorder:RegisterEvent("CHAT_MSG_ADDON"); recorder:RegisterEvent("PLAYER_LOGOUT"); recorder:RegisterEvent("PLAYER_LEAVING_WORLD")
 recorder:RegisterEvent("ADDON_LOADED")
 recorder:SetScript("OnEvent",function()
+    if not R.On() then return end
     if event=="CHAT_MSG_ADDON" then Receive(arg1,arg2)
     elseif event=="ADDON_LOADED" then if arg1=="KeijinUI" then K.runSnapshots.Loaded(); Trace("snapshots_loaded",nil,K.version) end
     else Save(event) end
 end)
 local elapsed=0
 recorder:SetScript("OnUpdate",function()
+    if not R.On() then return end
     elapsed=elapsed+(tonumber(arg1) or 0)
     if elapsed>=.1 then elapsed=0; Update() end
 end)
@@ -442,6 +457,7 @@ end
 local function Dash(value) return K.Number(value) and value>0 and K.Clock(value) or "-" end
 local function Count(value) return K.Number(value) and tostring(math.floor(value)) or "-" end
 function Render()
+    if not R.On() then panel:Hide(); return end
     local list=R.ZoneList()
     local count=table.getn(list)
     if not page then
@@ -505,18 +521,20 @@ local function Place()
     else panel:SetPoint("CENTER",UIParent,"CENTER",0,40) end
 end
 R.Place=Place
-panel:SetScript("OnShow",function() Place(); page=nil; Render() end)
+panel:SetScript("OnShow",function() if not R.On() then panel:Hide(); return end; Place(); page=nil; Render() end)
 K.OnLang(Render)
 R.panel,R.rows,R.zoneText=panel,rows,zoneText
 R.prev,R.next=prev,nextButton
 
 function R.Toggle()
+    if not R.On() then panel:Hide(); return end
     if panel:IsShown() then panel:Hide() else Place(); page=nil; panel:Show(); Render() end
 end
 function R.Page() return page end
 
 -- /kui runs and /kui runs msg [on|off]
 function K.RunsCommand(arg)
+    if not R.On() then return end
     arg=arg or ""
     if arg=="" then R.Toggle(); return end
     if arg=="check" then K.runSnapshots.Check(); return end
@@ -545,3 +563,18 @@ function K.RunsCommand(arg)
     end
     K.Say(K.T("/kui runs, /kui runs msg"))
 end
+
+function R.Refresh()
+    local enabled=R.On()
+    if enabled then
+        recorder:Show()
+        for _,name in ipairs({"CHAT_MSG_ADDON","PLAYER_LOGOUT","PLAYER_LEAVING_WORLD","ADDON_LOADED"}) do recorder:RegisterEvent(name) end
+        K.runSnapshots.Loaded()
+    else
+        panel:Hide(); recorder:Hide()
+        for _,name in ipairs({"CHAT_MSG_ADDON","PLAYER_LOGOUT","PLAYER_LEAVING_WORLD","ADDON_LOADED"}) do recorder:UnregisterEvent(name) end
+        -- Keep saved data untouched; do not attribute the disabled interval to a run.
+        waitingZone=true; boundary=true; zoneAt=nil; pendingZone=nil; gotRun=false; lastSignal=nil; elapsed=0
+    end
+end
+K.moduleRefresh.history=R.Refresh

@@ -121,7 +121,7 @@ function C.Render()
         else row:Hide() end
     end
 end
-function C.Toggle() if panel:IsShown() then panel:Hide() else C.Render(); panel:Show() end end
+function C.Toggle() if not K.ModuleOn("collection") then panel:Hide(); return end; if panel:IsShown() then panel:Hide() else C.Render(); panel:Show() end end
 -- Equipped gear is sampled by native inventory slot and native tooltip, never fictional run ranks.
 local elapsed=0
 local driver=CreateFrame("Frame")

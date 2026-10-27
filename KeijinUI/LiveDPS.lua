@@ -41,3 +41,19 @@ function D.Rate(name)
     if elapsed<=0 then return nil end
     return math.max(0,((last.values[name] or 0)-base)/elapsed)
 end
+
+-- Shared telemetry: analysis and other consumers keep sampling with the HUD off.
+if K.On and K.updates then
+local awaiting=false
+K.On("CHAT_MSG_ADDON",function(_,prefix)
+    if prefix=="AZSZONE" then D.Reset(); awaiting=true
+    elseif prefix=="AZSRUN" then awaiting=false end
+end)
+table.insert(K.updates,function()
+    local phase=AZS_GetPhase and AZS_GetPhase()
+    if phase=="playing" and K.Number(AZS_RUN_UPDATED) and GetTime()-AZS_RUN_UPDATED>5 then D.Reset(); return end
+    if awaiting or type(AZS_RUN)~="table" then return end
+    local now=K.ReportedRunTime() or (AZS_GetRunTime and AZS_GetRunTime())
+    if phase then D.Observe(now,AZS_GetMeter and AZS_GetMeter()) end
+end)
+end

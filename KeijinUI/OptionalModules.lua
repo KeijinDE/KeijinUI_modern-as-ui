@@ -1,6 +1,6 @@
--- Modules: 15 features that can be switched off as a whole. A module that is off keeps no scripts, no combat event
+-- Independent modules can be switched off as a whole. A module that is off keeps no scripts, no combat event
 -- subscriptions and no settings rows; where the game has its own version it comes back. Shared run telemetry stays active.
--- Core settings (sizes, windows, unit frames, run history, general) are not modules.
+-- Only layout tools and settings remain active when every module is off.
 -- Older keys that were merged (damageText, resourceText, guardianNav, cursor, jewelry, insights) map to the new key
 -- through K.moduleAlias (Core.lua), which also moves old saved switches over once (K.DB).
 local K=KeijinUI
@@ -30,10 +30,15 @@ function M.Apply(key)
     elseif entry.stop then entry.stop() end
 end
 function M.Set(key,on)
+    if key=="comfort" then
+        for _,part in ipairs({"cursor","autowalk","shortcuts"}) do M.Set(part,on) end
+        return true
+    end
     key=K.ModuleKey(key)
     local entry=M.definitions[key]; if not entry then return false end
     local db=K.DB(); if type(db.modules)~="table" then db.modules={} end
     db.modules[key]=on and true or false; M.Apply(key)
+    if K.layout then K.layout.Update() end
     if entry.reload then M.reloadHint=entry.label end
     -- Settings rows and sections of this module appear or disappear at once.
     if K.settings and K.settings.ReflowAll then K.settings.ReflowAll() end
@@ -66,10 +71,28 @@ Bind("storedLevels","Gespeicherte Level","Levelaufstiege sammeln und später ges
     {},K.storedLevels.Suspend,K.storedLevels.Resume)
 Bind("achievements","Erfolgsmeldungen","Erfolgsfenster beim Freischalten eines Erfolgs. Aus: kein Fenster, die Chatmeldung bleibt.",
     {},function() K.achievements.Stop() end)
-Bind("comfort","Eingabehilfen","Cursortracker (Ring um den Mauszeiger) und die Taste für Automatisch laufen. Aus: kein Ring, deine Laufbelegung ist inaktiv; die Spielbelegung bleibt unverändert.",
-    {K.cursor.frame},function() K.cursor.frame:Hide(); K.autoWalk.Suspend() end,function() K.cursor.Apply(); K.autoWalk.Resume() end)
 Bind("summons","Beschwörungen","Leiste mit deinen aktiven Beschwörungen (Dämonen, Begleiter, Treants, Wölfe) mit Anzahl und Restzeit. Aus: keine Leiste.",
     {K.summons.driver},K.summons.Stop,K.summons.Refresh,{CHAT_MSG_ADDON=true,PLAYER_ENTERING_WORLD=true})
 Bind("party","Partyfenster","Fenster mit Leben, Status und Wiederbelebung deiner Mitstreiter im Koop. Aus: kein Fenster, die Partyrahmen des Spiels bleiben.",
     {K.party.driver},K.party.Stop,K.party.Refresh,{PARTY_MEMBERS_CHANGED=true,UNIT_HEALTH=true,UNIT_MAXHEALTH=true,CHAT_MSG_ADDON=true,PLAYER_ENTERING_WORLD=true})
+-- Feature implementations expose one refresh entry for both activation and release.
+local function Feature(key,label,text)
+    local owner=key
+    local function Refresh() if K.moduleRefresh[owner] then K.moduleRefresh[owner]() end end
+    Bind(key,label,text,{},Refresh,Refresh)
+end
+Feature("basisHud","Basis HUD","Runübersicht, Begegnungen, Statistik, Schadensmesser, Kills, Gold und XP. Aus: Die entsprechenden Anzeigen des Spiels.")
+Feature("units","Einheitenrahmen","Spieler und Ziel mit Buffs, Debuffs und Klassenressourcen. Aus: Die Einheitenrahmen des Spiels.")
+Feature("build","Buildübersicht","Übersicht deiner Zauber und Schmuckstücke. Aus: Die Buildübersicht des Spiels.")
+Feature("action","Aktionsleiste","Zauber mit Rängen und Abklingzeiten. Aus: Die Aktionsleiste des Spiels.")
+Feature("effects","Effektleiste","Eigene Leiste für Talenttimer und zusätzliche Effekte, auch ohne Aktionsleiste. Aus: keine eigene Effektleiste.")
+Feature("characterWindow","Charakterfenster","Kompakte Ausrüstung und Charakterwerte. Aus: Das Charakterfenster des Spiels.")
+Feature("worldMap","Kleine Weltkarte","Verschiebbare kleine Weltkarte. Aus: Die normale Weltkarte des Spiels.")
+Feature("fps","FPS","Anpassbare Anzeige der Bildrate. Aus: keine FPS Anzeige von KeijinUI.")
+Feature("tooltip","Tooltip","Tooltips im KeijinUI Stil mit eigener Layoutposition. Aus: Die Tooltips des Spiels.")
+Feature("chat","Chat","Chatrahmen im KeijinUI Stil mit Ziehgriff und Kopierfunktion. Aus: Der Chat des Spiels.")
+Feature("history","Runhistorie","Zeichnet Runden auf und zeigt vergangene Ergebnisse und Runmeldungen. Aus: keine Aufzeichnung oder Runmeldungen, gespeicherte Daten bleiben.")
+Feature("cursor","Cursortracker","Ring um den Mauszeiger. Aus: Der normale Mauszeiger des Spiels.")
+Feature("autowalk","Automatisch laufen","Eigene Taste für automatisches Laufen. Aus: Nur deine ursprüngliche Spielbelegung.")
+Feature("shortcuts","Tastenbelegung","Eigene Tasten für Addonfunktionen und Raidmarker. Aus: Nur die Spielbelegungen; die Layouttaste bleibt verfügbar.")
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then for _,key in ipairs(M.order) do M.Apply(key) end end end)

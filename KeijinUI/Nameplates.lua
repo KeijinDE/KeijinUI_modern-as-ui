@@ -28,8 +28,8 @@ function K.SetNameplates(mode)
     if K.UpdateNameplateLabels then K.UpdateNameplateLabels() end
 end
 -- Keep the game's V binding and the explicit setting in agreement; V returns to the last visible mode.
-if nativeShow then ShowNameplates=function() local m=K.DB().platesOn; K.SetNameplates(m=="bosses" and "bosses" or "all") end end
-if nativeHide then HideNameplates=function() K.SetNameplates("off") end end
+if nativeShow then ShowNameplates=function() if not K.ModuleOn("nameplates") then nativeShow(); return end; local m=K.DB().platesOn; K.SetNameplates(m=="bosses" and "bosses" or "all") end end
+if nativeHide then HideNameplates=function() if not K.ModuleOn("nameplates") then nativeHide(); return end; K.SetNameplates("off") end end
 local rareNames={}
 local function ByKind(kind)
     if kind=="boss" or kind=="final" then return "boss" end

@@ -9,26 +9,42 @@ if not chat then return end
 local panel=K.Panel("KeijinUIChat","",K.PANEL_WIDTH,chat:GetHeight()+2*PAD)
 panel.strip:Hide(); panel.title:Hide()
 K.chat={panel=panel}
+function K.chat.On() return K.ModuleOn("chat") end
+panel:Hide()
 K.layout.Register("chat",panel,"Chat",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",25,78) end,
-    {inactive=function() return chat.resizing end})
+    {inactive=function() return not K.chat.On() or chat.resizing end})
 -- What the native frame looked like before KeijinUI took it over (given back on logout).
-local saved
+local saved,watcher
+local inputParts={}
+local inputStyle,inputSkins=nil,{}
+local wrapped={}
+local function NativeHooks(enabled)
+    for name,hook in pairs(wrapped) do
+        local current=getglobal(name)
+        if enabled and current==hook.original then setglobal(name,hook.wrapper)
+        elseif not enabled and current==hook.wrapper then setglobal(name,hook.original) end
+    end
+end
 local function Capture()
     if saved then return end
-    local point,relative,relativePoint,x,y=chat:GetPoint()
-    saved={parent=chat:GetParent() or UIParent,point=point or "BOTTOMLEFT",relative=relative or UIParent,
-        relativePoint=relativePoint or "BOTTOMLEFT",x=x or 32,y=y or 85,
-        width=chat:GetWidth(),strata=chat.GetFrameStrata and chat:GetFrameStrata() or "BACKGROUND"}
+    for _,part in ipairs(inputParts) do part[2]=part[1]:GetAlpha() end
+    saved={parent=chat:GetParent() or UIParent,parts={},level=chat.GetFrameLevel and chat:GetFrameLevel(),
+        strata=chat.GetFrameStrata and chat:GetFrameStrata() or "BACKGROUND"}
+    for _,name in ipairs({"ChatFrame1","ChatFrame1Tab","ChatFrameEditBox"}) do K.windowTools.Remember(saved.parts,getglobal(name)) end
+    for _,name in ipairs({"ChatFrameMenuButton","ChatFrame1UpButton","ChatFrame1DownButton","ChatFrame1BottomButton","ChatFrame1Background"}) do
+        local part=getglobal(name)
+        K.windowTools.Remember(saved.parts,part)
+        if part then saved.parts[part].restoreShown=part:IsShown() and true or false end
+    end
 end
-Capture()
 -- Native tab and resize edges keep their own scripts, fading and lock state.
 -- Only the menu/scroll buttons and background are replaced by the panel.
--- They are faded out and made click-through instead of hidden, because native code shows them again.
+-- Native code may show these again; enforce visibility without changing native mouse state.
 local hiddenNames={"ChatFrameMenuButton","ChatFrame1UpButton","ChatFrame1DownButton","ChatFrame1BottomButton"}
 local function Mute(part,hidden)
     if not part then return end
     if hidden then
-        part:SetAlpha(0); if part.EnableMouse then part:EnableMouse(false) end
+        part:SetAlpha(0); part:Hide()
     else
         part:SetAlpha(1); if part.EnableMouse then part:EnableMouse(true) end
     end
@@ -99,7 +115,6 @@ grip:SetScript("OnDragStop",function()
     if saved and chat.resizing and FCF_StopResize then FCF_StopResize() end
 end)
 K.chat.resizeGrip=grip
-local tabScale=ChatFrame1Tab and ChatFrame1Tab:GetScale() or 1
 local function LoadSize()
     local size=K.DB().chatSize
     local width,height=K.PANEL_WIDTH-2*PAD,chat:GetHeight()
@@ -110,24 +125,38 @@ local function LoadSize()
     chat:SetWidth(width); chat:SetHeight(height)
     sizeLoaded=true
 end
-local inputParts={}
 local function StyleInput()
-    if not ChatFrameEditBox then return end
-    if not ChatFrameEditBox.chamfer then
-        for _,region in ipairs({ChatFrameEditBox:GetRegions()}) do
+    local box=ChatFrameEditBox
+    if not box then return end
+    if not inputStyle then
+        if saved then K.windowTools.Remember(saved.parts,box) end
+        inputStyle={frame=box,backdrop=box.GetBackdrop and box:GetBackdrop(),
+            color=box.GetBackdropColor and {box:GetBackdropColor()},
+            border=box.GetBackdropBorderColor and {box:GetBackdropBorderColor()}}
+        for _,region in ipairs({box:GetRegions()}) do
             if region.GetObjectType and region:GetObjectType()=="Texture" then
                 local path=region:GetTexture()
                 if type(path)=="string" and string.find(string.lower(path),"ui%-chatinputborder") then
-                    table.insert(inputParts,{region,region:GetAlpha() or 1}); region:SetAlpha(0)
+                    local found=false
+                    for _,part in ipairs(inputParts) do if part[1]==region then found=true end end
+                    if not found then table.insert(inputParts,{region,region:GetAlpha() or 1}) end
                 end
             end
         end
-        K.Skin(ChatFrameEditBox,7)
     end
+    local skin=inputSkins[box]
+    if not skin then
+        skin=CreateFrame("Frame",nil,box); skin:SetAllPoints(box); skin:EnableMouse(false)
+        skin:SetFrameLevel(box:GetFrameLevel()); K.Skin(skin,7); inputSkins[box]=skin
+    end
+    -- Skin only our child: native backdrop colour methods remain untouched.
+    box:SetBackdrop({}); skin:Show()
+    for _,part in ipairs(inputParts) do part[1]:SetAlpha(0) end
 end
+
 local function Enforce()
     -- StartSizing controls both dimensions and anchors until FCF_StopResize.
-    if busy or chat.resizing then return end
+    if not K.chat.On() or not saved or busy or chat.resizing then return end
     busy=true
     if chat:GetParent()~=panel then chat:SetParent(panel); chat:SetScale(1) end
     local point,relative,relativePoint,x,y=chat:GetPoint(1)
@@ -160,30 +189,45 @@ local function Enforce()
 end
 K.chat.Enforce=Enforce
 function K.chat.Release()
-    if not saved then return end
+    if watcher then watcher:SetScript("OnUpdate",nil) end
+    NativeHooks(false)
+    if not saved then panel:Hide(); grip:Hide(); return end
+    K.layout.EndMove("chat")
     if chat.resizing then chat:StopMovingOrSizing(); chat.resizing=nil end
     grip:Hide()
     for _,part in ipairs(inputParts) do part[1]:SetAlpha(part[2]) end
-    if ChatFrameEditBox and ChatFrameEditBox.chamfer then
-        for _,part in ipairs(ChatFrameEditBox.chamfer.back) do part:Hide() end
-        for _,part in ipairs(ChatFrameEditBox.chamfer.rim) do part:Hide() end
+    if inputStyle then
+        local box=inputStyle.frame
+        if inputSkins[box] then inputSkins[box]:Hide() end
+        box:SetBackdrop(inputStyle.backdrop)
+        if inputStyle.color then box:SetBackdropColor(unpack(inputStyle.color)) end
+        if inputStyle.border then box:SetBackdropBorderColor(unpack(inputStyle.border)) end
+        inputStyle=nil
     end
-    Style(false)
-    chat:SetParent(saved.parent); chat:SetScale(1); chat:SetWidth(saved.width)
-    chat:ClearAllPoints(); chat:SetPoint(saved.point,saved.relative,saved.relativePoint,saved.x,saved.y)
+    chat:SetParent(saved.parent)
+    -- The player can change chat font size while the housing is active.
+    for part,state in pairs(saved.parts) do
+        if state.font and part.GetFont then
+            local _,size,flags=part:GetFont()
+            state.font[2]=size or state.font[2]; state.font[3]=flags or state.font[3]
+        end
+    end
+    K.windowTools.Restore(saved.parts)
     if chat.SetFrameStrata then chat:SetFrameStrata(saved.strata) end
-    if ChatFrameEditBox then ChatFrameEditBox:SetScale(1) end
-    if ChatFrame1Tab then ChatFrame1Tab:SetScale(tabScale) end
-    saved=nil
+    if saved.level then chat:SetFrameLevel(saved.level) end
+    panel:Hide(); bottom:Hide(); copy:Hide()
+    if K.chatCopy then K.chatCopy.panel:Hide() end
+    saved=nil; sizeLoaded=false; busy=false
+
 end
 -- Native code that re-anchors the chat: run the original, then put the chat back at once.
-local wrapped={}
 local function Wrap(name)
     if wrapped[name] then return end
     local original=getglobal(name)
     if type(original)~="function" then return end
-    wrapped[name]=true
-    setglobal(name,function(a,b,c,d) original(a,b,c,d); if saved then Enforce() end end)
+    local wrapper=function(a,b,c,d) original(a,b,c,d); if saved then Enforce() end end
+    wrapped[name]={original=original,wrapper=wrapper}
+    setglobal(name,wrapper)
 end
 for _,name in ipairs({"UIParent_ManageFramePositions","FCF_UpdateDockPosition","FCF_ValidateChatFramePosition",
     "FCF_DockUpdate","FCF_Set_SimpleChat","FCF_Set_NormalChat","FCF_ToggleLock","FCF_SetButtonSide"}) do Wrap(name) end
@@ -202,6 +246,7 @@ if type(resize)=="function" then
             if chat.resizing then K.layout.entries.chat.dock=nil else Enforce() end
         end
     end
+    wrapped.FCF_Resize={original=resize,wrapper=FCF_Resize}
 end
 local function FollowResize()
     local ratio=chat:GetEffectiveScale()/panel:GetEffectiveScale()
@@ -228,12 +273,13 @@ if type(stopResize)=="function" then
         panel:ClearAllPoints(); panel:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left-PAD,top+PAD)
         Enforce(); K.layout.Save("chat"); K.layout.SyncFollowers()
     end
+    wrapped.FCF_StopResize={original=stopResize,wrapper=FCF_StopResize}
 end
 -- Direct frame:SetPoint calls cannot be wrapped, so the anchor is also checked every frame.
-local watcher=CreateFrame("Frame","KeijinUIChatWatch")
+watcher=CreateFrame("Frame","KeijinUIChatWatch")
 -- Cheap anchor check every frame; the full pass (styling, size, scroll button) on a 0.1 s tick.
 local watched=0
-watcher:SetScript("OnUpdate",function()
+local function Watch()
     if not saved then return end
     if chat.resizing then FollowResize(); return end
     watched=watched+(tonumber(arg1) or 0)
@@ -242,7 +288,20 @@ watcher:SetScript("OnUpdate",function()
         or relative~=panel or relativePoint~="TOPLEFT" or x~=PAD or y~=-PAD then
         watched=0; Enforce()
     end
-end)
-K.On("PLAYER_ENTERING_WORLD",function() Capture(); LoadSize(); Enforce(); grip:Show(); K.layout.Place("chat") end)
+end
+function K.chat.Refresh()
+    if K.chat.On() then
+        NativeHooks(true)
+        watcher:SetScript("OnUpdate",Watch)
+        Capture()
+        if not sizeLoaded then LoadSize() end
+        copy:Show(); grip:Show(); Enforce(); K.layout.Place("chat")
+    else K.chat.Release() end
+    if K.ApplyFont then K.ApplyFont() end
+    if K.chatCopy then K.chatCopy.Refresh() end
+end
+K.moduleRefresh.chat=K.chat.Refresh
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then sizeLoaded=false; K.chat.Refresh() end end)
+K.On("PLAYER_ENTERING_WORLD",K.chat.Refresh)
 K.On("PLAYER_LOGOUT",function() K.chat.Release() end)
-Enforce()
+K.chat.Refresh()

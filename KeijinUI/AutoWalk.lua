@@ -4,6 +4,7 @@
 local K=KeijinUI
 local A={}
 K.autoWalk=A
+function A.On() return K.ModuleOn("autowalk") end
 function A.Available()
     return type(SetBinding)=="function" and type(GetBindingAction)=="function"
         and type(GetBindingKey)=="function" and type(SaveBindings)=="function"
@@ -25,6 +26,7 @@ local function Release()
     return true
 end
 function A.Assign(key,replace)
+    if not A.On() then return false,"unavailable" end
     if not A.Available() then return false,"unavailable" end
     if type(key)~="string" or key=="" then return false,"invalid" end
     local old=GetBindingAction(key)
@@ -38,9 +40,11 @@ function A.Assign(key,replace)
     end
     K.DB().autoWalkKey=key; K.DB().autoWalkSet=GetCurrentBindingSet()
     K.DB().autoWalkPrevious=old~="" and old or nil
+    K.DB().autoWalkHeld=nil
     Save(); if A.onChange then A.onChange() end; return true
 end
 function A.Clear()
+    K.DB().autoWalkHeld=nil
     if not A.Available() then return end
     if Release() then Save() end
 end
@@ -50,17 +54,24 @@ function A.Suspend()
     local db=K.DB()
     local key=db.autoWalkKey
     if not key then return end
-    if db.autoWalkSet==GetCurrentBindingSet() and GetBindingAction(key)=="TOGGLEAUTORUN" then
+    if db.autoWalkSet~=GetCurrentBindingSet() then return end
+    local held={key=key,set=db.autoWalkSet,previous=db.autoWalkPrevious}
+    if GetBindingAction(key)=="TOGGLEAUTORUN" then
         if not Release() then return end
-        db.autoWalkHeld=key; Save()
-    else db.autoWalkHeld=key; db.autoWalkKey=nil; db.autoWalkPrevious=nil; db.autoWalkSet=nil end
+        db.autoWalkHeld=held; Save()
+    else
+        db.autoWalkKey=nil; db.autoWalkPrevious=nil; db.autoWalkSet=nil
+    end
 end
 function A.Resume()
-    local key=K.DB().autoWalkHeld
-    if not key or not A.Available() then return end
-    K.DB().autoWalkHeld=nil
-    local ok,reason=A.Assign(key,true)
-    if not ok then K.DB().autoWalkHeld=(reason=="unavailable") and key or nil end
+    if not A.On() or not A.Available() then return end
+    local held=K.DB().autoWalkHeld
+    if type(held)=="string" then held={key=held,set=GetCurrentBindingSet()} end
+    if type(held)~="table" or held.set~=GetCurrentBindingSet() then return end
+    local current=GetBindingAction(held.key) or ""
+    if current~=(held.previous or "") and current~="TOGGLEAUTORUN" then return end
+    local ok=A.Assign(held.key,true)
+    if ok then K.DB().autoWalkHeld=nil end
 end
 -- The shield captures a mouse binding regardless of where the cursor is.
 -- It exists only while assigning, so a side button cannot reach the world.
@@ -95,9 +106,17 @@ capture:SetScript("OnMouseUp",function() Input(arg1,true) end)
 capture:SetScript("OnMouseWheel",function() Input(arg1>0 and "MOUSEWHEELUP" or "MOUSEWHEELDOWN",true) end)
 capture:SetScript("OnHide",function() pending=nil; capture:EnableKeyboard(false) end)
 function A.Capture()
+    if not A.On() then return end
     if not A.Available() then K.Say(K.T("Nicht verfügbar")); return end
     pending=nil
     text:SetText(K.T("Taste oder Maustaste drücken, zum Beispiel Maustaste 5. Escape oder Linksklick bricht ab."))
     capture:Show(); capture:EnableKeyboard(true)
 end
 A.capture=capture
+
+function A.Refresh()
+    if A.On() then A.Resume() else capture:Hide(); A.Suspend() end
+end
+K.moduleRefresh.autowalk=A.Refresh
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then A.Refresh() end end)
+K.On("PLAYER_ENTERING_WORLD",A.Refresh)

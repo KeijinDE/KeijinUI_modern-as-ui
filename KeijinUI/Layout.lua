@@ -24,8 +24,27 @@ function L.SetModifier(key)
 end
 local function Scale(f) return f:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
+local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
+local defaultAnchors={}
+local function RememberAnchors(entry)
+    local refs={}
+    local f=entry.frame
+    for index=1,f:GetNumPoints() do
+        local _,relative=f:GetPoint(index)
+        if type(relative)=="string" then relative=getglobal(relative) end
+        if relative then table.insert(refs,relative) end
+    end
+    defaultAnchors[f]={key=entry.key,refs=refs}
+end
 -- A frame handed back to the game (module off) keeps the game's own place and scale.
-local function Off(entry) return entry.options.inactive and entry.options.inactive() end
+local OWNERS={tracker="basisHud",bosses="basisHud",statistics="basisHud",meter="basisHud",crits="basisHud",tally="basisHud",xp="basisHud",
+    player="units",target="units",resources="units",buffs="units",skills="action",effects="effects",
+    fps="fps",chat="chat",worldmap="worldMap",characterwindow="characterWindow",tooltip="tooltip",minimap="minimap",
+    loot="loot",attributes="attributes",cachearrow="caches",party="party",summons="summons",levels="storedLevels",
+    combattext="combatText",healtext="combatText",takentext="combatText",achievements="achievements"}
+local function Off(entry)
+    return not K.ModuleOn(OWNERS[entry.key]) or (entry.options.inactive and entry.options.inactive())
+end
 -- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
 -- options.keepBottom keeps the bottom edge as well but, unlike grow, still allows docking (build panel).
 local function Up(entry)
@@ -38,6 +57,32 @@ local function ValidDock(dock)
         (dock.edge=="above" or dock.edge=="below") and Finite(dock.x)
 end
 local function CanDock(entry,target)
+    local frame=entry.frame
+    local visiting,checked={},{}
+    -- Default anchors are dependencies too: crits starts below meter even
+    -- without a saved dock. Looking only at dock metadata misses that cycle.
+    local function Safe(relative)
+        if not relative or relative==UIParent then return true end
+        if relative==frame or visiting[relative] then return false end
+        if checked[relative] then return true end
+        visiting[relative]=true
+        local defaults=defaultAnchors[relative]
+        if defaults and not Valid(K.DB().layout[defaults.key]) then
+            for _,anchor in ipairs(defaults.refs) do if not Safe(anchor) then return false end end
+        end
+        if relative.GetParent and not Safe(relative:GetParent()) then return false end
+        if relative.GetPoint then
+            local count=relative.GetNumPoints and relative:GetNumPoints() or 1
+            for index=1,count do
+                local _,anchor=relative:GetPoint(index)
+                if type(anchor)=="string" then anchor=getglobal(anchor) end
+                if not Safe(anchor) then return false end
+            end
+        end
+        visiting[relative]=nil; checked[relative]=true
+        return true
+    end
+    if not Safe(target.frame) then return false end
     local seen={[entry.key]=true}
     while target do
         if seen[target.key] then return false end
@@ -128,7 +173,6 @@ L.defaults={
     summons={scale=0.9},
     tracker={scale=0.9},
 }
-local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local function LimitScale(entry,value)
     local maximum=entry.options.maxScale and entry.options.maxScale() or 1.8
     return math.max(0.5,math.min(1.8,maximum,value))
@@ -175,7 +219,7 @@ local function Apply(entry)
     else
         local d=not saved and L.defaults and L.defaults[entry.key]
         local scale=d and K.Number(d.scale) and d.scale>0 and d.scale or 1
-        f:SetScale(entry.baseScale*scale); entry.anchor(f)
+        f:SetScale(entry.baseScale*scale); entry.anchor(f); RememberAnchors(entry)
     end
     if Clamp(entry) and saved then Save(entry) end
     Dock(entry)
@@ -380,9 +424,28 @@ function L.ToggleGrid()
     K.Say(K.T("Raster und Einrasten")..": "..(K.DB().snap and K.T("An (Shift beim Loslassen: ohne Einrasten)") or K.T("Aus")))
     RefreshGrid(L.Active())
 end
-function L.ResetKey(key) K.DB().layout[key]=nil; L.Place(key) end
+local function ReleaseDock(entry)
+    if not entry.dock then return end
+    if Off(entry) then entry.dock=nil else Detach(entry) end
+    local saved=K.DB().layout[entry.key]
+    if type(saved)=="table" then saved.dock=nil end
+end
+function L.ResetKey(key)
+    local entry=L.entries[key]
+    if entry then
+        Stop()
+        -- A restored default anchor may point at one of this frame's current
+        -- followers. Release those attachments before changing any anchors.
+        for _,other in pairs(L.entries) do
+            if other==entry or not CanDock(entry,other) then ReleaseDock(other) end
+        end
+    end
+    K.DB().layout[key]=nil; L.Place(key)
+end
 function L.Reset()
-    Stop(); K.DB().layout={}; K.DB().resourceFree=nil
+    Stop()
+    for _,e in pairs(L.entries) do ReleaseDock(e) end
+    K.DB().layout={}; K.DB().resourceFree=nil
     for _,e in pairs(L.entries) do Apply(e) end
 end
 function L.ClampAll()
@@ -398,7 +461,7 @@ function L.Update()
     end
     lastWidth,lastHeight=w,h
     local enabled=L.Active()
-    if active and not enabled and not directMove then Stop() end
+    if active and (Off(active) or (not enabled and not directMove)) then Stop() end
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
         if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end

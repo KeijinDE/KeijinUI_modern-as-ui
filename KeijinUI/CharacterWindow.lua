@@ -30,8 +30,9 @@ local function Slot(name,x,y)
     end
     W.Slot(changed,slot)
 end
-function C.On() return K.DB().characterWindowStyle~=false end
+function C.On() return K.ModuleOn("characterWindow") and K.DB().characterWindowStyle~=false end
 local function Restore()
+    if not active then return end
     K.layout.EndMove("characterwindow")
     local s=AZSMoreStats and changed[AZSMoreStats]
     if s then
@@ -46,6 +47,9 @@ local function Restore()
     if morePanel then morePanel:Hide() end
     if statsPanel then statsPanel:Hide() end
     if drag then drag:Hide() end
+    if nativeWindow and frame then
+        frame:SetScale(nativeWindow.scale); W.Place(frame,nativeWindow.points)
+    end
     active=false
 end
 local function FontTree(f)
@@ -118,6 +122,7 @@ local function Apply()
         if active then Restore() end
         return
     end
+    if not active then nativeWindow={points=W.Points(frame),scale=frame:GetScale()} end
     active=true
     K.layout.Place("characterwindow")
     W.Art(changed,PaperDollFrame,"interface\\paperdollinfoframe\\ui-character-charactertab-")
@@ -205,13 +210,13 @@ function C.Refresh()
         panel=K.Panel("KeijinUICharacterWindow","",336,410)
         panel:SetParent(frame); panel:SetPoint("TOPLEFT",frame,"TOPLEFT",10,-8)
         panel:SetFrameLevel(frame:GetFrameLevel()); panel:SetFrameStrata(frame:GetFrameStrata())
-        panel.title:Hide(); panel.strip:Hide()
+        panel.title:Hide(); panel.strip:Hide(); panel:Hide()
         K.layout.Register("characterwindow",frame,"Charakter",function(f)
             f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"CENTER",-270,230)
-        end,{inactive=function() return not C.On() end,titleDrag=true,right=function()
+        end,{inactive=function() return not C.On() or not active end,titleDrag=true,right=function()
             return AZSMoreStats and AZSMoreStats:IsVisible() and math.max(0,350+AZSMoreStats:GetWidth()-frame:GetWidth()) or 0
         end,release=function(f)
-            f:SetScale(nativeWindow.scale); W.Place(f,nativeWindow.points)
+            if active then Restore() end
         end})
         drag=CreateFrame("Frame","KeijinUICharacterDrag",frame)
         drag:SetWidth(284); drag:SetHeight(48); drag:SetPoint("TOPLEFT",frame,"TOPLEFT",22,-10)
@@ -232,3 +237,5 @@ K.Update("characterwindow",function()
     C.Refresh()
 end)
 C.Refresh()
+
+K.moduleRefresh.characterWindow=C.Refresh

@@ -5,6 +5,17 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.4.0 (2026-10-27, release v4.4.0)
+
+* **Empty damage meter fix:** docking now checks default frame anchors as well as saved links. Circular attachments, such as placing the meter above critical hits while critical hits follow the meter, no longer interrupt HUD updates. Existing valid stacks are retained. Layout resets release existing attachments before restoring default anchors.
+
+* **Settings reset:** Layout, Reset now offers a confirmed reset with a backup and restore button. Display options, modules and positions return to defaults after a UI reload. Language, key bindings, run history and the jewelry diary are kept. `/kui settings reset` and `/kui settings restore` open the same confirmation.
+
+* **Independent modules:** the Basis HUD, unit frames, build overview, action bar, effects, character window, world map, chat, tooltips, FPS and run history can be switched separately. Cursor tracking and auto run are independent. With all modules disabled, only Layout, Interface and Modules remain. The original game displays return; saved options and positions are kept. Combat text works alone with the normal game interface.
+* **Settings by topic:** seven categories with dedicated pages for each feature replace the long shared settings pages. The sidebar expands only the selected category. Each page keeps its own scroll position, and switching categories returns to the last visited page in that category.
+* **Direct access:** every control is visible on its page, with no Advanced foldouts. Information-only pages for summons and the party frame have been removed; both module switches remain available. Global search returns controls to their own page afterward. Disabled modules hide only their relevant pages.
+* Existing settings, layout positions and action callbacks are retained. Short pages no longer show a scrollbar just because of unused content space.
+
 ### 4.3.2 (2026-10-27, release v4.3.2)
 
 * **Customizable FPS counter:** a small movable display uses the client's actual smoothed frame rate and refreshes twice per second. Under Layout & Display, FPS, switch it on or off, show or hide its frame, and choose its own overall opacity and background opacity, font size and text color. The frameless default stays discreet; layout mode saves its position and scale. Missing frame rate data is shown as unknown.
@@ -585,6 +596,17 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.4.0 (2026-10-27, Release v4.4.0)
+
+* **Leerer Schadensmesser behoben:** Beim Andocken werden jetzt auch die Standardanker der Fenster berücksichtigt. Kreisverknüpfungen wie Schadensmesser oberhalb der kritischen Treffer, die wiederum am Schadensmesser hängen, unterbrechen die HUD Aktualisierung nicht mehr. Gültige Fensterstapel bleiben erhalten. Beim Layoutreset werden bestehende Verknüpfungen vor den Standardankern gelöst.
+
+* **Einstellungen zurücksetzen:** Unter Layout, Zurücksetzen gibt es jetzt einen Reset mit Bestätigung, Sicherung und Wiederherstellung. Anzeigeoptionen, Module und Positionen werden nach dem Neuladen zurückgesetzt. Sprache, Tastenbelegungen, Runhistorie und Schmucksammlung bleiben erhalten. `/kui settings reset` und `/kui settings restore` öffnen dieselbe Bestätigung.
+
+* **Unabhängige Module:** Basis HUD, Einheitenrahmen, Buildübersicht, Aktionsleiste, Effekte, Charakterfenster, Weltkarte, Chat, Tooltips, FPS und Runhistorie sind separat schaltbar. Cursortracker und automatisches Laufen sind getrennt. Sind alle Module aus, bleiben nur Layout, Oberfläche und Module. Die Spielanzeigen kehren zurück, gespeicherte Optionen und Positionen bleiben erhalten. Kampftext funktioniert allein mit der normalen Spieloberfläche.
+* **Einstellungen nach Themen:** Sieben Kategorien mit eigenen Seiten für jede Funktion ersetzen die langen Sammelseiten. Links klappt nur die gewählte Kategorie auf. Jede Seite behält ihre eigene Scrollposition; ein Kategorieaufruf führt zur zuletzt besuchten Unterseite zurück.
+* **Direkter Zugriff:** Alle Optionen sind auf ihrer Seite sichtbar, ohne Erweitert Aufklapper. Reine Infoseiten für Beschwörungen und Partyfenster entfallen; beide Modulschalter bleiben verfügbar. Die globale Suche stellt Bedienelemente anschließend auf ihrer eigenen Seite wieder her. Abgeschaltete Module verbergen nur ihre zugehörigen Seiten.
+* Bestehende Einstellungen, Layoutpositionen und Aktionen bleiben erhalten. Kurze Seiten zeigen keine unnötige Scrollleiste durch ungenutzten Inhaltsraum.
 
 ### 4.3.2 (2026-10-27, Release v4.3.2)
 

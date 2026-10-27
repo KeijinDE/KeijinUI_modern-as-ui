@@ -8,6 +8,7 @@ local function Copy(value)
 end
 local function Store()
     local db=K.DB()
+    if not K.ModuleOn("history") then return type(db.runSnapshots)=="table" and db.runSnapshots or {} end
     if type(db.runSnapshots)~="table" then db.runSnapshots={} end
     return db.runSnapshots
 end
@@ -16,6 +17,7 @@ function S.Find(open)
     for _,v in ipairs(Store()) do if v.id==open.snapshotId then return v end end
 end
 function S.Capture(open,packet)
+    if not K.ModuleOn("history") or type(open)~="table" then return end
     local prior=S.Find(open)
     if prior then return prior end
     if not open.won or not K.Number(open.winTime) or open.winTime<=0 then return end
@@ -35,17 +37,20 @@ function S.Capture(open,packet)
     return result
 end
 function S.Extend(open)
+    if not K.ModuleOn("history") then return end
     local v=S.Find(open)
     if not v or not open.endless or not K.Number(open.last) then return end
     if open.last>v.duration then v.duration=open.last; v.endless=true end
 end
 function S.Loaded()
+    if not K.ModuleOn("history") then return end
     -- Called only after the client has executed this addon's saved-variable file.
     if S.loadedOnce then return end
     S.loadedOnce=true
     for _,v in ipairs(Store()) do if type(v)=="table" and v.id and K.Number(v.victoryTime) then S.loaded[v.id]=true end end
 end
 function S.Check()
+    if not K.ModuleOn("history") then return end
     local list=Store(); local v=list[table.getn(list)]
     if not v then K.Say(K.T("Noch kein Sieg Snapshot vorhanden.")); return end
     local status=S.loaded[v.id] and K.T("Nach Neuladen aus gespeicherten Daten bestätigt") or K.T("In dieser Sitzung erfasst; Datenträgerprüfung nach Neuladen")

@@ -12,7 +12,7 @@ local lastSample
 local function Range(value,fallback,low,high)
     return K.Number(value) and math.max(low,math.min(high,value)) or fallback
 end
-function F.On() return K.DB().fps~=false end
+function F.On() return K.ModuleOn("fps") and K.DB().fps~=false end
 function F.Framed() return K.DB().fpsFrame==true end
 function F.Alpha() return Range(K.DB().fpsAlpha,.6,0,1) end
 function F.Opacity() return Range(K.DB().fpsOpacity,1,0,1) end
@@ -39,6 +39,7 @@ local function Sample(force)
     Fit()
 end
 function F.Refresh()
+    if not F.On() then frame:Hide(); K.layout.EndMove("fps"); return end
     K.SetFontSize(text,12*F.Size())
     text:SetTextColor(F.Color())
     frame:SetAlpha(F.Opacity())
@@ -71,3 +72,5 @@ K.On("PLAYER_ENTERING_WORLD",F.Refresh)
 K.OnLang(F.Refresh)
 K.Update("fps",function() if F.On() then frame:Show(); Sample(false) else frame:Hide() end end)
 F.Refresh()
+
+K.moduleRefresh.fps=F.Refresh

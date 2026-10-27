@@ -1,30 +1,30 @@
 <Bindings>
 	<Binding name="KEIJINUI_MARK1" header="KEIJINUI">
-		KeijinUI.marks.Set("target", 1);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 1) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK2">
-		KeijinUI.marks.Set("target", 2);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 2) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK3">
-		KeijinUI.marks.Set("target", 3);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 3) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK4">
-		KeijinUI.marks.Set("target", 4);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 4) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK5">
-		KeijinUI.marks.Set("target", 5);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 5) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK6">
-		KeijinUI.marks.Set("target", 6);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 6) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK7">
-		KeijinUI.marks.Set("target", 7);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 7) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK8">
-		KeijinUI.marks.Set("target", 8);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 8) end;
 	</Binding>
 	<Binding name="KEIJINUI_MARK0">
-		KeijinUI.marks.Set("target", 0);
+		if KeijinUI.ModuleOn("shortcuts") then KeijinUI.marks.Set("target", 0) end;
 	</Binding>
 	<Binding name="KEIJINUI_LAYOUT">
 		KeijinUI.layout.Toggle();

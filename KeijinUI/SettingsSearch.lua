@@ -59,7 +59,20 @@ local aliases={
     module_advisor="buildtipps build tips tipps empfehlung advisor",
     module_storedLevels="levelaufstiege levelups level stored gespeicherte",
     module_achievements="erfolg erfolge achievement achievements popup",
-    module_comfort="cursor mauszeiger autorun autowalk automatisch laufen eingabehilfen",
+    module_cursor="cursor mauszeiger ring",
+    module_autowalk="autorun autowalk automatisch laufen",
+    module_shortcuts="tasten keys bindings raidmarker",
+    module_basisHud="run overview uebersicht boss statistik statistics damage meter schaden kills gold xp",
+    module_units="player target spieler ziel buffs debuffs resources ressourcen",
+    module_build="build zauber schmuck spells jewelry",
+    module_action="actionbar aktionsleiste spells cooldown abklingzeit",
+    module_effects="effekte effects timer talent",
+    module_characterWindow="charakter character paperdoll ausruestung equipment",
+    module_worldMap="map weltkarte world map",
+    module_fps="fps bildrate framerate",
+    module_chat="chat copy kopieren",
+    module_tooltip="tooltip",
+    module_history="runs history historie verlauf runden",
     module_summons="beschwoerungen summons pets begleiter daemonen demons hexenmeister warlock treants wolf",
     module_party="party partyfenster gruppe koop coop co-op wiederbelebung revive",
 }
@@ -82,7 +95,7 @@ local function Corpus(entry)
     local function Add(text)
         table.insert(parts,text or ""); table.insert(parts,K.EN[text] or "")
     end
-    Add(entry.label); Add(entry.page.caption); Add(entry.section)
+    Add(entry.label); Add(entry.page.caption); Add(entry.page.description); Add(entry.section)
     table.insert(parts,entry.key or "")
     table.insert(parts,aliases[entry.key] or "")
     if entry.page.key=="attributes" then table.insert(parts,"player spieler character stats charakterwerte") end
@@ -235,3 +248,6 @@ K.OnLang(function()
     if O.searchQuery and O.searchQuery~="" then O.SetSearch(O.searchQuery) else Hint() end
 end)
 Hint()
+
+-- The search bar reduces the viewport; short standalone pages need no scrollbar.
+O.ReflowAll()

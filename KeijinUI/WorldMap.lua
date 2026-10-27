@@ -7,7 +7,7 @@ local M={}
 K.worldMap=M
 local frame,native,panel,drag,close,applied
 local changed={}
-function M.On() return K.DB().smallWorldMap~=false end
+function M.On() return K.ModuleOn("worldMap") and K.DB().smallWorldMap~=false end
 local function BaseScale()
     return math.min(.65,(K.UIWidth()-32)/1024,(K.UIHeight()-32)/768)
 end
@@ -16,6 +16,7 @@ local function NativeClose()
 end
 local function Release()
     if not native then return end
+    K.layout.EndMove("worldmap")
     W.Restore(changed); changed={}
     frame:SetParent(native.parent)
     frame:SetScale(native.scale); frame:SetWidth(native.width); frame:SetHeight(native.height)
@@ -68,6 +69,7 @@ local function Build()
     close:SetWidth(26); close:SetHeight(24); close:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-9,-4)
     K.Text(close,"x",16,"CENTER",0,0)
     close:SetScript("OnClick",NativeClose)
+    panel:Hide(); drag:Hide(); close:Hide()
     K.layout.Register("worldmap",frame,"Weltkarte",function(f)
         f:ClearAllPoints(); f:SetPoint("CENTER",UIParent,"CENTER",0,0)
     end,{inactive=function() return not M.On() end,scale=BaseScale,titleDrag=true,
@@ -84,10 +86,22 @@ function M.Refresh()
     Build()
     if not frame then return end
     if M.On() then
-        if not applied then Apply() end
-    elseif applied then M.Set(false) end
+        if not applied then
+            local shown=frame:IsShown()
+            if shown then NativeClose() end
+            Apply()
+            if shown then if ShowUIPanel then ShowUIPanel(frame) else frame:Show() end end
+        end
+    elseif applied then
+        local shown=frame:IsShown()
+        if shown then NativeClose() end
+        Release()
+        if shown then if ShowUIPanel then ShowUIPanel(frame) else frame:Show() end end
+    end
 end
 K.On("ADDON_LOADED",M.Refresh)
 K.On("PLAYER_ENTERING_WORLD",M.Refresh)
 K.Update("worldmap",M.Refresh)
 M.Refresh()
+
+K.moduleRefresh.worldMap=M.Refresh

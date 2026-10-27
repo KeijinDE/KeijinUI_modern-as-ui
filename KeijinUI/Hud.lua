@@ -1,11 +1,19 @@
 local K = KeijinUI
+local H={ready=false,refresh={}}
+K.basisHud=H
+function H.On() return K.ModuleOn("basisHud") end
+-- Native takeover starts only after saved variables arrive. Geometry may initialize earlier.
+function H.Native(part,replace) if H.ready then K.Native(part,replace) end end
+function H.NativeFollow(part,replace) if H.ready then K.NativeFollow(part,replace) end end
+local function Inactive() return not H.On() end
 local tracker=K.Panel("KeijinUITracker","Runübersicht",K.PANEL_WIDTH,220)
 -- Default: right below the minimap (its size follows the minimap style), else the old absolute place.
 K.layout.Register("tracker",tracker,"Runübersicht",function(f)
     f:ClearAllPoints()
     if MinimapCluster then f:SetPoint("TOPRIGHT",MinimapCluster,"BOTTOMRIGHT",-12,-10)
     else f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",-24,-220) end
-end)
+end,{inactive=Inactive})
+tracker:Hide()
 local zone=K.Text(tracker,"",12,"TOPLEFT",14,-35,270)
 zone:SetTextColor(1,0.82,0.28)
 local time=K.Text(tracker,"",22,"TOPLEFT",14,-55)
@@ -99,12 +107,14 @@ local head14=K.LText(tracker,"Runzeit",9,"TOPRIGHT",-14,-105); head14:SetTextCol
 K.HeaderPoint(head14,tracker,"TOPRIGHT",-14,-105)
 local bosses=K.Panel("KeijinUIBosses","Begegnungen",K.PANEL_WIDTH,40)
 bosses.title:Hide(); bosses.strip:Hide()
-K.layout.Register("bosses",bosses,"Begegnungen",function(f) f:ClearAllPoints(); f:SetPoint("TOP",UIParent,"TOP",0,-14) end,{hidden=true})
+K.layout.Register("bosses",bosses,"Begegnungen",function(f) f:ClearAllPoints(); f:SetPoint("TOP",UIParent,"TOP",0,-14) end,{hidden=true,inactive=Inactive})
+bosses:Hide()
 local bossRows={}
 local bossOffset=0
 bosses:EnableMouseWheel(true)
 bosses:SetScript("OnMouseWheel",function() bossOffset=math.max(0,bossOffset+(arg1>0 and -1 or 1)) end)
 local tally=K.Panel("KeijinUITally","",400,34)
+tally:Hide()
 tally.title:Hide()
 local T={frame=tally}
 K.tally=T
@@ -123,7 +133,7 @@ local function MigrateTally()
     db.tallyBottomAnchor=true
 end
 MigrateTally()
-K.layout.Register("tally",tally,"Kills, Gold, Cache",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",KeijinBuildBarFrame or UIParent,KeijinBuildBarFrame and "TOP" or "BOTTOM",0,KeijinBuildBarFrame and 6 or 102) end,{grow=function() return true end})
+K.layout.Register("tally",tally,"Kills, Gold, Cache",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",KeijinBuildBarFrame or UIParent,KeijinBuildBarFrame and "TOP" or "BOTTOM",0,KeijinBuildBarFrame and 6 or 102) end,{inactive=Inactive,grow=function() return true end})
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then MigrateTally(); K.layout.Place("tally") end end)
 local tallyValues={}
 local tallyIcons={
@@ -227,12 +237,16 @@ xpBar:SetWidth(386); xpBar:SetHeight(16); xpBar:SetPoint("CENTER",xp,"CENTER",0,
 xpBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
 xpBar:SetStatusBarColor(.48,.30,.66); xpBar:SetMinMaxValues(0,1)
 K.MetalBar(xpBar,xpBar)
-local xpRate=K.Text(xpBar,"",10,"CENTER",0,0,378)
+local rateHost=CreateFrame("Frame",nil,xpBar)
+rateHost:SetAllPoints(xpBar)
+local xpRate=K.Text(rateHost,"",10,"CENTER",0,0,378)
 xpRate:SetHeight(14); xpRate:SetJustifyH("CENTER"); xpRate:SetJustifyV("MIDDLE"); xpRate:Hide()
 K.xpDisplay={frame=xp,bar=xpBar,rateLabel=xpRate}
 -- Keep the panel below the default build bar; saved custom positions retain their top anchor.
-K.layout.Register("xp",xp,"Erfahrung",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,8) end)
+K.layout.Register("xp",xp,"Erfahrung",function(f) f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,8) end,{inactive=Inactive})
 xp:Hide()
+local guardianContent=CreateFrame("Frame",nil,tracker)
+guardianContent:SetAllPoints(tracker)
 local level=K.Text(tracker,"",10,"BOTTOMLEFT",14,9,272)
 local function Active(phase) return phase=="ready" or phase=="playing" or phase=="paused" or phase=="choosing" end
 local function ScheduleRow(i)
@@ -369,7 +383,7 @@ end
 local function DrawBosses(phase)
     local replace=Active(phase) and not K.DB().hidden.bosses
     -- Our group replaces the native boss bars as long as it is switched on, data or not; it is merely empty outside fights.
-    K.NativeFollow("bosses",not K.DB().hidden.bosses)
+    H.NativeFollow("bosses",not K.DB().hidden.bosses)
     local list=replace and EngagedList() or {}
     if table.getn(list)==0 then
         for _,row in ipairs(bossRows) do K.encounterDebuffs.Clear(row); row:Hide() end
@@ -416,7 +430,90 @@ local function DrawBosses(phase)
     for i=visible+1,table.getn(bossRows) do K.encounterDebuffs.Clear(bossRows[i]); bossRows[i]:Hide() end
     bosses:SetHeight(top+10); bosses:Show()
 end
+local guardianPanel=K.Panel("KeijinUIGuardianOverview","Wächter",K.PANEL_WIDTH,60)
+guardianPanel:Hide()
+local analysisPanel=K.Panel("KeijinUIAnalysisOverview","Run-Analyse",400,88)
+analysisPanel:Hide()
+local function GuardianInactive() return not H.ready or H.On() or not K.guardians.On() end
+local function AnalysisInactive() return not H.ready or H.On() or not K.ModuleOn("analysis") end
+K.layout.Register("guardianOverview",guardianPanel,"Wächter",function(f)
+    f:ClearAllPoints(); f:SetPoint("TOPRIGHT",UIParent,"TOPRIGHT",-24,-220)
+end,{inactive=GuardianInactive,hidden=true})
+K.layout.Register("analysisOverview",analysisPanel,"Run-Analyse",function(f)
+    f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36)
+end,{inactive=AnalysisInactive,hidden=true})
+local function Support()
+    local on=H.On()
+    if on and not H.supportDetached then return end
+    H.supportDetached=not on
+    if not on and GuardianInactive() and AnalysisInactive() then
+        if not H.supportStopped then
+            guardianPanel:Hide(); analysisPanel:Hide()
+            for _,key in ipairs({"guardianOverview","analysisOverview"}) do
+                local e=K.layout.entries[key]
+                if e.handle then e.handle:Hide() end
+            end
+        end
+        H.supportStopped=true
+        return
+    end
+    H.supportStopped=false
+    guardianContent:SetParent(on and tracker or guardianPanel)
+    guardianContent:ClearAllPoints(); guardianContent:SetAllPoints(on and tracker or guardianPanel)
+    if not GuardianInactive() then
+        local height=K.guardians.Draw(guardianContent,-30)
+        if height>0 then guardianPanel:SetHeight(40+height); guardianPanel:Show() else guardianPanel:Hide() end
+    else guardianPanel:Hide() end
+    -- The rate label remains the same object used by RunInsights.lua.
+    -- Its frame host can move without changing the FontString API.
+    rateHost:SetParent(on and xpBar or analysisPanel)
+    rateHost:ClearAllPoints()
+    if on then
+        rateHost:SetAllPoints(xpBar)
+        paceRow:SetParent(tracker); accountRow:SetParent(tracker)
+        extras:SetParent(tally); extras:ClearAllPoints(); extras:SetPoint("TOPLEFT",tally,"TOPLEFT",6,-33)
+    elseif not AnalysisInactive() then
+        local height=30
+        paceRow:SetParent(analysisPanel); accountRow:SetParent(analysisPanel)
+        paceRow:ClearAllPoints(); paceRow:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
+        if K.pace.On() then
+            local d=K.pace.Details()
+            paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            paceRow.text:SetTextColor(K.pace.Color(d.status)); paceRow:Show(); height=height+18
+        else paceRow:Hide() end
+        accountRow:ClearAllPoints(); accountRow:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
+        if K.pace.AccountOn() then
+            local d=K.pace.Details(true)
+            accountRow.text:SetText(K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            accountRow.text:SetTextColor(K.pace.Color(d.status)); accountRow:Show(); height=height+18
+        else accountRow:Hide() end
+        rateHost:SetWidth(272); rateHost:SetHeight(18); rateHost:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
+        if K.DB().xpRate==true and not K.DB().hidden.xp then height=height+18 end
+        extras:SetParent(analysisPanel); extras:ClearAllPoints(); extras:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",6,-height)
+        T.UpdateExtras()
+        if extras:IsShown() then height=height+24 end
+        analysisPanel:SetHeight(height+10)
+        if height>30 then analysisPanel:Show() else analysisPanel:Hide() end
+    else analysisPanel:Hide() end
+    if on then analysisPanel:Hide() end
+    for _,key in ipairs({"guardianOverview","analysisOverview"}) do
+        local e=K.layout.entries[key]
+        if e.options.inactive() and e.handle then e.handle:Hide() end
+    end
+end
+H.Support=Support
+local function Release()
+    tracker:Hide(); bosses:Hide(); tally:Hide(); xp:Hide()
+    for _,key in ipairs({"tracker","bosses","tally","xp"}) do
+        local e=K.layout.entries[key]
+        if e and e.handle then e.handle:Hide() end
+    end
+    for _,row in ipairs(bossRows) do K.encounterDebuffs.Clear(row); row:Hide() end
+    K.guardians.Hide()
+    for _,part in ipairs({"clock","bosses","tally"}) do K.Native(part,false) end
+end
 local function Update()
+    if Inactive() then Release(); return end
     paceExtra=K.pace.On() and (K.pace.AccountOn() and 36 or 18) or 0
     TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra)
     TrackerPoint(headBoss,"TOPLEFT",14,-105-paceExtra)
@@ -489,13 +586,13 @@ local function Update()
         for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
         DrawMarks(schedule,endless and 0 or count,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
-        local guardians=K.guardians.Draw(tracker,-127-count*18-paceExtra+K.HeaderOffset(tracker))
+        local guardians=K.guardians.Draw(guardianContent,-127-count*18-paceExtra+K.HeaderOffset(tracker))
         tracker:SetHeight(136+count*18+guardians+paceExtra)
         level:SetText("")
-        tracker:Show(); K.Native("clock",true)
+        tracker:Show(); H.Native("clock",true)
     else
         paceRow:Hide()
-        K.NativeFollow("clock",not K.DB().hidden.tracker)
+        H.NativeFollow("clock",not K.DB().hidden.tracker)
         if K.DB().hidden.tracker then tracker:Hide()
         else
             zone:SetText((GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
@@ -528,22 +625,41 @@ local function Update()
         tallyCells[4].detail=K.T("Geöffnete Caches in diesem Run")
         tallyCells[5].tip=string.format("%.0f",missing)
         tallyCells[5].detail=K.T("Fehlendes Gold bis zum nächsten Cache. Grün: bezahlbar, Gelb: höchstens ein Viertel des Preises fehlt, Rot: mehr.")
-        tally:Show(); K.Native("tally",true)
+        tally:Show(); H.Native("tally",true)
     else
-        K.NativeFollow("tally",not K.DB().hidden.tally)
+        H.NativeFollow("tally",not K.DB().hidden.tally)
         if K.DB().hidden.tally then tally:Hide() else for _,value in ipairs(tallyValues) do value:SetText("?") end; tally:Show() end
     end
     if Active(phase) and type(r)=="table" and K.Number(r.xp) and K.Number(r.xpn) and r.xpn>0 and not K.DB().hidden.xp then
         xpBar:SetValue(math.min(1,r.xp/r.xpn)); xp:Show()
     else xpBar:SetValue(0); if K.DB().hidden.xp then xp:Hide() else xp:Show() end end
 end
-table.insert(K.updates,Update)
+K.Update("basisHud",Update)
+table.insert(K.updates,Support)
 local function MoveStock()
     -- The minimap (layout key "minimap") is registered in Minimap.lua.
     -- Automatic spells are represented by the single build bar. The chat window lives in Chat.lua.
     -- The game's action bar is only hidden while our action bar is on (KeijinBuildBar keeps it in step).
-    if MainMenuBar and (not K.buildBar or not K.buildBar.ActionOn or K.buildBar.ActionOn()) then MainMenuBar:SetAlpha(0); MainMenuBar:EnableMouse(false); MainMenuBar:Hide() end
-    if MainMenuExpBar then MainMenuExpBar:Hide() end
+    -- The action bar belongs to build, never to this module.
+    if H.ready and H.On() and MainMenuExpBar then
+        if not H.xpOriginal then
+            local f=MainMenuExpBar
+            local saved={shown=f:IsShown(),show=f:GetScript("OnShow"),active=true}
+            H.xpOriginal=saved
+            saved.hook=function()
+                if saved.show then saved.show() end
+                if saved.active and H.On() then saved.shown=true; f:Hide() end
+            end
+            f:SetScript("OnShow",saved.hook)
+        end
+        MainMenuExpBar:Hide()
+    elseif H.xpOriginal and MainMenuExpBar then
+        local f,saved=MainMenuExpBar,H.xpOriginal
+        saved.active=false
+        if f:GetScript("OnShow")==saved.hook then f:SetScript("OnShow",saved.show) end
+        H.xpOriginal=nil
+        if saved.shown then f:Show() else f:Hide() end
+    end
     if KeijinBuildBarFrame then
         K.layout.Register("build",KeijinBuildBarFrame,"Zauber, Schmuck und Buildtipps",function(f)
             f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,42)
@@ -556,10 +672,18 @@ local function MoveStock()
     end
 end
 K.On("PLAYER_ENTERING_WORLD",function()
+    H.ready=true
     MoveStock()
     for key in pairs(K.layout.entries) do K.layout.Place(key) end
     Update()
 end)
 table.insert(K.updates,MoveStock)
+K.moduleRefresh=K.moduleRefresh or {}
+K.moduleRefresh.basisHud=function()
+    H.ready=true
+    MoveStock(); Update(); Support()
+    for _,refresh in ipairs(H.refresh) do refresh() end
+end
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.moduleRefresh.basisHud() end end)
 MoveStock()
 Update()

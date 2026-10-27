@@ -1,5 +1,6 @@
-KeijinUI = { version = "4.3.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.4.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
+K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
 K.PANEL_WIDTH = 300
 K.font = "Fonts\\FRIZQT__.TTF"
@@ -46,7 +47,7 @@ function K.ClassColor(token)
 end
 -- Modules (OptionalModules.lua). Older module keys that were merged map onto the new key.
 K.moduleAlias = { damageText = "combatText", resourceText = "combatText", guardianNav = "guardians",
-    cursor = "comfort", jewelry = "collection", insights = "analysis" }
+    jewelry = "collection", insights = "analysis" }
 local MODULE_SCHEMA = 340
 -- 3.4.0: modules that were switched off stay off under their new key. Nothing a player stored is removed.
 local function MigrateModules(db)
@@ -59,7 +60,7 @@ local function MigrateModules(db)
     if Off("damageText") then Stop("combatText")
     elseif Off("resourceText") then db.healingText = false; db.incomingText = false end
     if Off("guardianNav") then Stop("guardians") end
-    if Off("cursor") then Stop("comfort") end
+    if Off("cursor") and db.moduleSplitSchema~=440 then Stop("comfort") end
     if Off("insights") then Stop("analysis") end
     if Off("jewelry") and not Off("collection") then db.jewelryCooldowns = false end
     if type(KeijinUIBuildDB) == "table" and KeijinUIBuildDB.advisor == false then Stop("advisor") end
@@ -70,6 +71,14 @@ function K.DB()
     if type(KeijinUIDB) ~= "table" then KeijinUIDB = {} end
     local db = KeijinUIDB
     if db.moduleSchema ~= MODULE_SCHEMA then MigrateModules(db) end
+    if db.moduleSplitSchema ~= 440 then
+        if type(db.modules)=="table" and db.modules.comfort==false then
+            for _,key in ipairs({"cursor","autowalk","shortcuts"}) do
+                if db.modules[key]==nil then db.modules[key]=false end
+            end
+        end
+        db.moduleSplitSchema=440
+    end
     if type(db.layout) ~= "table" then db.layout = {} end
     if type(db.native) ~= "table" then db.native = {} end
     if type(db.hidden) ~= "table" then db.hidden = {} end

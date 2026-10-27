@@ -1,6 +1,8 @@
 local K=KeijinUI
+local function Inactive() return not K.basisHud.On() end
 local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
-K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end)
+K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end,{inactive=Inactive})
+stats:Hide()
 -- Level and experience of the current level only: the game hands out no run total of experience.
 local definitions={
     {"lvl","Level"},{"xp","Erfahrung"},
@@ -14,7 +16,8 @@ for i,v in ipairs(definitions) do local text=v[2]; rows[i]=K.ValueRow(stats,i,19
 -- The panel border closes the list, so the last row needs no line of its own.
 rows[table.getn(rows)].line:Hide()
 local meter=K.Panel("KeijinUIDamage","Schaden",K.PANEL_WIDTH,235)
-K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end)
+K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end,{inactive=Inactive})
+meter:Hide()
 local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,K.PANEL_WIDTH-26)
 local summaryHover=CreateFrame("Frame",nil,meter)
 summaryHover:SetAllPoints(summary); summaryHover:EnableMouse(true)
@@ -173,7 +176,8 @@ reset:SetScript("OnClick",ResetMeter)
 local crit=K.Panel("KeijinUICrits","Größte kritische Treffer",K.PANEL_WIDTH,220)
 K.layout.Register("crits",crit,"Kritische Treffer",function(f)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",meter,"BOTTOMLEFT",0,-10)
-end)
+end,{inactive=Inactive})
+crit:Hide()
 crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
 local critRows,critData={},{}
@@ -209,8 +213,8 @@ K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then ResetRun(true) elseif prefix=="AZSRUN" then awaitingBossRun=false end
 end)
 local combat=CreateFrame("Frame",nil,UIParent)
-for ev in pairs(K.tools.CombatEvents) do combat:RegisterEvent(ev) end
 combat:SetScript("OnEvent",function()
+    if Inactive() or not K.basisHud.ready then return end
     local phase=AZS_GetPhase and AZS_GetPhase()
     if phase~="playing" then return end
     local hit=K.tools.ParseCombatLine(event,arg1)
@@ -348,7 +352,17 @@ local function UpdateParty(sorted,total,rate)
     meter:Show()
 end
 local previousReported
+local function Release()
+    stats:Hide(); meter:Hide(); crit:Hide()
+    for _,key in ipairs({"statistics","meter","crits"}) do
+        local e=K.layout.entries[key]
+        if e and e.handle then e.handle:Hide() end
+    end
+    for ev in pairs(K.tools.CombatEvents) do combat:UnregisterEvent(ev) end
+    K.basisHud.Native("meter",false)
+end
 local function Update()
+    if Inactive() then Release(); return end
     local phase=AZS_GetPhase and AZS_GetPhase()
     local r=AZS_RUN
     local seconds=AZS_GetRunTime and AZS_GetRunTime()
@@ -386,9 +400,6 @@ local function Update()
     end
     AutoSwitch(); PaintTabs()
     local lines=AZS_GetMeter and AZS_GetMeter()
-    if phase=="playing" and K.Number(AZS_RUN_UPDATED) and GetTime()-AZS_RUN_UPDATED>5 then
-        K.liveDPS.Reset()
-    elseif valid and not awaitingBossRun then K.liveDPS.Observe(reported or seconds,lines) end
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
     local bossView=K.MeterView()=="boss"
     local healingView=K.MeterView()=="healing"
@@ -403,11 +414,11 @@ local function Update()
         end
     end
     if healingView and not K.DB().hidden.meter then
-        UpdateHealing(healing,healTotal,healRate,healSupported); K.Native("meter",true)
+        UpdateHealing(healing,healTotal,healRate,healSupported); K.basisHud.Native("meter",true)
     elseif bossView and not K.DB().hidden.meter then
-        UpdateBoss(); K.Native("meter",true)
+        UpdateBoss(); K.basisHud.Native("meter",true)
     elseif partyView and not K.DB().hidden.meter then
-        UpdateParty(party,partyTotal,partyRate); K.Native("meter",true)
+        UpdateParty(party,partyTotal,partyRate); K.basisHud.Native("meter",true)
     elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
         meter:SetHeight(K.MeterMaxHeight())
@@ -440,9 +451,9 @@ local function Update()
         meter.runAverage=duration>0 and total/duration or 0
         local ready=sorted[1] and K.liveDPS.Rate(sorted[1].name)~=nil
         Summary(K.T("%s gesamt · %s DPS",K.Short(total),ready and K.Short(liveTotal) or "?"),total,ready and liveTotal or nil)
-        meter:Show(); K.Native("meter",true)
+        meter:Show(); K.basisHud.Native("meter",true)
     else
-        K.NativeFollow("meter",not K.DB().hidden.meter)
+        K.basisHud.NativeFollow("meter",not K.DB().hidden.meter)
         if K.DB().hidden.meter then meter:Hide()
         else
             for _,row in ipairs(meterRows) do row:Hide() end
@@ -498,6 +509,7 @@ debugFrame:SetScript("OnEvent",function()
     end
 end)
 function K.HealDebug()
+    if Inactive() then return end
     if HealingSupported() then
         local lines,total,hps=ReadHealing(AZS_GetPhase and AZS_GetPhase() and K.Number(AZS_GetRunTime and AZS_GetRunTime()))
         if not lines then K.Say(K.T("Noch keine aktuellen Heilungsdaten")); return end
@@ -518,5 +530,17 @@ end
 table.insert(K.updates,function() if debugUntil and GetTime()>=debugUntil then DebugStop() end end)
 K.ResetMeter=ResetMeter
 K.ResetCrits=function() critData={} end
-table.insert(K.updates,Update)
-Update()
+local function Refresh()
+    if Inactive() then Release(); DebugStop()
+    else
+        if K.basisHud.ready then
+            for ev in pairs(K.tools.CombatEvents) do combat:RegisterEvent(ev) end
+        end
+        Update()
+    end
+end
+table.insert(K.basisHud.refresh,Refresh)
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then Refresh() end end)
+K.On("PLAYER_ENTERING_WORLD",Refresh)
+K.Update("basisHud",Update)
+Refresh()

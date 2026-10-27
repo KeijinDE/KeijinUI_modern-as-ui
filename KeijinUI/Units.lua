@@ -1,9 +1,37 @@
 local K=KeijinUI
 K.units={}
+local ready=false
+local originals={}
+local function Inactive() return not K.ModuleOn("units") end
+function K.UnitsActive() return not Inactive() end
+-- Only take visibility. Alpha, mouse state, anchors and native events stay native.
+-- Remember a native Show while replaced so target changes are released correctly.
+local function TakeStock(f)
+    if not f then return end
+    local s=originals[f]
+    if not s then
+        s={shown=f:IsShown(),show=f:GetScript("OnShow"),active=true}; originals[f]=s
+        s.hook=function()
+            if s.show then s.show() end
+            if s.active and not Inactive() then s.shown=true; f:Hide() end
+        end
+        f:SetScript("OnShow",s.hook)
+    end
+    if f:IsShown() then f:Hide() end
+end
+local function ReleaseStock()
+    for f,s in pairs(originals) do
+        s.active=false
+        if f:GetScript("OnShow")==s.hook then f:SetScript("OnShow",s.show) end
+        if s.shown and (f~=TargetFrame or UnitExists("target")) then f:Show() else f:Hide() end
+    end
+    originals={}
+end
 local function HideStock()
+    if not ready then return end
     for _,key in ipairs({"PlayerFrame","TargetFrame"}) do
         local f=getglobal(key)
-        if f then f:SetAlpha(0); f:EnableMouse(false); if f:IsShown() then f:Hide() end end
+        TakeStock(f)
     end
 end
 -- Debuff icons of one unit, only what UnitDebuff returns (texture, stack count): no durations are
@@ -114,6 +142,7 @@ end
 local function Create(unit,mirror)
     local name=unit=="player" and "KeijinUIPlayer" or "KeijinUITarget"
     local f=CreateFrame("Button",name,UIParent)
+    f:Hide()
     f:SetWidth(FRAME_W); f:SetHeight(FRAME_H); f:SetFrameStrata("LOW")
     f:SetScale(K.CombatScale()); f:EnableMouse(true); f:RegisterForClicks("LeftButtonUp","RightButtonUp")
     -- Everything of the portrait style lives under this container so it can be hidden as a whole.
@@ -193,7 +222,7 @@ local function Create(unit,mirror)
         -- The frame is centred on the skill bar: the bar top moves with the frame height, so shift it back.
         local y=top-(clean and CLEAN_H or FRAME_H)/2
         frame:SetPoint(mirror and "LEFT" or "RIGHT",KeijinUISkills,mirror and "RIGHT" or "LEFT",x,y)
-    end,{scale=K.CombatScale,hidden=mirror,edge=function() return EdgeOffset(unit,CleanStyle()) end})
+    end,{scale=K.CombatScale,hidden=mirror,inactive=Inactive,edge=function() return EdgeOffset(unit,CleanStyle()) end})
     if mirror then
         f.debuffs=K.DebuffRow(f,18,false)
         f.debuffs:SetPoint("TOPLEFT",f,"BOTTOMLEFT",DEBUFF_X,DEBUFF_Y)
@@ -222,10 +251,21 @@ end
 function K.RefreshTargetDebuffs()
     local f=K.units and K.units.target
     if not f or not f.debuffs then return end
+    if Inactive() then K.UpdateDebuffRow(f.debuffs,nil); return end
     if UnitExists("target") and (K.DB().targetDebuffsBoth~=false or not K.targetPlateShown) then K.UpdateDebuffRow(f.debuffs,"target")
     else K.UpdateDebuffRow(f.debuffs,nil) end
 end
 local function Update()
+    if Inactive() then
+        for _,f in pairs(K.units) do
+            if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(f) then GameTooltip:Hide() end
+            f:Hide()
+            local entry=K.layout.entries[f.unit]
+            if entry and entry.handle then entry.handle:Hide() end
+        end
+        ReleaseStock()
+        return
+    end
     HideStock()
     for unit,f in pairs(K.units) do
         ApplyStyle(f,CleanStyle())
@@ -289,9 +329,17 @@ function K.ApplyUnitBackground()
     end
 end
 K.UpdateUnits=function() Update(); K.ApplyUnitBackground() end
-for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update) end
-table.insert(K.updates,Update)
+for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update,"units") end
+K.Update("units",Update)
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
 -- Saved variables arrive after the files: switch to a saved compact style as soon as they exist.
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.UpdateUnits() end end)
+K.moduleRefresh=K.moduleRefresh or {}
+K.moduleRefresh.units=function()
+    ready=true
+    K.UpdateUnits()
+    if K.resources then K.resources.Update() end
+    if K.RefreshAuras then K.RefreshAuras() end
+end
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.moduleRefresh.units() end end)
+K.On("PLAYER_ENTERING_WORLD",function() K.moduleRefresh.units() end)
 Update()

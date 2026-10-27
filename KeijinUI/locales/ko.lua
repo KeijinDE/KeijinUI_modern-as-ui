@@ -2,6 +2,12 @@
 -- Written by check_locales.py write; characters were checked against the font of the language.
 local K=KeijinUI
 local text={
+ ["Opacity"]="불투명도",
+ ["FPS"]="FPS",
+ ["Show frame"]="테두리 표시",
+ ["Font size"]="글꼴 크기",
+ ["Font color"]="글꼴 색상",
+
  ["Strength"]="힘",
  ["Agility"]="민첩성",
  ["Stamina"]="체력",

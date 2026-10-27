@@ -1,6 +1,12 @@
 -- Simplified Chinese UI. German source keys share their English lookup labels.
 local K=KeijinUI
 local text={
+ ["Opacity"]="不透明度",
+ ["FPS"]="FPS",
+ ["Show frame"]="显示边框",
+ ["Font size"]="字体大小",
+ ["Font color"]="字体颜色",
+
  ["Strength"]="力量",
  ["Agility"]="敏捷",
  ["Stamina"]="耐力",

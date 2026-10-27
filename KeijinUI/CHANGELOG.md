@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.3.2 (2026-10-27, release v4.3.2)
+
+* **Customizable FPS counter:** a small movable display uses the client's actual smoothed frame rate and refreshes twice per second. Under Layout & Display, FPS, switch it on or off, show or hide its frame, and choose its own overall opacity and background opacity, font size and text color. The frameless default stays discreet; layout mode saves its position and scale. Missing frame rate data is shown as unknown.
+
 ### 4.3.1 (2026-10-27, release v4.3.1)
 
 * **Map behind settings:** the small world map and its title controls now stay below dialog windows, so map content no longer appears between the settings background and its controls. The native fullscreen map keeps its original drawing order.
@@ -581,6 +585,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.3.2 (2026-10-27, Release v4.3.2)
+
+* **Anpassbare FPS Anzeige:** Kleine verschiebbare Anzeige der tatsächlichen geglätteten Bildrate des Clients, zweimal pro Sekunde aktualisiert. Unter Layout & Anzeige, FPS ein- und ausschaltbar, wahlweise mit Rahmen sowie eigener Gesamtdeckkraft und Hintergrunddeckkraft, Schriftgröße und Schriftfarbe. Standardmäßig dezenter Text ohne Rahmen. Position und Skalierung werden im Layoutmodus gespeichert. Fehlende Bildratendaten werden als unbekannt angezeigt.
 
 ### 4.3.1 (2026-10-27, Release v4.3.1)
 

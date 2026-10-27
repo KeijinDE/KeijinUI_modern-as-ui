@@ -24,6 +24,31 @@ O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
 
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
 
+O.Section(p,"FPS")
+O.Toggle(p,"fps","FPS",K.fps.On,K.fps.Set)
+O.Requires(O.Toggle(p,"fpsFrame","Rahmen anzeigen",K.fps.Framed,K.fps.SetFrame),K.fps.On)
+O.Requires(O.Slider(p,"fpsAlpha","Hintergrund-Deckkraft",K.fps.Alpha,K.fps.SetAlpha,0,100),function() return K.fps.On() and K.fps.Framed() end)
+O.Requires(O.Slider(p,"fpsOpacity","Deckkraft",K.fps.Opacity,K.fps.SetOpacity,0,100),K.fps.On)
+O.Requires(O.Slider(p,"fpsSize","Schriftgröße",K.fps.Size,K.fps.SetSize,75,200),K.fps.On)
+local fpsColor=O.Row(p,"fpsColor","Schriftfarbe",36)
+local fpsSwatch=fpsColor:CreateTexture(nil,"ARTWORK"); fpsSwatch:SetTexture(K.flat)
+fpsSwatch:SetWidth(28); fpsSwatch:SetHeight(20); fpsSwatch:SetPoint("RIGHT",fpsColor,"RIGHT",-90,0)
+K.LText(fpsColor,"Wählen…",10,"RIGHT",-4,0)
+O.Watch(function() fpsSwatch:SetVertexColor(K.fps.Color()) end)
+O.Requires(fpsColor,K.fps.On)
+fpsColor:SetScript("OnClick",function()
+    if not K.fps.On() then return end
+    O.CloseChoice()
+    local picker=ColorPickerFrame
+    if not picker or not picker.SetColorRGB or not picker.GetColorRGB then K.Say(K.T("Farbwahl nicht verfügbar.")); return end
+    picker:Hide()
+    local r,g,b=K.fps.Color()
+    picker.func=function() K.fps.SetColor(picker:GetColorRGB()); O.Refresh() end
+    picker.cancelFunc=function() K.fps.SetColor(r,g,b); O.Refresh() end
+    picker.hasOpacity=false; picker.opacityFunc=nil
+    picker:SetColorRGB(r,g,b); picker:SetFrameStrata("FULLSCREEN_DIALOG"); picker:Show()
+end)
+
 -- Core windows: only show or hide. What a module adds is switched in that module's section further down.
 O.Section(p,"Fenster")
 Hidden(p,"tracker","Runübersicht")

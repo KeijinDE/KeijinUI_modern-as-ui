@@ -1,4 +1,4 @@
-# KeijinUI 4.3.1
+# KeijinUI 4.3.2
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -67,6 +67,7 @@ Section titles sit under Size & Position, character values have their own small 
 * Small world map: keeps the native map controls and normal opening key while the HUD stays visible. Drag its title bar to move it without a modifier. Resize it in layout mode; settings persist. Switch back to fullscreen under Layout & Display, Game windows, or with `/kui map`.
 * Character window: compact paper doll in the addon style, with your selected font and background opacity. Drag its header to move it; themed buttons keep the native actions. Native equipment slots, tooltips and model rotation remain active; the redundant tab row is hidden to keep the window compact. Both window styles can be disabled under Layout & Display, Game windows.
 * Addon shortcuts: assign layout editing and raid marker keys directly in the addon settings, under Input assistance, KeijinUI. Keyboard, mouse buttons and modifier combinations are supported. Conflicts require confirmation; removing your assignment restores its previous action.
+* FPS counter: movable text with an optional frame, independent overall and background opacity, font size and text color. Configure it under Layout & Display, FPS.
 * Layout mode: use `/kui edit`, assign Edit layout directly under Layout & Display in the addon settings, or hold the selected layout modifier (Alt by default; Ctrl, Shift or No hold key are available). Drag labeled frames with the left mouse button and use the mouse wheel to resize them (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
 * Position, size and options are saved immediately.
 
@@ -288,7 +289,7 @@ Der Modus Am Gegner behält Dauer, Bewegung und Stapelverhalten, auch wenn ohne 
 
 ## Gleiche Fensterbreite
 
-All movable KeijinUI HUD housings share a 300-point base width. This includes the minimap, overview, encounters, statistics, damage/healing, critical hits, attributes, chat, every loot mode, player/target, action/build bars, counters, XP, class resources, stored levels and achievements. Buff and tooltip placement anchors also use 300 points. Actual tooltips size to their contents; larger settings, history, collection and copy dialogs keep their required widths. Personal scale settings stay intact. At the same effective scale the HUD housings have the same visible width; responsive combat scaling can still reduce player/target, action and resource frames on smaller viewports. The selected layout modifier and mouse wheel adjust each HUD frame.
+The main movable KeijinUI HUD housings share a 300-point base width. The compact FPS counter has its own content width. This includes the minimap, overview, encounters, statistics, damage/healing, critical hits, attributes, chat, every loot mode, player/target, action/build bars, counters, XP, class resources, stored levels and achievements. Buff and tooltip placement anchors also use 300 points. Actual tooltips size to their contents; larger settings, history, collection and copy dialogs keep their required widths. Personal scale settings stay intact. At the same effective scale the HUD housings have the same visible width; responsive combat scaling can still reduce player/target, action and resource frames on smaller viewports. The selected layout modifier and mouse wheel adjust each HUD frame.
 
 Alle verschiebbaren KeijinUI HUD Fenster haben 300 Punkte Grundbreite. Das gilt für Minimap, Runübersicht, Begegnungen, Statistik, Schaden/Heilung, Krits, Charakterwerte, Chat, alle Beutemodi, Spieler/Ziel, Aktionsleiste, Zauber/Gegenstände, Zähler, XP, Klassenressourcen, gespeicherte Level und Erfolge. Auch die Platzhalter für Buffs und Tooltips sind 300 Punkte breit. Tooltips selbst passen sich dem Inhalt an; größere Dialoge für Einstellungen, Historie, Sammlung und Chatkopie behalten ihre benötigte Breite. Persönliche Skalierungen bleiben erhalten. Bei gleicher effektiver Skalierung sind die HUD Fenster gleich breit; die automatische Anpassung an kleine Bildschirmflächen kann Spieler/Ziel, Aktionsleiste und Ressourcen weiterhin verkleinern. Die gewählte Layouttaste und das Mausrad passen die einzelnen HUD Fenster an.
 

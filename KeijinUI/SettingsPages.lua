@@ -9,7 +9,10 @@ local p=O.Page("display","Layout & Anzeige","Alle Anzeigen, Positionen und Grö�
 O.Section(p,"Größe & Position")
 O.Choice(p,"layoutModifier","Layouttaste",K.layout.Modifier,K.layout.SetModifier,{{"alt","Alt"},{"ctrl","Ctrl"},{"shift","Shift"},{"none","Keine Haltefunktion"}})
 O.Help(p,"Im Layoutmodus ziehen und mit dem Mausrad skalieren. /kui edit oder Layout bearbeiten schaltet den Modus um.")
-O.Help(p,"Eine Umschalttaste kannst du in den Tastenbelegungen des Spiels unter KeijinUI zuweisen. Keine Haltefunktion lässt Alt für Push to Talk frei.")
+local layoutKey=O.Row(p,"layoutKey","Layout bearbeiten")
+layoutKey.value=K.Text(layoutKey,"",11,"RIGHT",-4,0)
+O.Watch(function() layoutKey.value:SetText(K.shortcuts.Label("KEIJINUI_LAYOUT")) end)
+O.Pair(p,"Taste zuweisen",function() K.shortcuts.Capture("KEIJINUI_LAYOUT") end,"Eigene Belegung entfernen",function() K.shortcuts.Clear("KEIJINUI_LAYOUT") end)
 O.Slider(p,"optionsScale","Menügröße",O.MenuScale,O.SetMenuScale,70,100)
 O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
 O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
@@ -211,6 +214,15 @@ O.Watch(function() walk.value:SetText(K.autoWalk.Label()) end)
 O.Pair(p,"Taste zuweisen",function() K.autoWalk.Capture() end,"Eigene Belegung entfernen",K.autoWalk.Clear)
 O.Help(p,"Belegte Tasten müssen zum Ersetzen zweimal gedrückt werden. Escape bricht ab.")
 K.autoWalk.onChange=O.Refresh
+O.Section(p,"KeijinUI","comfort")
+local shortcutAction="KEIJINUI_LAYOUT"
+O.Choice(p,"shortcutAction","Taste zuweisen",function() return shortcutAction end,function(value) shortcutAction=value end,K.shortcuts.actions)
+local shortcut=O.Row(p,"shortcutKey","Aktuelle Taste")
+shortcut.value=K.Text(shortcut,"",11,"RIGHT",-4,0)
+O.Watch(function() shortcut.value:SetText(K.shortcuts.Label(shortcutAction)) end)
+O.Pair(p,"Taste zuweisen",function() K.shortcuts.Capture(shortcutAction) end,"Eigene Belegung entfernen",function() K.shortcuts.Clear(shortcutAction) end)
+O.Help(p,"Belegte Tasten müssen zum Ersetzen zweimal gedrückt werden. Escape bricht ab.")
+K.shortcuts.onChange=O.Refresh
 
 O.Finish(p)
 

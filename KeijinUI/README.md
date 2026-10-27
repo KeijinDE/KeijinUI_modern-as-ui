@@ -1,4 +1,4 @@
-# KeijinUI 4.3.0
+# KeijinUI 4.3.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -66,7 +66,8 @@ Section titles sit under Size & Position, character values have their own small 
 * Achievement popup (`/kachi`).
 * Small world map: keeps the native map controls and normal opening key while the HUD stays visible. Drag its title bar to move it without a modifier. Resize it in layout mode; settings persist. Switch back to fullscreen under Layout & Display, Game windows, or with `/kui map`.
 * Character window: compact paper doll in the addon style, with your selected font and background opacity. Drag its header to move it; themed buttons keep the native actions. Native equipment slots, tooltips and model rotation remain active; the redundant tab row is hidden to keep the window compact. Both window styles can be disabled under Layout & Display, Game windows.
-* Layout mode: use `/kui edit`, assign Edit layout in the game key bindings under KeijinUI, or hold the selected layout modifier (Alt by default; Ctrl, Shift or No hold key are available). Drag labeled frames with the left mouse button and use the mouse wheel to resize them (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
+* Addon shortcuts: assign layout editing and raid marker keys directly in the addon settings, under Input assistance, KeijinUI. Keyboard, mouse buttons and modifier combinations are supported. Conflicts require confirmation; removing your assignment restores its previous action.
+* Layout mode: use `/kui edit`, assign Edit layout directly under Layout & Display in the addon settings, or hold the selected layout modifier (Alt by default; Ctrl, Shift or No hold key are available). Drag labeled frames with the left mouse button and use the mouse wheel to resize them (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
 * Position, size and options are saved immediately.
 
 ## Installation

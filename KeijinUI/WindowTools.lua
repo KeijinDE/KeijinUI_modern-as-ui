@@ -9,7 +9,9 @@ function W.Points(f)
 end
 function W.Place(f,points)
     f:ClearAllPoints()
-    for _,point in ipairs(points) do f:SetPoint(unpack(point)) end
+    -- GetPoint may return nil as its relative frame. Preserve all five slots:
+    -- Lua 5.0 unpack can stop at that hole and pass an invalid SetPoint call.
+    for _,point in ipairs(points) do f:SetPoint(point[1],point[2],point[3],point[4],point[5]) end
 end
 function W.Remember(list,f)
     if not f or list[f] then return end

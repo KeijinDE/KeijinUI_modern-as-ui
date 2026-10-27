@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.3.1 (2026-10-27, release v4.3.1)
+
+* **Map behind settings:** the small world map and its title controls now stay below dialog windows, so map content no longer appears between the settings background and its controls. The native fullscreen map keeps its original drawing order.
+* **Fullscreen map fix:** disabling the small world map no longer loses anchor arguments when the native map is anchored to the screen. This fixes the SetPoint error while restoring fullscreen.
+* **Assign addon keys in settings:** assign a layout toggle directly under Layout & Display. Under Input assistance, KeijinUI, choose layout editing or any raid marker action and assign a keyboard key, mouse button, wheel or modifier combination. Existing assignments require confirmation before replacement. Removing your assignment restores its previous action. The game's key binding menu is no longer needed for configuration.
+
 ### 4.3.0 (2026-10-27, release v4.3.0)
 
 * **Layout controls:** choose Alt, Ctrl, Shift or no hold key under Layout & Display. A separate Edit layout action can be assigned in the game's key bindings under KeijinUI. With No hold key, Alt does not activate frame handles, placeholders or the grid. Existing bindings are left alone.
@@ -575,6 +581,12 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.3.1 (2026-10-27, Release v4.3.1)
+
+* **Karte hinter den Einstellungen:** Die kleine Weltkarte und ihre Titelbedienung liegen unter Dialogfenstern. Karteninhalte erscheinen dadurch nicht mehr zwischen dem Hintergrund und den Bedienelementen der Einstellungen. Die native Vollbildkarte behält ihre ursprüngliche Darstellungsebene.
+* **Vollbildkarte korrigiert:** Beim Ausschalten der kleinen Weltkarte bleiben alle Ankerargumente erhalten, auch bei einem nativen Bildschirmanker. Damit wird der SetPoint Fehler beim Wiederherstellen der Vollbildansicht behoben.
+* **Addontasten in den Einstellungen zuweisen:** Die Layoutumschaltung lässt sich direkt unter Layout & Anzeige belegen. Unter Eingabehilfen, KeijinUI stehen außerdem die Layoutumschaltung und alle Raidmarkeraktionen zur Auswahl. Tastatur, Maustasten, Mausrad und Tastenkombinationen sind möglich. Bestehende Belegungen werden erst nach Bestätigung ersetzt. Beim Entfernen der eigenen Belegung wird die vorherige Aktion wiederhergestellt. Das Tastenmenü des Spiels wird für die Einrichtung nicht mehr benötigt.
 
 ### 4.3.0 (2026-10-27, Release v4.3.0)
 

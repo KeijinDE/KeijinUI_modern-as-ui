@@ -29,7 +29,8 @@ local function Apply()
     -- The native OnShow calls SetupFullscreenScale every time: apply AFTER it.
     frame:SetParent(UIParent)
     frame:ClearAllPoints(); frame:SetWidth(1024); frame:SetHeight(768)
-    frame:SetFrameStrata("DIALOG")
+    -- Above the HUD, below settings/dialogs, independent of frame levels.
+    frame:SetFrameStrata("HIGH")
     if UIPanelWindows then UIPanelWindows.WorldMapFrame=nil end
     W.Art(changed,frame,"interface\\worldmap\\ui-worldmap-")
     for _,region in ipairs({frame:GetRegions()}) do
@@ -57,13 +58,13 @@ local function Build()
     if shown and M.On() then NativeClose() end
     panel=K.Panel("KeijinUIWorldMap","Weltkarte",1024,768)
     panel:SetParent(frame); panel:SetAllPoints(frame); panel:SetFrameLevel(frame:GetFrameLevel())
-    panel:SetFrameStrata("DIALOG")
+    panel:SetFrameStrata("HIGH")
     drag=CreateFrame("Frame","KeijinUIWorldMapDrag",frame)
-    drag:SetFrameStrata("DIALOG"); drag:SetFrameLevel(frame:GetFrameLevel()+10)
+    drag:SetFrameStrata("HIGH"); drag:SetFrameLevel(frame:GetFrameLevel()+10)
     drag:SetWidth(960); drag:SetHeight(25); drag:SetPoint("TOPLEFT",frame,"TOPLEFT",6,-4)
     W.Drag(drag,"worldmap",frame)
     close=CreateFrame("Button","KeijinUIWorldMapClose",frame)
-    close:SetFrameStrata("DIALOG"); close:SetFrameLevel(frame:GetFrameLevel()+10)
+    close:SetFrameStrata("HIGH"); close:SetFrameLevel(frame:GetFrameLevel()+10)
     close:SetWidth(26); close:SetHeight(24); close:SetPoint("TOPRIGHT",frame,"TOPRIGHT",-9,-4)
     K.Text(close,"x",16,"CENTER",0,0)
     close:SetScript("OnClick",NativeClose)

@@ -210,7 +210,7 @@ local function ApplyPosition()
     else panel:ClearAllPoints(); panel:SetPoint("BOTTOM",UIParent,"BOTTOM",0,42) end
 end
 local function DragStart()
-	if IsAltKeyDown() then
+	if KeijinUI.layout.Active() then
 		if hovered then GameTooltip:Hide(); hovered = nil end
 		KeijinUI.layout.BeginMove("build")
 	end
@@ -485,7 +485,7 @@ local function Tooltip(cell)
 		end
 		if row.recommended then GameTooltip:AddLine(T("Buildtipp")..": "..row.adviceHeading, 1, 0.82, 0, true) end
 	end
-	GameTooltip:AddLine(T("Alt gedrückt halten und ziehen zum Verschieben."), 0.6, 0.6, 0.62)
+	GameTooltip:AddLine(T("Layout bearbeiten").." (/kui edit)", 0.6, 0.6, 0.62)
 	GameTooltip:Show()
 end
 local function Cell(pool, index)
@@ -730,7 +730,7 @@ local effectCount, effectShown = 0, 0
 -- Alt held or the layout editor open: the empty bar shows two blank cells so it can be placed and scaled before a run.
 local EFFECT_PLACEHOLDER = 2
 local function Arranging()
-	return (IsAltKeyDown and IsAltKeyDown()) or (KeijinUI.layout.IsEditing and KeijinUI.layout.IsEditing()) and true or false
+	return KeijinUI.layout.Active()
 end
 local function PaintEffects(timers)
 	effectCount = table.getn(timers)
@@ -897,9 +897,9 @@ SlashCmdList["KEIJINBUILDBAR"] = function(msg)
 	elseif command == "reset" then
 		Settings().position = nil; KeijinUI.DB().layout.build=nil; KeijinUI.layout.ResetKey("skills"); KeijinUI.layout.ResetKey("effects")
 		ApplyPosition()
-		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Position zurückgesetzt. Alt halten und ziehen zum Verschieben."))
+		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("Layout bearbeiten").." (/kui edit)")
 	else
-		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: "..T("/kbb, /kbb reset, /kbb tipps; /kbb fokus schaden|boss|ueberleben|ausgewogen (englisch: tips, focus damage|boss|survival|balanced). Alt halten und ziehen zum Verschieben."))
+		DEFAULT_CHAT_FRAME:AddMessage("KeijinBuildBar: ".."/kbb, /kbb reset, /kbb tips; /kbb focus damage|boss|survival|balanced. /kui edit")
 	end
 end
 local watcher = CreateFrame("Frame")

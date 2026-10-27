@@ -57,7 +57,7 @@ K.layout.Register("resources",frame,"Klassenressourcen",Anchor,
 local playerEntry=K.layout.entries.player
 playerEntry.options.bottom=function()
     -- Gap below the health bar plus the frame height; the bar ends at the player frame's bottom edge.
-    if Attached() and (frame:IsShown() or IsAltKeyDown() or K.layout.IsEditing()) then return GAP+frame:GetHeight() end
+    if Attached() and (frame:IsShown() or K.layout.Active()) then return GAP+frame:GetHeight() end
     return 0
 end
 local function Clear(reason)

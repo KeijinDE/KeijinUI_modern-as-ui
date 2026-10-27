@@ -242,6 +242,7 @@ end
 -- Key bindings (Bindings.xml): names are set as globals, in the current language.
 local function BindingNames()
     setglobal("BINDING_HEADER_KEIJINUI","KeijinUI")
+    setglobal("BINDING_NAME_KEIJINUI_LAYOUT",K.T("Layout bearbeiten"))
     for i=1,8 do setglobal("BINDING_NAME_KEIJINUI_MARK"..i,K.T("Raidmarker")..": "..K.T(NAMES[i])) end
     setglobal("BINDING_NAME_KEIJINUI_MARK0",K.T("Raidmarker")..": "..K.T("Entfernen"))
 end

@@ -26,4 +26,7 @@
 	<Binding name="KEIJINUI_MARK0">
 		KeijinUI.marks.Set("target", 0);
 	</Binding>
+	<Binding name="KEIJINUI_LAYOUT">
+		KeijinUI.layout.Toggle();
+	</Binding>
 </Bindings>

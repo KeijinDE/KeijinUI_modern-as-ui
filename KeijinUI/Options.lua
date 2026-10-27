@@ -51,6 +51,7 @@ SlashCmdList.KEIJINUI=function(message)
     local command=string.lower(string.gsub(message or "","^%s*(.-)%s*$","%1"))
     if command=="" then if panel:IsShown() then panel:Hide() else panel:Show() end
     elseif command=="edit" then K.layout.Toggle()
+    elseif command=="map" then K.worldMap.Set(not K.worldMap.On()); RefreshAll()
     elseif command=="reset" then K.layout.Reset()
     elseif command=="grid" then K.layout.ToggleGrid()
     elseif command=="grid debug" then K.layout.GridDebug()

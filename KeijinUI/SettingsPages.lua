@@ -7,7 +7,9 @@ local function Hidden(page,key,label)
 end
 local p=O.Page("display","Layout & Anzeige","Alle Anzeigen, Positionen und Größen an einem Ort.")
 O.Section(p,"Größe & Position")
-O.Help(p,"Alt halten: Rahmen anzeigen und verschieben.\nAlt + Mausrad: Größe ändern.\nShift beim Loslassen: ohne Einrasten.")
+O.Choice(p,"layoutModifier","Layouttaste",K.layout.Modifier,K.layout.SetModifier,{{"alt","Alt"},{"ctrl","Ctrl"},{"shift","Shift"},{"none","Keine Haltefunktion"}})
+O.Help(p,"Im Layoutmodus ziehen und mit dem Mausrad skalieren. /kui edit oder Layout bearbeiten schaltet den Modus um.")
+O.Help(p,"Eine Umschalttaste kannst du in den Tastenbelegungen des Spiels unter KeijinUI zuweisen. Keine Haltefunktion lässt Alt für Push to Talk frei.")
 O.Slider(p,"optionsScale","Menügröße",O.MenuScale,O.SetMenuScale,70,100)
 O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
 O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
@@ -15,6 +17,7 @@ O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAl
 O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
 O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then K.layout.ToggleGrid() end end)
 O.Help(p,"Layout bearbeiten öffnet den Bearbeitungsmodus. Änderungen werden gespeichert.")
+O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
 
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
 
@@ -57,7 +60,8 @@ O.Button(p,"Werte wählen…",376,attributesY-1,140,function() O.ShowPage("attri
 O.Help(p,"Krit, Tempo, Lebensraub und weitere Werte")
 
 O.Section(p,"Beschwörungen","summons")
-O.Help(p,"Symbol je Beschwörung mit Anzahl (ab 2) und Restzeit. Alt halten zum Verschieben, Alt + Mausrad ändert die Größe.")
+O.Help(p,"Symbol je Beschwörung mit Anzahl (ab 2) und Restzeit.")
+O.Help(p,"Position und Größe im Layoutmodus ändern.")
 
 O.Section(p,"Beute","loot")
 O.Choice(p,"lootMode","Beuteanzeige",K.loot.Mode,K.loot.SetMode,{{"notice","Meldung"},{"list","Liste"},{"small","Liste klein"},{"icons","Nur Symbole"}})
@@ -85,6 +89,12 @@ zone.value=K.Text(zone,"",11,"RIGHT",-108,0)
 O.Button(zone,"−",420,-2,40,function() K.SetClockOffset(K.ClockOffset()-1) end)
 O.Button(zone,"+",468,-2,40,function() K.SetClockOffset(K.ClockOffset()+1) end)
 O.Watch(function() zone.value:SetText(K.ClockOffsetText()) end)
+
+O.Section(p,"Spielfenster")
+O.Toggle(p,"smallWorldMap","Kleine Weltkarte",K.worldMap.On,K.worldMap.Set)
+O.Help(p,"Die Weltkarte bleibt über ihre normale Taste erreichbar. Position und Größe im Layoutmodus ändern. Aus: native Vollbildkarte.")
+O.Toggle(p,"characterWindowStyle","Charakterfenster im KeijinUI Stil",K.characterWindow.On,K.characterWindow.Set)
+O.Help(p,"Kompakte Ausrüstung und Runwerte mit der gewählten Schrift und Hintergrunddeckkraft. Aus: Originaldarstellung.")
 
 O.Section(p,"Caches","caches")
 for _,entry in ipairs({{"icons","Cache Symbole"},{"edge","Cache Randpfeil"},{"arrow","Cache Bildschirmpfeil"},{"msg","Cache Meldung"}}) do
@@ -114,7 +124,8 @@ O.Toggle(p,"xpRate","XP Rate und Levelschätzung",function() return K.DB().xpRat
 O.Help(p,"Benötigt mindestens drei XP Zuwächse und zehn Spielsekunden. Bei Messlücken erscheint ein Fragezeichen.")
 
 O.Section(p,"Partyfenster","party")
-O.Help(p,"Zeigt bis zu 4 Mitstreiter mit Leben, Status und Wiederbelebung. Alt halten zum Verschieben, Alt + Mausrad ändert die Größe.")
+O.Help(p,"Zeigt bis zu 4 Mitstreiter mit Leben, Status und Wiederbelebung.")
+O.Help(p,"Position und Größe im Layoutmodus ändern.")
 
 O.Section(p,"Zurücksetzen")
 O.Pair(p,"Layout zurücksetzen",K.layout.Reset,"Tooltip zurücksetzen",K.ResetTooltip)
@@ -136,7 +147,7 @@ local function PositionHelp()
     local mode=K.CombatTextMode()
     if mode=="native" then return K.T("Im Stil Spiel zeichnet das Spiel die Zahlen selbst. Ihre Position lässt sich nicht verschieben; für Feste Stelle Kompakt, Scrollend oder Aufsteigend wählen.") end
     if mode=="off" then return K.T("Schadenszahlen sind aus.") end
-    return K.T("Am Gegner: Zahlen steigen über der Namensplakette. Feste Stelle: alle Zahlen starten im Kampftext Anker. Alt halten, um den Anker zu verschieben, Alt und Mausrad ändert die Größe.")
+    return K.T("Am Gegner: Zahlen steigen über der Namensplakette. Feste Stelle: alle Zahlen starten im Kampftext Anker.").." "..K.T("Position und Größe im Layoutmodus ändern.")
 end
 local positionHelp=O.Help(p,"")
 K.Live(positionHelp,PositionHelp)

@@ -273,7 +273,7 @@ local function Update()
             -- No target: the whole frame is gone. Alt or layout editing keeps an invisible,
             -- movable frame so the position can still be set.
             if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(f) then GameTooltip:Hide() end
-            if IsAltKeyDown() or (K.layout.IsEditing and K.layout.IsEditing()) then f:SetAlpha(0); f:Show()
+            if K.layout.Active() then f:SetAlpha(0); f:Show()
             else f:SetAlpha(1); f:Hide() end
         else f:SetAlpha(1); f:Show() end
         if unit=="target" and not UnitExists(unit) then K.combatDetails.Execute(f,f.bar,nil,true) end

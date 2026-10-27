@@ -1,7 +1,27 @@
 local K=KeijinUI
 K.layout={entries={}}
 local L=K.layout
-local editing,active,lastWidth,lastHeight
+local editing,active,lastWidth,lastHeight,directMove
+function L.Modifier()
+    local key=K.DB().layoutModifier
+    if key=="ctrl" or key=="shift" or key=="none" then return key end
+    return "alt"
+end
+function L.ModifierDown()
+    local key=L.Modifier()
+    if key=="alt" then return IsAltKeyDown and IsAltKeyDown() or false end
+    if key=="ctrl" then return IsControlKeyDown and IsControlKeyDown() or false end
+    if key=="shift" then return IsShiftKeyDown and IsShiftKeyDown() or false end
+    return false
+end
+function L.Active() return editing or L.ModifierDown() end
+function L.SetModifier(key)
+    if key~="alt" and key~="ctrl" and key~="shift" and key~="none" then return end
+    -- End a drag using the old modifier before changing its meaning.
+    if active then L.EndMove(active.key) end
+    K.DB().layoutModifier=key
+    L.Update()
+end
 local function Scale(f) return f:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
 -- A frame handed back to the game (module off) keeps the game's own place and scale.
@@ -53,10 +73,11 @@ local function Clamp(entry)
     local ratio=Scale(f)/Scale(UIParent)
     if entry.options.follow and entry.options.follow() then return end
     local extra=entry.options.bottom and entry.options.bottom() or 0
-    local width,height=f:GetWidth()*ratio,(f:GetHeight()+extra)*ratio
+    local right=entry.options.right and entry.options.right() or 0
+    local width,height=(f:GetWidth()+right)*ratio,(f:GetHeight()+extra)*ratio
     if width>w-16 or height>h-16 then
         f:SetScale(f:GetScale()*math.min((w-16)/width,(h-16)/height))
-        ratio=Scale(f)/Scale(UIParent); width,height=f:GetWidth()*ratio,(f:GetHeight()+extra)*ratio
+        ratio=Scale(f)/Scale(UIParent); width,height=(f:GetWidth()+right)*ratio,(f:GetHeight()+extra)*ratio
     end
     local x,y=f:GetLeft(),f:GetBottom()
     if not Finite(x) or not Finite(y) then return end
@@ -108,6 +129,10 @@ L.defaults={
     tracker={scale=0.9},
 }
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
+local function LimitScale(entry,value)
+    local maximum=entry.options.maxScale and entry.options.maxScale() or 1.8
+    return math.max(0.5,math.min(1.8,maximum,value))
+end
 local function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
     if Off(entry) then
@@ -123,7 +148,7 @@ local function Apply(entry)
     local saved=Valid(p)
     if not saved then p=L.defaults and L.defaults[entry.key] end
     if Valid(p) then
-        f:SetScale(entry.baseScale*math.max(0.5,math.min(1.8,p.scale)))
+        f:SetScale(entry.baseScale*LimitScale(entry,p.scale))
         local ratio=Scale(UIParent)/Scale(f)
         local ox,oy=0,0
         if entry.options.edge then ox,oy=entry.options.edge() end
@@ -219,17 +244,21 @@ local function Snap(entry)
 end
 local function Stop()
     if not active then return end
-    active.frame:StopMovingOrSizing(); Snap(active); Save(active); active=nil
+    active.frame:StopMovingOrSizing()
+    if not directMove then Snap(active) end
+    Save(active); active=nil; directMove=nil
     if L.SyncFollowers then L.SyncFollowers() end
 end
 -- Both the layout handle and a panel's own drag regions use this lifecycle.
-function L.BeginMove(key)
+function L.BeginMove(key,fromTitle)
     local e=L.entries[key]
-    if not e or Off(e) or (not editing and not IsAltKeyDown()) then return end
+    local direct=e and fromTitle and e.options.titleDrag
+    if not e or Off(e) or (not direct and not L.Active()) then return end
     if e.options.locked and e.options.locked() then return end
+    if active==e then return end
     if active and active~=e then Stop() end
     if e.options.beforeMove then e.options.beforeMove() end
-    Detach(e); active=e; e.frame:StartMoving()
+    Detach(e); active=e; directMove=direct; e.frame:StartMoving()
 end
 function L.EndMove(key)
     if active and active.key==key then Stop() end
@@ -300,7 +329,7 @@ function L.Register(key,frame,name,anchor,options)
         if e.options.locked and e.options.locked() then return end
         if e.options.beforeMove then e.options.beforeMove() end
         local scale=frame:GetScale()/e.baseScale
-        frame:SetScale(e.baseScale*math.max(0.5,math.min(1.8,scale+(arg1>0 and 0.05 or -0.05))))
+        frame:SetScale(e.baseScale*LimitScale(e,scale+(arg1>0 and 0.05 or -0.05)))
         Save(e)
         if L.SyncFollowers then L.SyncFollowers() end
         -- Open settings show the new size at once (the combat text slider).
@@ -331,7 +360,7 @@ function L.IsEditing() return editing end
 function L.SetEditing(on)
     editing=on and true or false
     if editing then hint:Show() else Stop(); hint:Hide() end
-    RefreshGrid(editing or IsAltKeyDown())
+    RefreshGrid(L.Active())
     L.Update()
 end
 function L.Toggle() L.SetEditing(not editing) end
@@ -349,7 +378,7 @@ end
 function L.ToggleGrid()
     K.DB().snap=(K.DB().snap==false)
     K.Say(K.T("Raster und Einrasten")..": "..(K.DB().snap and K.T("An (Shift beim Loslassen: ohne Einrasten)") or K.T("Aus")))
-    RefreshGrid(editing or IsAltKeyDown())
+    RefreshGrid(L.Active())
 end
 function L.ResetKey(key) K.DB().layout[key]=nil; L.Place(key) end
 function L.Reset()
@@ -368,8 +397,8 @@ function L.Update()
         Stop(); for _,e in pairs(L.entries) do Apply(e) end
     end
     lastWidth,lastHeight=w,h
-    local enabled=editing or IsAltKeyDown()
-    if active and not enabled then Stop() end
+    local enabled=L.Active()
+    if active and not enabled and not directMove then Stop() end
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
         if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end

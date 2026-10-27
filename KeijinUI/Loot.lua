@@ -386,7 +386,7 @@ local function CheckRun()
     if reported then previousReported=reported end
 end
 local function RenderList(mode)
-    local arranging=(IsAltKeyDown and IsAltKeyDown()) or (K.layout.IsEditing and K.layout.IsEditing())
+    local arranging=K.layout.Active()
     if not (Enabled() or arranging) then notice:Hide(); return end
     local list=Visible()
     local n=table.getn(list)

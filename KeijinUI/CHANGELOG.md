@@ -5,6 +5,13 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.3.0 (2026-10-27, release v4.3.0)
+
+* **Layout controls:** choose Alt, Ctrl, Shift or no hold key under Layout & Display. A separate Edit layout action can be assigned in the game's key bindings under KeijinUI. With No hold key, Alt does not activate frame handles, placeholders or the grid. Existing bindings are left alone.
+* **Small world map:** the native map opens as a smaller window while the rest of the UI stays visible. Its normal opening key, zone selection, map clicks, markers and player position remain native. Drag its title bar directly to move it without a modifier; resize it in layout mode. Position and size are saved and scaling stays within the screen. Disable Small world map to restore fullscreen, or use /kui map to switch.
+* **Character window:** a compact KeijinUI paper doll with closer equipment columns, a smaller model area, aligned weapon slots and matching KeijinUI buttons for rotation and closing. Drag the header directly to move the window; its position is saved. It uses your selected font and background opacity. Native equipment clicks, tooltips and model rotation remain available. The redundant tab row is hidden. Stat rows use aligned columns with inner padding and a clear gap above the weapon slots. Run stats are styled even when the game creates them later. Disable the character window option to restore its original appearance.
+* **Native text fallback:** character names and labels are checked against the actual font glyphs. Text in another script uses a suitable fallback instead of losing characters. Character level, race, class and stat labels follow the selected addon language, including the native attributes shown before run stats arrive.
+
 ### 4.2.2 (2026-10-26, release v4.2.2)
 
 * **Inspect party members:** the right click menu on a party row or on a friendly player as target now has an Inspect row below the marker buttons. It opens the game's own inspect window, like the right click menu of the standard interface. The row is greyed out while the player is farther away than the game allows (about 10 yards); clicking it then says so in the chat. Your own frame and enemies show no Inspect row.
@@ -568,6 +575,13 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.3.0 (2026-10-27, Release v4.3.0)
+
+* **Layoutbedienung:** Unter Layout & Anzeige stehen Alt, Ctrl, Shift oder keine Haltefunktion zur Wahl. In den Tastenbelegungen des Spiels unter KeijinUI lässt sich außerdem Layout bearbeiten auf eine eigene Taste legen. Ohne Haltefunktion aktiviert Alt weder Verschiebeflächen noch Platzhalter oder Raster. Bestehende Tastenbelegungen bleiben erhalten.
+* **Kleine Weltkarte:** Die native Karte öffnet sich als kleineres Fenster, während die übrige UI sichtbar bleibt. Öffnungstaste, Zonenwahl, Kartenklicks, Marker und Spielerposition bleiben beim Spiel. Die Titelzeile lässt sich ohne Zusatztaste ziehen; die Größe änderst du im Layoutmodus. Position und Größe werden gespeichert. Die Skalierung bleibt innerhalb des Bildschirms. Kleine Weltkarte ausschalten stellt Vollbild wieder her; /kui map schaltet ebenfalls um.
+* **Charakterfenster:** Kompakte Ausrüstung im KeijinUI Stil mit engeren Spalten, kleinerem Modellbereich, ausgerichteten Waffenplätzen und passenden KeijinUI Buttons für Modelldrehung und Schließen. Direkt an der Titelzeile verschiebbar, mit gespeicherter Position. Gewählte Schrift und Hintergrunddeckkraft werden übernommen. Native Ausrüstungsklicks, Tooltips und Modelldrehung bleiben verfügbar. Die überflüssige Registerleiste entfällt. Werte stehen in ausgerichteten Spalten mit Innenabstand und Abstand zu den Waffenplätzen. Zusätzliche Runwerte erhalten den Stil auch bei später Erstellung. Die Charakterfensteroption stellt auf Wunsch die Originaldarstellung wieder her.
+* **Ersatzschrift für native Texte:** Spielernamen und Beschriftungen werden anhand der tatsächlichen Schriftzeichen geprüft. Texte in einer anderen Schrift erhalten eine passende Ersatzschrift. Charakterstufe, Volk, Klasse und Wertebeschriftungen folgen der Addonsprache, auch vor dem Eintreffen der Runwerte.
 
 ### 4.2.2 (2026-10-26, Release v4.2.2)
 

@@ -1,4 +1,4 @@
-# KeijinUI 4.4.0
+# KeijinUI 4.4.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -74,6 +74,7 @@ Section titles sit under Size & Position, character values have their own small 
 * Character window: compact paper doll in the addon style, with your selected font and background opacity. Drag its header to move it; themed buttons keep the native actions. Native equipment slots, tooltips and model rotation remain active; the redundant tab row is hidden to keep the window compact. Both window styles can be disabled under Interface, Game windows.
 * Addon shortcuts: assign layout editing and raid marker keys directly in the addon settings, under Input assistance, Key bindings. Keyboard, mouse buttons and modifier combinations are supported. Conflicts require confirmation; removing your assignment restores its previous action.
 * FPS counter: movable text with an optional frame, independent overall and background opacity, font size and text color. Configure it under Interface, FPS.
+* Background and border: under Interface, Appearance, switch off the background and border of single HUD windows such as encounters, action bar, effects, the spells and jewelry panel, kills and gold or XP. Bars, icons and text stay visible.
 * Layout mode: use `/kui edit`, assign Edit layout directly under Layout, Size & Position in the addon settings, or hold the selected layout modifier (Alt by default; Ctrl, Shift or No hold key are available). Drag labeled frames with the left mouse button and use the mouse wheel to resize them (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
 * Position, size and options are saved immediately.
 
@@ -203,6 +204,7 @@ Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eige
 * Erfolgsmeldung (`/kachi`).
 * Layoutmodus: Alt halten zeigt beschriftete Rahmen, mit der linken Maustaste verschieben, Alt und Mausrad ändern die Größe (50 bis 180 Prozent). Raster und Einrasten helfen beim Ausrichten (Shift beim Loslassen schaltet das Einrasten aus). Rahmen bleiben im Bild.
 * Positionen, Größen und Optionen werden sofort gespeichert.
+* Hintergrund und Rahmen: Unter Oberfläche, Darstellung lassen sich Hintergrund und Rahmen einzelner HUD Fenster abschalten, etwa Begegnungen, Aktionsleiste, Effekte, Zauber und Schmuck, Kills und Gold oder Erfahrung. Balken, Symbole und Text bleiben sichtbar.
 
 ## Installation
 

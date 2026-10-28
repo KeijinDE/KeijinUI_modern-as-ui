@@ -2,6 +2,9 @@
 -- Written by check_locales.py write; characters were checked against the font of the language.
 local K=KeijinUI
 local text={
+ ["Background and border"]="背景と枠",
+ ["Off: the window shows only its content, without background or border."]="オフ：ウィンドウは背景と枠なしで内容だけを表示します。",
+
  ["\nAdditional effect"]="\\n追加効果",
  ["\nNo observed hits since the UI loaded."]="\\nUI読み込み後の命中はまだ観測されていません。",
  ["\nNormal hits: %s · average %s · min %s · max %s"]="\\n通常ヒット：%s · 平均 %s · 最小 %s · 最大 %s",

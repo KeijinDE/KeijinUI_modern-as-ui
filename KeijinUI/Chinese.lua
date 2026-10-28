@@ -1,6 +1,9 @@
 -- Simplified Chinese UI. German source keys share their English lookup labels.
 local K=KeijinUI
 local text={
+ ["Background and border"]="背景和边框",
+ ["Off: the window shows only its content, without background or border."]="关闭时窗口只显示内容，不显示背景和边框。",
+
  ["Reset settings"]="重置设置",
  ["Restore backup"]="恢复备份",
  ["Reset all addon settings?"]="重置所有插件设置？",

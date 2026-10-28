@@ -49,6 +49,15 @@ O.Section(p,"Darstellung")
 O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
 O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
+O.Section(p,"Hintergrund und Rahmen")
+O.Help(p,"Aus: Das Fenster zeigt nur seinen Inhalt, ohne Hintergrund und Rahmen.")
+for _,w in ipairs({{"bosses","Begegnungen"},{"skills","Aktionsleiste"},{"effects","Effekte"},{"build","Zauber, Schmuck und Buildtipps"},
+    {"tally","Kills und Gold"},{"xp","Erfahrung"},{"tracker","Runübersicht"},{"statistics","Runstatistiken"},
+    {"meter","Schadensanzeige"},{"crits","Kritische Treffer"},{"guardianOverview","Wächter"},{"analysisOverview","Run-Analyse"},
+    {"attributes","Charakterwerte"},{"party","Partyfenster"},{"loot","Beutemeldung"},{"chat","Chat"},{"levels","Gespeicherte Level"}}) do
+    local key=w[1]   -- body local for the closures
+    O.Toggle(p,"framed_"..key,w[2],function() return K.Framed(key) end,function(on) K.SetFramed(key,on) end)
+end
 O.Finish(p)
 
 p=O.Page("general","Sprache","Oberfläche","general")

@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.4.1 (2026-10-28)
+
+* **Background and border per window:** Interface, Appearance has a new Background and border section with one switch per HUD window: encounters, action bar, effects, spells and jewelry, kills and gold, XP, run overview, statistics, damage meter, critical hits, guardians, run analysis, character attributes, party, loot notice, chat and stored levels. Off hides the window's background and border; bars, icons and text stay. All windows keep their frame by default. Hide section titles under Section headers if a frameless window should show no title bar either.
+
 ### 4.4.0 (2026-10-27, release v4.4.0)
 
 * **Empty damage meter fix:** docking now checks default frame anchors as well as saved links. Circular attachments, such as placing the meter above critical hits while critical hits follow the meter, no longer interrupt HUD updates. Existing valid stacks are retained. Layout resets release existing attachments before restoring default anchors.
@@ -596,6 +600,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.4.1 (2026-10-28)
+
+* **Hintergrund und Rahmen je Fenster:** Oberfläche, Darstellung hat einen neuen Abschnitt Hintergrund und Rahmen mit einem Schalter je HUD Fenster: Begegnungen, Aktionsleiste, Effekte, Zauber und Schmuck, Kills und Gold, Erfahrung, Runübersicht, Statistiken, Schadensanzeige, kritische Treffer, Wächter, Run-Analyse, Charakterwerte, Party, Beutemeldung, Chat und gespeicherte Level. Aus blendet Hintergrund und Rahmen des Fensters aus; Balken, Symbole und Text bleiben. Standardmäßig behalten alle Fenster ihren Rahmen. Wer bei rahmenlosen Fenstern auch keine Titelleiste möchte, schaltet die Abschnittstitel aus.
 
 ### 4.4.0 (2026-10-27, Release v4.4.0)
 

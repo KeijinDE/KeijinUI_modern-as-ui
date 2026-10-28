@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.4.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.4.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -268,7 +268,27 @@ function K.ApplyBackground()
             local c=shape.background; frame:SetBackdropColor(c[1],c[2],c[3],a)
         end
     end
+    -- Windows switched to frameless (settings) keep only their content: background and rim pieces are hidden.
+    for key,e in pairs(K.layout and K.layout.entries or {}) do
+        local shape=e.frame.skinTracked and e.frame.chamfer
+        if shape then
+            local framed=K.Framed(key)
+            for _,t in ipairs(shape.back) do if framed then t:Show() else t:Hide() end end
+            for _,t in ipairs(shape.rim) do if framed then t:Show() else t:Hide() end end
+        end
+    end
     if K.ApplyUnitBackground then K.ApplyUnitBackground() end
+end
+-- Background and rim of one layout window (settings). Only the frameless ones are stored.
+function K.Framed(key)
+    local t=K.DB().frameless
+    return not (type(t)=="table" and t[key]==true)
+end
+function K.SetFramed(key,on)
+    local db=K.DB()
+    if type(db.frameless)~="table" then db.frameless={} end
+    db.frameless[key]=not on or nil
+    K.ApplyBackground()
 end
 function K.SetBackgroundAlpha(v)
     v=math.max(0.2,math.min(1,tonumber(v) or K.BG_ALPHA))

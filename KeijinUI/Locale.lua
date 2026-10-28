@@ -877,3 +877,5 @@ K.EN["Vorher wird eine Sicherung angelegt. Die Oberfläche wird anschließend ne
 K.EN["Setzt Anzeige, Module und Layout zurück. Die letzte Sicherung lässt sich hier wiederherstellen."]="Resets display, modules and layout. You can restore the latest backup here."
 K.EN["Wiederherstellen"]="Restore"
 K.EN["Abbrechen"]="Cancel"
+K.EN["Hintergrund und Rahmen"]="Background and border"
+K.EN["Aus: Das Fenster zeigt nur seinen Inhalt, ohne Hintergrund und Rahmen."]="Off: the window shows only its content, without background or border."

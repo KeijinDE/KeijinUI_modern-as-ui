@@ -48,6 +48,41 @@ function N.Arrow(texture,clockwise)
     texture:SetTexCoord(column/8,(column+1)/8,row/4,(row+1)/4)
     return step
 end
+-- Screen compasses share geometry and the same 32 clockwise atlas cells. No rotation API.
+local HEX="Interface\\AddOns\\KeijinUI\\media\\navigation\\"
+local HEXART={Cache={"CacheHex.tga","CacheSymbol.tga"},Guardian={"GuardianHex.tga","GuardianSymbol.tga"}}
+function N.ScreenFresh()
+    -- Paused and choosing runs keep their last position without periodic reports.
+    if not N.Active() or not N.Finite(AZS_RUN_UPDATED) or not K.Fresh(AZS_RUN_UPDATED) then return false end
+    local phase=AZS_GetPhase and AZS_GetPhase() or (type(AZS_RUN)=="table" and AZS_RUN.ph)
+    if phase~="playing" then return true end
+    local age=GetTime()-AZS_RUN_UPDATED
+    return age>=-0.25 and age<=5
+end
+function N.Hex(frame,kind)
+    frame:SetWidth(96); frame:SetHeight(92); frame:SetFrameStrata("LOW"); frame:EnableMouse(false); frame:Hide()
+    frame.rim=frame:CreateTexture(nil,"BACKGROUND")
+    frame.rim:SetTexture(HEX..HEXART[kind][1]); frame.rim:SetWidth(60); frame.rim:SetHeight(60)
+    frame.rim:SetPoint("TOP",frame,"TOP",0,0)
+    frame.tex=frame:CreateTexture(nil,"ARTWORK")
+    frame.tex:SetTexture(HEX.."DirectionAtlas.tga"); frame.tex:SetWidth(60); frame.tex:SetHeight(60)
+    frame.tex:SetPoint("TOP",frame,"TOP",0,0); N.Arrow(frame.tex,0)
+    frame.icon=frame:CreateTexture(nil,"OVERLAY")
+    frame.icon:SetTexture(HEX..HEXART[kind][2]); frame.icon:SetWidth(22); frame.icon:SetHeight(22)
+    frame.icon:SetPoint("TOP",frame,"TOP",0,-19)
+    frame.distance=K.Text(frame,"",12,"TOP",0,-62,96)
+    frame.distance:SetJustifyH("CENTER"); frame.distance:SetHeight(16)
+    frame.price=K.Text(frame,"",9,"TOP",0,-78,96)
+    frame.price:SetJustifyH("CENTER"); frame.price:SetHeight(13)
+    if kind=="Cache" then frame.tex:SetVertexColor(1,.82,.38,1); frame.price:SetTextColor(1,.82,.38)
+    else frame.tex:SetVertexColor(.72,.88,.94,1); frame.price:SetTextColor(.82,.88,.9) end
+end
+function N.HexDirection(frame,east,north,facing,source)
+    local step=N.Arrow(frame.tex,facing-math.atan2(-east,north))
+    -- At the destination there is no meaningful direction, nor without a real heading.
+    if source=="north" or east*east+north*north<=.25 then frame.tex:Hide() else frame.tex:Show() end
+    return step
+end
 -- Minimap is north up. Project an offset in yards to an inset position, clamping outside destinations to its edge.
 -- The geometry is passed in so the per frame glide can read it once for all of its symbols.
 function N.Project(east,north,inset,width,height,diameter,square)

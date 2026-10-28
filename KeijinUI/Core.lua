@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.4.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.5.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -14,7 +14,7 @@ function K.FontSize(size)
 end
 function K.SetFontSize(fs, size, flags)
     K.fontBase[fs] = size
-    fs:SetFont(K.fontOverrides[fs] or K.font, K.fontOverrides[fs] and size or K.FontSize(size), flags or "OUTLINE")
+    fs:SetFont(K.fontOverrides[fs] or K.font, K.fontOverrides[fs] and size or K.FontSize(K.PanelFontSize and K.PanelFontSize(fs,size) or size), flags or "OUTLINE")
 end
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end
@@ -275,6 +275,7 @@ function K.ApplyBackground()
             local framed=K.Framed(key)
             for _,t in ipairs(shape.back) do if framed then t:Show() else t:Hide() end end
             for _,t in ipairs(shape.rim) do if framed then t:Show() else t:Hide() end end
+            if e.frame.compactHeader then K.headers.Strip(e.frame) end
         end
     end
     if K.ApplyUnitBackground then K.ApplyUnitBackground() end
@@ -283,6 +284,13 @@ end
 function K.Framed(key)
     local t=K.DB().frameless
     return not (type(t)=="table" and t[key]==true)
+end
+-- Same for a panel frame; frames without a layout entry count as framed.
+function K.FrameFramed(frame)
+    for key,e in pairs(K.layout and K.layout.entries or {}) do
+        if e.frame==frame then return K.Framed(key) end
+    end
+    return true
 end
 function K.SetFramed(key,on)
     local db=K.DB()
@@ -421,6 +429,7 @@ function K.ListBarRow(parent, index, height)
     function bar:GetValue() return self.value end
     function bar:SetValue(value)
         value = math.max(0, math.min(1, tonumber(value) or 0)); self.value = value
+        width=row:GetWidth()
         local w = width*value
         local a = math.min(w, CAP)
         local b = math.min(math.max(w-CAP, 0), width-2*CAP)
@@ -435,6 +444,15 @@ function K.ListBarRow(parent, index, height)
     end
     function bar:GetStatusBarColor() return unpack(self.barcolor) end
     bar:SetStatusBarColor(1, 1, 1, 1); bar:SetValue(0)
+    function row:ResizeArtwork()
+        width=self:GetWidth()
+        ListFull(back,width); ListFull(rim,width)
+        for _,pieces in ipairs({back,rim,fill}) do
+            for _,t in ipairs(pieces) do t:SetHeight(self:GetHeight()) end
+            pieces[3]:ClearAllPoints(); pieces[3]:SetPoint("TOPLEFT",self,"TOPLEFT",width-CAP,0)
+        end
+        bar:SetValue(bar:GetValue())
+    end
     row.bar, row.back, row.rim = bar, back, rim
     return row
 end

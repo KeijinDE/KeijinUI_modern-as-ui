@@ -178,7 +178,7 @@ end
 function O.Finish(page) page.endY=page.y; page:SetHeight(math.max(viewport:GetHeight(),-page.y+8)) end
 function O.ShowPage(key)
     key=(O.pageAliases and O.pageAliases[key]) or key
-    local page=O.pages[key] or O.pages.display
+    local page=O.pages[key] or O.pages[O.defaultPage or "general"]
     -- A page whose module is off has nothing to show: the module page takes over.
     if not O.PageVisible(page) and O.pages.modules then page=O.pages.modules end
     O.CloseChoice()
@@ -254,6 +254,7 @@ function O.UpdateNavigation()
     O.MarkSections()
 end
 function O.ShowCategory(key)
+    key=(O.categoryAliases and O.categoryAliases[key]) or key
     local remembered=O.categoryPage and O.categoryPage[key]
     if remembered and O.pages[remembered] and O.PageVisible(O.pages[remembered]) then O.ShowPage(remembered); return end
     for _,item in ipairs(O.navOrder) do
@@ -302,7 +303,7 @@ function O.Track(page,obj,x,y,point,relative)
     return obj
 end
 function O.SectionVisible(section)
-    return not section.module or K.ModuleOn(section.module)
+    return (not section.active or section.active()) and (not section.module or K.ModuleOn(section.module))
 end
 function O.PageVisible(page)
     if page.module and not K.ModuleOn(page.module) then return false end
@@ -313,33 +314,57 @@ end
 function O.EntryVisible(entry)
     local section=entry.sectionRef
     if entry.page.module and not K.ModuleOn(entry.page.module) then return false end
-    return not section or not section.module or K.ModuleOn(section.module)
+    if entry.module and not K.ModuleOn(entry.module) then return false end
+    return not section or O.SectionVisible(section)
 end
+-- A single row can belong to a module of its own inside a shared section (O.RowModule). While that module is off
+-- the row is hidden, left out of the search, and the rows below it move up by its height.
+function O.RowModule(page,row,module)
+    for _,item in ipairs(page.items or {}) do
+        if item.obj==row then item.module=module; item.height=row:GetHeight() end
+    end
+    if row.searchEntry then row.searchEntry.module=module end
+    return row
+end
+local function ItemOff(item) return item.module and not K.ModuleOn(item.module) end
 function O.Reflow(page)
     if not page.items then return end
-    local shifts,total={},0
+    local shifts,total,cut={},0,0
+    local cutIn={}
+    for _,item in ipairs(page.items) do
+        local section=page.sections[item.section]
+        if ItemOff(item) and (not section or O.SectionVisible(section)) then
+            cutIn[item.section]=(cutIn[item.section] or 0)+(item.height or 0)
+        end
+    end
     for i,section in ipairs(page.sections) do
-        shifts[i]=total
-        section.offset=section.baseOffset-total
+        shifts[i]=total+cut
+        section.offset=section.baseOffset-total-cut
         if not O.SectionVisible(section) then
             local following=page.sections[i+1]
             total=total+(section.top-(following and following.top or page.endY or section.top))
+        else
+            cut=cut+(cutIn[i] or 0)
         end
     end
+    local run,current=0,nil
     for _,item in ipairs(page.items) do
         local section=page.sections[item.section]
+        if item.section~=current then current=item.section; run=0 end
         if section and not O.SectionVisible(section) then
             item.obj:Hide(); item.hidden=true
+        elseif ItemOff(item) then
+            item.obj:Hide(); item.hidden=true; run=run+(item.height or 0)
         else
             if item.hidden then item.obj:Show(); item.hidden=nil end
             -- A control that the search shows temporarily lives on the result page; leave its anchor alone.
             if item.obj:GetParent()==page then
                 item.obj:ClearAllPoints()
-                item.obj:SetPoint(item.point,page,item.relative,item.x,item.y+(shifts[item.section] or 0))
+                item.obj:SetPoint(item.point,page,item.relative,item.x,item.y+(shifts[item.section] or 0)+run)
             end
         end
     end
-    if page.endY then page:SetHeight(math.max(viewport:GetHeight(),-(page.endY+total)+8)) end
+    if page.endY then page:SetHeight(math.max(viewport:GetHeight(),-(page.endY+total+cut)+8)) end
 end
 function O.ReflowPages() for _,page in pairs(O.pages) do O.Reflow(page) end end
 function O.ReflowAll()
@@ -490,7 +515,9 @@ function O.FontChoice(page)
     return row
 end
 -- Preview the percentage during a drag; commit on release so the control does not move under the cursor.
-function O.Slider(page,key,label,get,set,minimum,maximum)
+function O.Slider(page,key,label,get,set,minimum,maximum,style)
+    local unit=style and style.unit or "%"
+    local factor=style and style.factor or 100
     local row=O.Row(page,key,label,48); row.name:SetWidth(240)
     row.name:ClearAllPoints(); row.name:SetPoint("LEFT",row,"LEFT",0,3)
     local control=CreateFrame("Slider",nil,row); row.slider=control
@@ -500,22 +527,26 @@ function O.Slider(page,key,label,get,set,minimum,maximum)
     local thumb=control:GetThumbTexture()
     if thumb then thumb:SetWidth(10); thumb:SetHeight(20); thumb:SetVertexColor(.8,.66,.38,1) end
     row.value=K.Text(row,"",11,"RIGHT",-4,3,52); row.value:SetJustifyH("RIGHT")
-    local low=K.Text(control,minimum.."%",9,"TOPLEFT",0,-21,45)
-    local high=K.Text(control,maximum.."%",9,"TOPRIGHT",0,-21,45); high:SetJustifyH("RIGHT")
+    local low=K.Text(control,minimum..unit,9,"TOPLEFT",0,-21,45)
+    local high=K.Text(control,maximum..unit,9,"TOPRIGHT",0,-21,45); high:SetJustifyH("RIGHT")
     low:SetTextColor(.65,.63,.57); high:SetTextColor(.65,.63,.57)
     local function Percent(value) return math.max(minimum,math.min(maximum,math.floor(value+.5))) end
     O.Watch(function()
         if row.pending then return end
-        row.refreshing=true; control:SetValue(Percent(get()*100)); row.refreshing=nil
-        row.value:SetText(Percent(get()*100).."%")
+        if style and style.bounds then
+            minimum,maximum=style.bounds()
+            control:SetMinMaxValues(minimum,maximum); low:SetText(minimum..unit); high:SetText(maximum..unit)
+        end
+        row.refreshing=true; control:SetValue(Percent(get()*factor)); row.refreshing=nil
+        row.value:SetText(Percent(get()*factor)..unit)
     end)
     control:SetScript("OnValueChanged",function()
         if row.refreshing or row.locked then return end
-        row.pending=Percent(control:GetValue()); row.value:SetText(row.pending.."%")
+        row.pending=Percent(control:GetValue()); row.value:SetText(row.pending..unit)
     end)
     control:SetScript("OnMouseUp",function()
         if arg1~="LeftButton" or not row.pending or row.locked then return end
-        local value=row.pending/100; row.pending=nil; O.CloseChoice(); set(value); O.Refresh()
+        local value=row.pending/factor; row.pending=nil; O.CloseChoice(); set(value); O.Refresh()
     end)
     control:SetScript("OnHide",function() row.pending=nil end)
     O.Wheel(control)
@@ -536,6 +567,6 @@ function O.Pair(page,left,fn,right,other)
     local b=right and O.Button(page,right,264,page.y,248,other)
     O.Wheel(a); if b then O.Wheel(b) end; page.y=page.y-36; return a,b
 end
-panel:SetScript("OnShow",function() O.Fit(); O.ShowPage("display"); O.Scroll(0) end)
+panel:SetScript("OnShow",function() O.Fit(); O.ShowPage(O.defaultPage or "general"); O.Scroll(0) end)
 panel:SetScript("OnHide",O.CloseChoice)
 K.OnLang(function() if O.current then title:SetText(K.T(O.current.caption)); subtitle:SetText(K.T(O.current.description)) end; O.Refresh() end)

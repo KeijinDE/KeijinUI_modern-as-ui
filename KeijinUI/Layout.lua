@@ -19,6 +19,7 @@ function L.SetModifier(key)
     if key~="alt" and key~="ctrl" and key~="shift" and key~="none" then return end
     -- End a drag using the old modifier before changing its meaning.
     if active then L.EndMove(active.key) end
+    if K.layoutSizing then K.layoutSizing.Close() end
     K.DB().layoutModifier=key
     L.Update()
 end
@@ -44,6 +45,10 @@ local OWNERS={tracker="basisHud",bosses="basisHud",statistics="basisHud",meter="
     combattext="combatText",healtext="combatText",takentext="combatText",achievements="achievements"}
 local function Off(entry)
     return not K.ModuleOn(OWNERS[entry.key]) or (entry.options.inactive and entry.options.inactive())
+end
+function L.CanEdit(key)
+    local e=L.entries[key]
+    return e and not Off(e) and not (e.options.locked and e.options.locked()) and (e.frame:IsShown() or e.options.hidden)
 end
 -- A frame that grows upwards (options.grow, loot list) is anchored and saved by its bottom edge, all others by the top edge.
 -- options.keepBottom keeps the bottom edge as well but, unlike grow, still allows docking (build panel).
@@ -94,7 +99,7 @@ end
 local function Dock(entry)
     local d=entry.dock
     local target=d and L.entries[d.target]
-    if not target or entry==active or not CanDock(entry,target) then return end
+    if not target or entry==active or entry.sizing or not CanDock(entry,target) then return end
     local f=entry.frame
     local ratio=Scale(f)/Scale(UIParent)
     f:ClearAllPoints()
@@ -108,6 +113,8 @@ local function Detach(entry)
     local f=entry.frame
     local left,top=f:GetLeft(),f:GetTop()
     entry.dock=nil
+    -- No resolved position (hidden frame): keep the current anchor, only the dock is dropped.
+    if not Finite(left) or not Finite(top) then return end
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left,top)
 end
 local function Clamp(entry)
@@ -298,6 +305,7 @@ function L.BeginMove(key,fromTitle)
     local e=L.entries[key]
     local direct=e and fromTitle and e.options.titleDrag
     if not e or Off(e) or (not direct and not L.Active()) then return end
+    if K.layoutSizing then K.layoutSizing.Finish() end
     if e.options.locked and e.options.locked() then return end
     if active==e then return end
     if active and active~=e then Stop() end
@@ -366,16 +374,23 @@ function L.Register(key,frame,name,anchor,options)
     K.Live(handle.label,function() return K.T(name).." | "..K.T("Mausrad: Größe") end)
     handle:EnableMouse(true); handle:EnableMouseWheel(true); handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart",function()
+        handle.dragged=true
         L.BeginMove(key)
     end)
     handle:SetScript("OnDragStop",Stop)
+    handle:SetScript("OnMouseDown",function() handle.dragged=nil end)
+    handle:SetScript("OnMouseUp",function()
+        if not handle.dragged and arg1=="LeftButton" and K.layoutSizing then K.layoutSizing.Open(key) end
+    end)
     handle:SetScript("OnMouseWheel",function()
+        if K.layoutSizing then K.layoutSizing.Finish() end
         if e.options.locked and e.options.locked() then return end
         if e.options.beforeMove then e.options.beforeMove() end
         local scale=frame:GetScale()/e.baseScale
         frame:SetScale(e.baseScale*LimitScale(e,scale+(arg1>0 and 0.05 or -0.05)))
         Save(e)
         if L.SyncFollowers then L.SyncFollowers() end
+        if K.layoutSizing then K.layoutSizing.Changed(key) end
         -- Open settings show the new size at once (the combat text slider).
         if K.settings and K.settings.panel and K.settings.panel:IsShown() then K.settings.Refresh() end
     end)
@@ -389,7 +404,7 @@ function L.SyncFollowers()
     for _,e in pairs(L.entries) do Dock(e) end
     for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end
-function L.Place(key) local e=L.entries[key]; if e and e~=active then Apply(e) end end
+function L.Place(key) local e=L.entries[key]; if e and e~=active and not e.sizing then Apply(e) end end
 local hint=K.Panel("KeijinUILayoutHint","Layoutmodus aktiv",470,92)
 hint:SetFrameStrata("TOOLTIP"); hint:SetFrameLevel(220); hint:SetScale(.85)
 hint:SetPoint("TOP",UIParent,"TOP",0,-72); hint:SetBackdropColor(.04,.04,.05,1)
@@ -400,10 +415,20 @@ done:SetPoint("RIGHT",hint,"RIGHT",-14,-10)
 K.Chamfer(done,4,{.18,.14,.07,1},{.67,.57,.36,1}); K.LText(done,"Fertig",12,"CENTER",0,0)
 L.hint,L.done=hint,done; hint:Hide()
 table.insert(UISpecialFrames,"KeijinUILayoutHint")
+-- One Escape target: the numeric editor takes the hint's slot until it closes.
+-- CloseAllWindows hides every visible special frame in one pass.
+function L.EditorEscape(open)
+    for i,name in ipairs(UISpecialFrames) do
+        if name=="KeijinUILayoutHint" or name=="KeijinUILayoutSizing" then
+            UISpecialFrames[i]=open and "KeijinUILayoutSizing" or "KeijinUILayoutHint"
+            return
+        end
+    end
+end
 function L.IsEditing() return editing end
 function L.SetEditing(on)
     editing=on and true or false
-    if editing then hint:Show() else Stop(); hint:Hide() end
+    if editing then hint:Show() else Stop(); if K.layoutSizing then K.layoutSizing.Close() end; hint:Hide() end
     RefreshGrid(L.Active())
     L.Update()
 end
@@ -450,21 +475,23 @@ function L.Reset()
 end
 function L.ClampAll()
     for _,e in pairs(L.entries) do
-        if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end
+        if e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
     end
 end
 function L.Update()
     L.SyncFollowers()
     local w,h=K.UIWidth(),K.UIHeight()
     if lastWidth and (w~=lastWidth or h~=lastHeight) then
+        if K.layoutSizing then K.layoutSizing.Finish() end
         Stop(); for _,e in pairs(L.entries) do Apply(e) end
     end
     lastWidth,lastHeight=w,h
     local enabled=L.Active()
+    if not enabled and K.layoutSizing then K.layoutSizing.Close() end
     if active and (Off(active) or (not enabled and not directMove)) then Stop() end
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
-        if e~=active and Clamp(e) and K.DB().layout[e.key] then Save(e) end
+        if e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
         local show=enabled and not Off(e) and not (e.options.locked and e.options.locked()) and (e.frame:IsShown() or e.options.hidden)
         if show then
             local region=e.options.region or e.frame

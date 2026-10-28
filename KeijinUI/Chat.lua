@@ -85,6 +85,12 @@ panel:SetScript("OnMouseWheel",function()
 end)
 local busy=false
 local sizeLoaded=false
+local chatWidth,chatHeight
+local personalSize=false
+-- Keep the existing saved-size range, including legacy widths below the native XML
+-- minimum (296). Native FloatingChatFrame.xml allows 296..608 by 75..400.
+local function ValidWidth(width) return K.Number(width) and width>=200 and width<=608 end
+local function ValidHeight(height) return K.Number(height) and height>=75 and height<=400 end
 -- A visible grip uses the native resize lifecycle, including the chat lock.
 -- Parent it to the chat: FCF_Resize/FCF_StopResize operate on this:GetParent().
 local grip=CreateFrame("Button","KeijinUIChatResizeGrip",chat)
@@ -118,10 +124,12 @@ K.chat.resizeGrip=grip
 local function LoadSize()
     local size=K.DB().chatSize
     local width,height=K.PANEL_WIDTH-2*PAD,chat:GetHeight()
+    personalSize=false
     if type(size)=="table" then
-        if K.Number(size.width) and size.width>=200 and size.width<=608 then width=size.width end
-        if K.Number(size.height) and size.height>=75 and size.height<=400 then height=size.height end
+        if ValidWidth(size.width) then width=size.width; personalSize=true end
+        if ValidHeight(size.height) then height=size.height; personalSize=true end
     end
+    chatWidth,chatHeight=width,height
     chat:SetWidth(width); chat:SetHeight(height)
     sizeLoaded=true
 end
@@ -168,7 +176,13 @@ local function Enforce()
     if chat.SetFrameLevel and chat.GetFrameLevel and chat:GetFrameLevel()<=panel:GetFrameLevel() then
         chat:SetFrameLevel(panel:GetFrameLevel()+2)
     end
-    if not sizeLoaded then chat:SetWidth(K.PANEL_WIDTH-2*PAD) end
+    -- Native restore can set dimensions after ADDON_LOADED or ENTERING_WORLD.
+    -- A saved personal size changes only on completed player resize. Without one,
+    -- keep following native geometry; StartSizing always owns its live rectangle.
+    if sizeLoaded and personalSize then
+        if chat:GetWidth()~=chatWidth then chat:SetWidth(chatWidth) end
+        if chat:GetHeight()~=chatHeight then chat:SetHeight(chatHeight) end
+    elseif not sizeLoaded then chat:SetWidth(K.PANEL_WIDTH-2*PAD) end
     local width=chat:GetWidth()
     local height=chat:GetHeight()
     if K.Number(height) and height>0 then
@@ -265,8 +279,10 @@ if type(stopResize)=="function" then
         if not own then return end
         local left,top=chat:GetLeft(),chat:GetTop()
         local width,height=chat:GetWidth(),chat:GetHeight()
-        if not K.Number(width) or not K.Number(height) or width<=0 or height<=0 then return end
+        if not ValidWidth(width) or not ValidHeight(height) then Enforce(); return end
         K.DB().chatSize={width=width,height=height}
+        chatWidth,chatHeight=width,height
+        personalSize=true
         -- Native resizing can move the opposite corner. Transfer that position to the panel.
         local entry=K.layout.entries.chat
         entry.dock=nil

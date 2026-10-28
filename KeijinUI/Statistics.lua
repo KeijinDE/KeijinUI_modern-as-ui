@@ -1,4 +1,5 @@
 local K=KeijinUI
+local P=K.panelSizing
 local function Inactive() return not K.basisHud.On() end
 local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end,{inactive=Inactive})
@@ -29,7 +30,7 @@ summaryHover:SetScript("OnEnter",function()
 end)
 summaryHover:SetScript("OnLeave",function() GameTooltip:Hide() end)
 local meterRows,baseline={},{}
-local meterStart,offset,critOffset=0,0,0
+local meterStart,offset,critOffset=0; P.offsets.crits=0,0,0
 local MAX_ROWS=8
 -- Height of the meter with data: as many rows as the screen allows, 3 to MAX_ROWS.
 function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((K.UIHeight()-563)/22)))*22 end
@@ -67,7 +68,7 @@ for i=1,MAX_ROWS do
     meterRows[i]=row
 end
 meter:EnableMouseWheel(true)
-meter:SetScript("OnMouseWheel",function() offset=math.max(0,offset+(arg1>0 and -1 or 1)) end)
+meter:SetScript("OnMouseWheel",function() P.Scroll("meter",arg1) end)
 local reset=CreateFrame("Button",nil,meter)
 reset:SetWidth(44); reset:SetHeight(20); reset:SetPoint("TOPRIGHT",meter,"TOPRIGHT",-10,-6)
 reset.text=K.LText(reset,"Reset",9,"CENTER",0,0)
@@ -122,10 +123,10 @@ local function PaintTabs()
     Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss"); Paint(tabHeal,view=="healing"); Paint(tabParty,view=="party")
 end
 function K.SetMeterView(view)
-    if autoView and view==autoView then offset=0; PaintTabs(); return end
+    if autoView and view==autoView then offset=0; P.offsets.meter=0; PaintTabs(); return end
     K.DB().meterView=(view=="boss" or view=="healing" or view=="party") and view or nil
     autoView=nil   -- Manual Run/Healing choices remain until the next fight.
-    offset=0; PaintTabs()
+    offset=0; P.offsets.meter=0; PaintTabs()
 end
 function K.SetMeterAuto(on) K.DB().meterAutoBoss=on and true or nil end
 tabRun:SetScript("OnClick",function() K.SetMeterView("run") end)
@@ -168,7 +169,7 @@ local function Summary(full,total,rate)
 end
 local function ResetMeter()
     K.liveDPS.Reset()
-    baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0
+    baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0; P.offsets.meter=0
     local lines=AZS_GetMeter and AZS_GetMeter()
     for _,v in ipairs(lines or {}) do if K.Number(v.dmg) then baseline[v.name]=v.dmg end end
 end
@@ -179,7 +180,7 @@ K.layout.Register("crits",crit,"Kritische Treffer",function(f)
 end,{inactive=Inactive})
 crit:Hide()
 crit:EnableMouseWheel(true)
-crit:SetScript("OnMouseWheel",function() critOffset=math.max(0,critOffset+(arg1>0 and -1 or 1)) end)
+crit:SetScript("OnMouseWheel",function() P.Scroll("crits",arg1) end)
 local critRows,critData={},{}
 for i=1,8 do
     local row=K.ListBarRow(crit,i,19); AddSpellIcon(row,15); critRows[i]=row
@@ -205,7 +206,7 @@ local function ReadHealing(valid)
 end
 local function ResetRun(waitForRun)
     K.liveDPS.Reset()
-    baseline={}; meterStart=0; offset=0; critData={}; critOffset=0
+    baseline={}; meterStart=0; offset=0; P.offsets.meter=0; critData={}; critOffset=0; P.offsets.crits=0
     if K.DB().meterAutoBoss==true and K.DB().meterView=="boss" then K.DB().meterView=nil end
     autoView=nil; bossWasAlive=nil; autoWasOn=nil; awaitingBossRun=waitForRun==true
 end
@@ -240,15 +241,15 @@ local function AutoSwitch()
     bossWasAlive=alive; autoWasOn=enabled
     -- Process setting changes even when the boss count has not changed.
     if not enabled then
-        if autoView then offset=0 end
+        if autoView then offset=0; P.offsets.meter=0 end
         autoView=nil; return
     end
     if not alive then
         if autoView or (ended and K.MeterView()=="boss") then
             if K.DB().meterView=="boss" then K.DB().meterView=nil end
-            autoView=nil; offset=0
+            autoView=nil; offset=0; P.offsets.meter=0
         end
-    elseif began and K.MeterView()=="run" then autoView="boss"; offset=0 end
+    elseif began and K.MeterView()=="run" then autoView="boss"; offset=0; P.offsets.meter=0 end
 end
 local function UpdateBoss()
     local lines,total,dps
@@ -261,14 +262,15 @@ local function UpdateBoss()
     end
     if table.getn(sorted)==0 then
         for _,row in ipairs(meterRows) do row:Hide() end
-        meter:SetHeight(100); summary:SetText(K.T("Noch kein Bosskampf")); meter:Show()
+        meter:SetHeight(100); if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end; summary:SetText(K.T("Noch kein Bosskampf")); meter:Show()
         return
     end
     table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
     if not K.Number(total) then total=sum end
     meter:SetHeight(K.MeterMaxHeight())
-    local visible=(meter.headerHeight-56)/22
-    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    local visible
+    if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
+    else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
     for i,row in ipairs(meterRows) do
         local v=sorted[i+offset]
         if v and i<=visible then
@@ -298,11 +300,13 @@ local function UpdateHealing(lines,total,hps,supported)
     if table.getn(sorted)==0 then
         for _,row in ipairs(meterRows) do row:Hide() end
         meter:SetHeight(100)
+        if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
         summary:SetText(K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); meter:Show(); return
     end
     meter:SetHeight(K.MeterMaxHeight())
-    local visible=(meter.headerHeight-56)/22
-    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    local visible
+    if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
+    else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
     for i,row in ipairs(meterRows) do
         local value=sorted[i+offset]
         if value and i<=visible then
@@ -323,8 +327,9 @@ end
 -- Co-op: damage of all heroes of the party (AZS_GetPartyMeter), class coloured, own hero framed in gold.
 local function UpdateParty(sorted,total,rate)
     meter:SetHeight(K.MeterMaxHeight())
-    local visible=(meter.headerHeight-56)/22
-    offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+    local visible
+    if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
+    else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
     local me=UnitName("player")
     for i,row in ipairs(meterRows) do
         local v=sorted[i+offset]
@@ -352,6 +357,7 @@ local function UpdateParty(sorted,total,rate)
     meter:Show()
 end
 local previousReported
+local sizedMeter
 local function Release()
     stats:Hide(); meter:Hide(); crit:Hide()
     for _,key in ipairs({"statistics","meter","crits"}) do
@@ -360,6 +366,70 @@ local function Release()
     end
     for ev in pairs(K.tools.CombatEvents) do combat:UnregisterEvent(ev) end
     K.basisHud.Native("meter",false)
+end
+-- Party tab, tab painting and the sized meter layout; split out of Update (Lua 5.0 allows 32 upvalues per function).
+local function UpdateTabs(party)
+    if (party~=nil)~=partyReady then
+        partyReady=party~=nil
+        if partyReady then tabParty:Show() else tabParty:Hide() end
+        LayoutSummary()
+    end
+    AutoSwitch(); PaintTabs()
+    if not P.Custom("meter") and sizedMeter then
+        P.Restore("meter"); meter.sizingMinimum=nil
+        summary:ClearAllPoints(); summary:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",13,10)
+        summary:SetHeight(15); meter.headerExtra(K.headers.Mode()); sizedMeter=nil
+    end
+    if P.Custom("meter") then
+        sizedMeter=true
+        P.Fonts("meter")
+        local q,step,pad=P.Metrics("meter",22)
+        local tabs={tabRun,tabBoss,tabHeal,tabParty,reset}
+        local x=13
+        for _,tab in ipairs(tabs) do
+            tab:SetWidth(math.max(30,P.Measure(tab.text,tab.text:GetText() or "")+12))
+            tab:SetHeight(math.max(20,16*q)); tab:ClearAllPoints()
+            tab:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",x,8+math.max(30,26*q))
+            if tab:IsShown() then x=x+tab:GetWidth()+3 end
+        end
+        meter.sizingMinimum=x+13
+        P.Width("meter",x+13)
+        summary:ClearAllPoints(); summary:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",13,7)
+        summary:SetWidth(meter:GetWidth()-26); summary:SetHeight(math.max(30,26*q))
+        meter.title:SetHeight(math.max(17,15*q)); meter.strip:SetHeight(math.max(23,18*q))
+    end
+end
+-- Critical hit list; split out of Update for the same reason.
+local function UpdateCrits(valid)
+    local crits={}
+    for _,v in pairs(critData) do table.insert(crits,v) end
+    table.sort(crits,function(a,b) if a.best==b.best then return a.name<b.name end return a.best>b.best end)
+    if valid and not K.DB().hidden.crits and table.getn(crits)>0 then
+        local available=(meter:GetBottom() or 220)-190
+        local visible=math.max(1,math.min(8,math.floor((available-42)/21)))
+        if P.Custom("crits") then visible,critOffset=P.List("crits",critRows,table.getn(crits),8,21)
+        else critOffset=P.Range("crits",table.getn(crits),visible) end
+        for i,row in ipairs(critRows) do
+            local v=crits[i+critOffset]
+            if v and i<=visible then
+                UpdateSpellIcon(row,v.name)
+                row.label:SetText(v.name); row.value:SetText(K.Short(v.best))
+                row.bar:SetValue(v.best/crits[1].best)
+                local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)
+                row.tip=v.name
+                row.detail=string.format(K.T("Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"),v.best,v.last,v.sum/v.count,v.min,v.count)
+                row:Show()
+            else row:Hide() end
+        end
+        if not P.Custom("crits") then crit:SetHeight(42+math.min(visible,table.getn(crits))*21) end; crit:Show()
+    else
+        for _,row in ipairs(critRows) do row:Hide() end
+        if K.DB().hidden.crits then crit:Hide() else
+            crit:SetHeight(63)
+            if P.Custom("crits") then P.List("crits",critRows,0,8,21) end
+            crit:Show()
+        end
+    end
 end
 local function Update()
     if Inactive() then Release(); return end
@@ -373,32 +443,34 @@ local function Update()
     local healing,healTotal,healRate,healSupported=ReadHealing(valid)
     if not K.DB().hidden.statistics then
         r=valid and r or {}
-        for i,def in ipairs(definitions) do
-            local key=def[1]; local value=r[key]
-            rows[i].tip=K.T(def[2]); rows[i].label:SetText(K.T(def[2]))
-            if key=="xp" then
-                local need=r.xpn
-                if K.Number(value) and K.Number(need) and need>0 then
-                    rows[i].value:SetText(K.Short(value).." / "..K.Short(need))
-                    rows[i].detail=K.T("%.0f / %.0f, %.0f %% bis zum nächsten Level",value,need,math.min(100,value/need*100))
+        local visible,statOffset=P.List("statistics",rows,7,7,21)
+        if not P.Custom("statistics") then stats:SetHeight(185) end
+        for i,row in ipairs(rows) do
+            local def=definitions[i+statOffset]
+            if def and i<=visible then
+                row:Show(); row.line:Show()
+                local key=def[1]; local value=r[key]
+                row.tip=K.T(def[2]); row.label:SetText(K.T(def[2]))
+                if key=="xp" then
+                    local need=r.xpn
+                    if K.Number(value) and K.Number(need) and need>0 then
+                        row.value:SetText(K.Short(value).." / "..K.Short(need))
+                        row.detail=K.T("%.0f / %.0f, %.0f %% bis zum nächsten Level",value,need,math.min(100,value/need*100))
+                    else
+                        row.value:SetText(K.Short(nil)); row.detail=K.T("Noch keine Spieldaten")
+                    end
                 else
-                    rows[i].value:SetText(K.Short(nil)); rows[i].detail=K.T("Noch keine Spieldaten")
+                    row.value:SetText(K.Short(value))
+                    if key=="taken" then row.detail=K.combatDetails.Taken()
+                    else row.detail=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten") end
                 end
-            else
-                rows[i].value:SetText(K.Short(value))
-                if key=="taken" then rows[i].detail=K.combatDetails.Taken()
-                else rows[i].detail=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten") end
-            end
+            if i==visible then row.line:Hide() end
+            else row:Hide() end
         end
         stats:Show()
     else stats:Hide() end
     local party,partyTotal,partyRate=K.PartyMeter()
-    if (party~=nil)~=partyReady then
-        partyReady=party~=nil
-        if partyReady then tabParty:Show() else tabParty:Hide() end
-        LayoutSummary()
-    end
-    AutoSwitch(); PaintTabs()
+    UpdateTabs(party)
     local lines=AZS_GetMeter and AZS_GetMeter()
     local meterValid=valid and type(lines)=="table" and not K.DB().hidden.meter
     local bossView=K.MeterView()=="boss"
@@ -422,8 +494,9 @@ local function Update()
     elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
         meter:SetHeight(K.MeterMaxHeight())
-        local visible=(meter.headerHeight-56)/22
-        offset=math.min(offset,math.max(0,table.getn(sorted)-visible))
+        local visible
+        if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
+        else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
         local duration=seconds-meterStart
         local liveTotal=0
         for _,v in ipairs(sorted) do liveTotal=liveTotal+(K.liveDPS.Rate(v.name) or 0) end
@@ -460,30 +533,9 @@ local function Update()
             meter:SetHeight(100); summary:SetText(K.T("Noch kein Schaden")); meter:Show()
         end
     end
-    local crits={}
-    for _,v in pairs(critData) do table.insert(crits,v) end
-    table.sort(crits,function(a,b) if a.best==b.best then return a.name<b.name end return a.best>b.best end)
-    if valid and not K.DB().hidden.crits and table.getn(crits)>0 then
-        local available=(meter:GetBottom() or 220)-190
-        local visible=math.max(1,math.min(8,math.floor((available-42)/21)))
-        critOffset=math.min(critOffset,math.max(0,table.getn(crits)-visible))
-        for i,row in ipairs(critRows) do
-            local v=crits[i+critOffset]
-            if v and i<=visible then
-                UpdateSpellIcon(row,v.name)
-                row.label:SetText(v.name); row.value:SetText(K.Short(v.best))
-                row.bar:SetValue(v.best/crits[1].best)
-                local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)
-                row.tip=v.name
-                row.detail=string.format(K.T("Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"),v.best,v.last,v.sum/v.count,v.min,v.count)
-                row:Show()
-            else row:Hide() end
-        end
-        crit:SetHeight(42+math.min(visible,table.getn(crits))*21); crit:Show()
-    else
-        for _,row in ipairs(critRows) do row:Hide() end
-        if K.DB().hidden.crits then crit:Hide() else crit:SetHeight(63); crit:Show() end
-    end
+    if P.Custom("meter") and not meterValid and not bossView and not healingView and not partyView then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
+    if P.Custom("meter") then summary:SetWidth(meter:GetWidth()-26) end
+    UpdateCrits(valid)
 end
 -- /kui heal debug: 60 seconds of buff chat events (all names are in the 1.12 event catalog).
 local HEAL_EVENTS={"CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS","CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF",
@@ -528,6 +580,9 @@ function K.HealDebug()
     K.Say("Heilmitschnitt läuft 60 Sekunden (höchstens 20 Zeilen).")
 end
 table.insert(K.updates,function() if debugUntil and GetTime()>=debugUntil then DebugStop() end end)
+P.Register("statistics",stats,"Runstatistiken",Update)
+P.Register("meter",meter,"Schadensanzeige",Update)
+P.Register("crits",crit,"Kritische Treffer",Update)
 K.ResetMeter=ResetMeter
 K.ResetCrits=function() critData={} end
 local function Refresh()

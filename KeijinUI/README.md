@@ -1,4 +1,4 @@
-# KeijinUI 4.4.1
+# KeijinUI 4.5.0
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -9,9 +9,13 @@ Deutsche Fassung: siehe [Deutsch](#deutsch).
 
 ## Settings
 
-The settings use seven categories: Layout, Interface, Combat, Run & map, Collections, Input assistance and Modules. Each submenu opens a separate page. All controls are directly visible on their page. Pages with only information text have been removed. Switching categories returns to the last visited page within that category. Existing settings and frame positions are retained.
+The settings use seven categories: Interface & Layout, Combat, Run & map, Collections, Input assistance, Modules and Administration. Language & Font is the first page when opening settings. Each submenu opens a separate page. All controls are directly visible on their page. Pages with only information text have been removed. Switching categories returns to the last visited page within that category. Existing settings and frame positions are retained.
 
-FPS is under Interface, FPS; font selection under Interface, Font; map and character styles under Interface, Game windows. Layout controls and their shortcut are under Layout, Size & Position. Raid marker shortcuts are under Input assistance, Key bindings.
+Font selection and language share Interface & Layout, Language & Font. Character window, world map, achievements and FPS share Game Windows & FPS in that order. Layout controls and their shortcut are under Interface & Layout, Size & Position. Reload, resets and backup restore are under Administration. Raid marker shortcuts are under Input assistance, Key bindings.
+
+Run overview, run statistics, damage meter, critical hits and character attributes have separate width, visible-row and font controls under Interface & Layout, Size & Position. Set a font size to keep it readable when scaling the panel. Scroll lists with the mouse wheel; in layout mode the wheel still scales. Administration resets these dimensions while keeping positions.
+
+Layout and appearance can be shared as a text code under Administration, Share: export shows a code to copy with Ctrl+C, import previews the changes, makes a backup and asks for confirmation. Importing replaces layout and appearance; values missing from the code are reset to default, and the preview lists those areas. Runs, collection, key bindings and language are never included.
 
 ## Overview
 
@@ -21,7 +25,7 @@ run statistics, damage meter and critical hits on the left, your own player and 
 cooldowns (mana is not shown), a build overview, modern nameplates, damage numbers in the world, loot notice,
 achievement popup and one chat window in the KeijinUI frame.
 
-English is the default. Every language of the game client can be chosen under Interface, Language or with `/kui lang <code>`
+English is the default. Every language of the game client can be chosen under Interface & Layout, Language & Font or with `/kui lang <code>`
 (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Only English and German are checked by hand; all other languages are machine translated and not yet
 reviewed by native speakers, please report mistakes. Interface, Font offers seven interface fonts with a preview and a language fallback, including Expressway. Chat and game tooltips keep their language fonts. Font origins and licenses are listed in `third_party/NOTICE.md`.
 
@@ -74,7 +78,6 @@ Section titles sit under Size & Position, character values have their own small 
 * Character window: compact paper doll in the addon style, with your selected font and background opacity. Drag its header to move it; themed buttons keep the native actions. Native equipment slots, tooltips and model rotation remain active; the redundant tab row is hidden to keep the window compact. Both window styles can be disabled under Interface, Game windows.
 * Addon shortcuts: assign layout editing and raid marker keys directly in the addon settings, under Input assistance, Key bindings. Keyboard, mouse buttons and modifier combinations are supported. Conflicts require confirmation; removing your assignment restores its previous action.
 * FPS counter: movable text with an optional frame, independent overall and background opacity, font size and text color. Configure it under Interface, FPS.
-* Background and border: under Interface, Appearance, switch off the background and border of single HUD windows such as encounters, action bar, effects, the spells and jewelry panel, kills and gold or XP. Bars, icons and text stay visible.
 * Layout mode: use `/kui edit`, assign Edit layout directly under Layout, Size & Position in the addon settings, or hold the selected layout modifier (Alt by default; Ctrl, Shift or No hold key are available). Drag labeled frames with the left mouse button and use the mouse wheel to resize them (50 to 180 percent). A grid and snapping help to line frames up (hold Shift while releasing to skip snapping). Frames are kept inside the screen.
 * Position, size and options are saved immediately.
 
@@ -147,6 +150,14 @@ The search bar filters live across every category, including individual characte
 
 # Deutsch
 
+## Einstellungen
+
+Die sieben Kategorien heißen Oberfläche & Layout, Kampf, Run & Karte, Sammlungen, Eingabehilfen, Module und Verwaltung. Beim Öffnen erscheint Sprache & Schrift. Spielfenster & FPS bündelt Charakterfenster, Weltkarte, Erfolgsmeldungen und FPS in dieser Reihenfolge. Neuladen, alle Resets und Sicherung wiederherstellen stehen unter Verwaltung. Alle Optionen sind direkt sichtbar, ausgeschaltete Module verbergen ihre jeweiligen Abschnitte. Suche und gespeicherte Einstellungen bleiben erhalten.
+
+Runübersicht, Runstatistiken, Schadensmesser, kritische Treffer und Charakterwerte haben unter Oberfläche & Layout, Größe & Position eigene Regler für Breite, sichtbare Zeilen und Schrift. Eine dort gewählte Schriftgröße bleibt beim Skalieren des Fensters lesbar. Außerhalb des Layoutmodus blättert das Mausrad durch die Liste. Verwaltung setzt die Fenstermaße zurück und erhält die Positionen.
+
+Layout und Darstellung lassen sich unter Verwaltung, Teilen als Textcode weitergeben: Der Export zeigt einen Code zum Kopieren mit Strg+C, der Import zeigt eine Vorschau, legt eine Sicherung an und fragt nach. Der Import ersetzt Layout und Darstellung; Werte, die im Code fehlen, werden auf Standard zurückgesetzt, die Vorschau führt diese Bereiche auf. Runs, Sammlung, Tastenbelegungen und Sprache sind nie enthalten.
+
 ## Überblick
 
 KeijinUI ersetzt die Standardoberfläche von Azeroth Survivors durch eine einheitliche Oberfläche. Runübersicht unter der
@@ -155,10 +166,10 @@ Minimap, Runstatistiken, Schadensanzeige und kritische Treffer links, eigene Spi
 Aktionsleiste mit Rängen und Abklingzeiten (Mana wird nicht angezeigt), eine Buildübersicht, moderne Namensplaketten,
 Schadenszahlen in der Spielwelt, Beutemeldung, Erfolgsmeldung und ein einzelnes Chatfenster im KeijinUI Rahmen.
 
-Englisch ist der Standard. Jede Sprache des Spielclients wählst du unter Oberfläche, Sprache oder mit `/kui lang <Code>`
+Englisch ist der Standard. Jede Sprache des Spielclients wählst du unter Oberfläche & Layout, Sprache & Schrift oder mit `/kui lang <Code>`
 (de, en, fr, es, pt, pl, cs, ro, tr, ru, uk, zh, ja, ko). Nur Englisch und Deutsch sind von Hand geprüft; alle anderen Sprachen sind maschinell übersetzt und noch
 nicht muttersprachlich geprüft, Fehler bitte melden. Polnisch, Tschechisch, Rumänisch, Türkisch, Russisch,
-Ukrainisch, Chinesisch, Japanisch und Koreanisch verwenden bei Bedarf die mitgelieferte Ersatzschrift. Unter Oberfläche, Schrift stehen sieben UI Schriften einschließlich Expressway mit Vorschau zur Wahl. Chat und Spieltooltips behalten ihre sprachabhängige Schrift. Herkunft und Lizenzen stehen in `third_party/NOTICE.md`.
+Ukrainisch, Chinesisch, Japanisch und Koreanisch verwenden bei Bedarf die mitgelieferte Ersatzschrift. Unter Oberfläche & Layout, Sprache & Schrift stehen sieben UI Schriften einschließlich Expressway Free mit Vorschau zur Wahl. Chat und Spieltooltips behalten ihre sprachabhängige Schrift. Herkunft und Lizenzen stehen in `third_party/NOTICE.md`.
 
 Der Reiter Run zeigt Live DPS der letzten 10 Spielsekunden. Gesamtschaden und Reihenfolge bleiben runbezogen,
 der Durchschnitt steht im Tooltip. Die Runübersicht ergänzt Endlosbosstimer und optional Account Pace.
@@ -204,7 +215,6 @@ Abschnittstitel stehen unter Größe & Position, Charakterwerte haben einen eige
 * Erfolgsmeldung (`/kachi`).
 * Layoutmodus: Alt halten zeigt beschriftete Rahmen, mit der linken Maustaste verschieben, Alt und Mausrad ändern die Größe (50 bis 180 Prozent). Raster und Einrasten helfen beim Ausrichten (Shift beim Loslassen schaltet das Einrasten aus). Rahmen bleiben im Bild.
 * Positionen, Größen und Optionen werden sofort gespeichert.
-* Hintergrund und Rahmen: Unter Oberfläche, Darstellung lassen sich Hintergrund und Rahmen einzelner HUD Fenster abschalten, etwa Begegnungen, Aktionsleiste, Effekte, Zauber und Schmuck, Kills und Gold oder Erfahrung. Balken, Symbole und Text bleiben sichtbar.
 
 ## Installation
 

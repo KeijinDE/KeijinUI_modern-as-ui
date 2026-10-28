@@ -1,6 +1,7 @@
 -- Current native character attributes, separate from the run counters.
 -- Selection and visibility are independent. Missing values are never guessed.
 local K=KeijinUI
+local P=K.panelSizing
 local S={}
 K.characterStats=S
 local function Percent(v) return string.format("%.1f%%",v*100) end
@@ -79,17 +80,25 @@ for i=1,table.getn(S.definitions) do rows[i]=K.ValueRow(frame,i,18) end
 local fresh=type(AZS_STATS)=="table"
 function S.Update()
     if not S.On() then frame:Hide(); return end
+    local selected={}
+    for _,def in ipairs(S.Ordered()) do if S.Selected(def.key) then table.insert(selected,def) end end
+    local total=table.getn(selected)
+    local visible,offset=P.List("attributes",rows,total,29,20)
     local n=0
-    for _,def in ipairs(S.Ordered()) do
-        if S.Selected(def.key) then
+    for i=1,visible do
+        local def=selected[i+offset]
+        if def then
             n=n+1; local row=rows[n]
-            row.label:SetText(K.T(def.label)); row.label:SetWidth(frame:GetWidth()-92)
+            row.label:SetText(K.T(def.label)); if not P.Custom("attributes") then row.label:SetWidth(frame:GetWidth()-92) end
             row.value:SetText(S.Value(def,fresh and AZS_STATS or nil))
             row.tip=K.T(def.label); row.detail=nil; row:Show(); row.line:Show()
         end
     end
     for i=n+1,table.getn(rows) do rows[i]:Hide() end
-    if n>0 then rows[n].line:Hide(); frame:SetHeight(42+n*20); frame:Show() else frame:Hide() end
+    if n>0 then rows[n].line:Hide() end
+    if n>0 or P.Config("attributes").rows then
+        if not P.Custom("attributes") then frame:SetHeight(42+n*20) end; frame:Show()
+    else frame:Hide() end
 end
 function S.Set(on) K.DB().characterStats=on and true or false; S.Update() end
 function S.Select(key,on)
@@ -104,5 +113,6 @@ K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then fresh=false
     elseif prefix=="AZS" then fresh=true end
 end)
+P.Register("attributes",frame,"Charakterwerte",S.Update)
 K.Update("attributes",S.Update)
 S.Update()

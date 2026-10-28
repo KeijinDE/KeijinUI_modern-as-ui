@@ -54,8 +54,9 @@ function K.ApplyFont()
         end
         local fixed=K.fontOverrides[fs]
         local size=K.fontBase[fs] or v[2]
-        fs:SetFont(fixed or path,fixed and size or K.FontSize(size),flags or "OUTLINE")
+        fs:SetFont(fixed or path,fixed and size or K.FontSize(K.PanelFontSize and K.PanelFontSize(fs,size) or size),flags or "OUTLINE")
     end
+    if K.panelSizing then K.panelSizing.Refresh() end
     -- Restore native font paths after leaving a language that needed our fallback.
     -- Keep the current chat size and flags, including changes made by the player.
     local function Native(fs,defaultSize,defaultFlags)

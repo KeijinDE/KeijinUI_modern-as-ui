@@ -222,7 +222,7 @@ end
 function O.SetSearch(query)
     if busy then return end
     busy=true; query=tostring(query or "")
-    if O.current~=page then returnKey=O.current and O.current.key or "display" end
+    if O.current~=page then returnKey=O.current and O.current.key or (O.defaultPage or "general") end
     if edit:GetText()~=query then edit:SetText(query) end
     Render(query); busy=false
 end

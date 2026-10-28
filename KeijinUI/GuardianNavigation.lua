@@ -13,6 +13,8 @@ function G.TimersOn() return G.PinsOn() and K.DB().guardianTimers~=false end
 function G.SetTimers(on) K.DB().guardianTimers=on and true or false; G.Update() end
 function G.Set(on) K.DB().guardianGuide=on and true or false; G.Update() end
 function G.SetPins(on) K.DB().guardianPins=on and true or false; G.Update() end
+function G.ArrowOn() return K.ModuleOn("guardians") and K.DB().guardianArrow==true end
+function G.SetArrow(on) K.DB().guardianArrow=on and true or false; G.Update() end
 -- Lair markers: one symbol per lair for the whole run, on the minimap and before the name in the overview.
 local MEDIA="Interface\\AddOns\\KeijinUI\\media\\guardians\\"
 local SKULL="Interface\\TargetingFrame\\UI-TargetingFrame-Skull"
@@ -306,13 +308,60 @@ function G.Glide(sx,sy)
         end
     end
 end
+-- Independent layout entry. The inactive predicate gives this entry to the guardians module
+-- without adding another module or changing Layout.lua's frozen owner list.
+local arrow=CreateFrame("Frame","KeijinUIGuardianArrow",UIParent)
+N.Hex(arrow,"Guardian")
+arrow.digit=arrow:CreateTexture(nil,"OVERLAY"); arrow.digit:SetWidth(22); arrow.digit:SetHeight(22)
+arrow.digit:SetPoint("TOP",arrow,"TOP",0,-19)
+local arrowOptions={hidden=false,inactive=function() return not K.ModuleOn("guardians") end}
+K.layout.Register("guardianarrow",arrow,"Hort Pfeil",function(f)
+    -- New defaults follow the existing cache position, including its personal scale.
+    -- Never save this initial placement or overwrite either saved layout entry.
+    local cache=K.caches.arrow
+    local ratio=cache:GetEffectiveScale()/UIParent:GetEffectiveScale()
+    local left,top=cache:GetLeft(),cache:GetTop()
+    left=N.Finite(left) and left*ratio or (K.UIWidth()-96)/2
+    top=N.Finite(top) and top*ratio or K.UIHeight()-170
+    local x=left+cache:GetWidth()*ratio+20
+    if x+96>K.UIWidth() then x=left-116 end
+    if x<0 then
+        x=math.max(0,math.min(K.UIWidth()-96,left))
+        local below=top-cache:GetHeight()*ratio-20
+        if below>=92 then top=below else top=math.min(K.UIHeight(),top+112) end
+    end
+    f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",x,top)
+end,arrowOptions)
+G.arrow=arrow
+local arrowModuleOn
+local function ScreenArrow(chosen)
+    arrowOptions.hidden=G.ArrowOn()
+    if not G.ArrowOn() or not inWorld or not N.ScreenFresh() or not chosen or not chosen.dist then
+        arrow.destination=nil; arrow:Hide(); return
+    end
+    local slot=G.Slot(chosen.lair,chosen.index)
+    local tint=SKULLTINT[slot]
+    arrow.icon:SetVertexColor(tint[1],tint[2],tint[3],1)
+    arrow.digit:SetTexture(MEDIA.."GuardianDigits.tga")
+    local cell=CELLS[slot]; arrow.digit:SetTexCoord(cell[1],cell[2],cell[3],cell[4])
+    local facing,source=N.Facing()
+    arrow.step=N.HexDirection(arrow,chosen.east,chosen.north,facing,source)
+    arrow.distance:SetText(K.T("%d Yards",math.floor(chosen.dist+.5)))
+    local text,r,g,b=K.guardians.Status(chosen.lair)
+    arrow.price:SetText(text); arrow.price:SetTextColor(r,g,b)
+    arrow.destination=chosen; arrow:Show()
+end
 function G.Update()
+    local moduleOn=K.ModuleOn("guardians")
+    if moduleOn and not arrowModuleOn then K.layout.Place("guardianarrow") end
+    arrowModuleOn=moduleOn
     G.glideX,G.glideY=nil,nil
     for row in pairs(rows) do G.Decorate(row) end
-    if not inWorld or (not G.On() and not G.PinsOn()) then
+    if not inWorld or (not G.On() and not G.PinsOn() and not G.ArrowOn()) then
         G.current=nil; G.shownPins=0
         for _,pin in ipairs(G.pins) do pin.destination=nil; pin:Hide() end
         NativeFlag(false)
+        ScreenArrow(nil)
         return
     end
     -- Even with no lair snapshot yet the native flag is ours to suppress. After leaving
@@ -323,6 +372,7 @@ function G.Update()
     local list=G.List(); local chosen
     for _,v in ipairs(list) do if selected==v.key then chosen=v; break end end
     chosen=chosen or Nearest(list); selected=chosen and chosen.key or nil; G.current=chosen
+    ScreenArrow(chosen)
     local count=0
     -- With the 0.102 flag switch our skulls stand for every lair and replace the native flag.
     -- Older clients keep their native flag, so only defeated lairs get a skull there.
@@ -358,9 +408,10 @@ function G.Update()
     end
 end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then selected=nil; awaitLairs=true
+    if prefix=="AZSZONE" then selected=nil; awaitLairs=true; G.Update()
     elseif prefix=="AZSLAIRS" then awaitLairs=false end
 end)
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("guardianarrow") end end)
 K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; G.Update() end)
 K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
 K.On("PLAYER_LOGOUT",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)

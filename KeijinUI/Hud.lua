@@ -1,4 +1,5 @@
 local K = KeijinUI
+local P=K.panelSizing
 local H={ready=false,refresh={}}
 K.basisHud=H
 function H.On() return K.ModuleOn("basisHud") end
@@ -69,6 +70,11 @@ K.HeaderPoint(zone,tracker,"TOPLEFT",14,-35)
 K.HeaderPoint(time,tracker,"TOPLEFT",14,-55)
 K.HeaderPoint(progress,tracker,"TOPLEFT",14,-85)
 local schedules={}
+local scheduleRun
+local scheduleScroll=CreateFrame("Frame",nil,tracker)
+scheduleScroll:EnableMouse(true); scheduleScroll:EnableMouseWheel(true)
+scheduleScroll:SetScript("OnMouseWheel",function() P.Scroll("tracker",arg1) end)
+scheduleScroll:Hide()
 local paceRow=CreateFrame("Frame",nil,tracker)
 paceRow:SetWidth(272); paceRow:SetHeight(16); paceRow:EnableMouse(true)
 paceRow.text=K.Text(paceRow,"",11,"LEFT",0,0,272)
@@ -267,6 +273,8 @@ local function ScheduleRow(i)
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave",function() GameTooltip:Hide() end)
+    row:EnableMouseWheel(true)
+    row:SetScript("OnMouseWheel",function() P.Scroll("tracker",arg1) end)
     schedules[i]=row
     return row
 end
@@ -514,13 +522,97 @@ local function Release()
 end
 local function Update()
     if Inactive() then Release(); return end
+    local custom=P.Custom("tracker")
+    if custom then P.Fonts("tracker") end
+    local q,step,pad=1,18,0
+    if custom then q,step,pad=P.Metrics("tracker",18) end
+    -- At very small physical viewports use one-line list cells, retaining the
+    -- selected font size and the existing full-name tooltips instead of shrinking
+    -- forever. This leaves room for one boss and one independently paged lair.
+    local compact=false
+    if custom then
+        local n=K.guardians.Count()
+        local fixed=136+math.max(0,math.ceil(math.max(17,26*q)+math.max(27,25*q)-44))+pad
+            +math.max(0,12*q-14)+(K.pace.On() and (K.pace.AccountOn() and 36 or 18)*math.max(1,q) or 0)
+        local minimum=fixed+step+(n>0 and 9+math.max(16,16*q)+step or 0)-K.HeaderOffset(tracker)
+        compact=minimum>P.AvailableHeight("tracker")
+        if compact then
+            local font=P.Config("tracker").font
+            if font then
+                -- Compact minimum: at most 136*q + 64 logical units, including
+                -- rounding and one row per list. Solve once instead of converging
+                -- through repeated Layout.Clamp / font compensation updates.
+                local budget=(K.UIHeight()-16)*UIParent:GetEffectiveScale()
+                local ceiling=(budget-136*font/11*(K.fontFactor or 1))/64
+                local effective=tracker:GetEffectiveScale()
+                if ceiling>0 and effective>ceiling then
+                    tracker:SetScale(tracker:GetScale()*ceiling/effective)
+                    P.Fonts("tracker")
+                    q,step,pad=P.Metrics("tracker",18)
+                end
+            end
+            step=math.max(18,math.ceil(18*q)); pad=math.max(0,math.ceil(18*q-18))
+        end
+    end
+    local column=custom and math.max(64,68*q,P.Measure(head14,head14:GetText())+8,P.Measure(head84,head84:GetText())+8) or 64
+    local width=custom and P.Width("tracker",math.max(220,250*q,2*column+28+80*q)) or K.PANEL_WIDTH
+    tracker:SetWidth(width); tracker.title:SetWidth(width-26)
+    local headExtra=custom and math.max(0,12*q-14) or 0
+    headBoss:SetWidth(custom and width-40-2*column or 130); headBoss:SetHeight(math.max(14,12*q))
+    if custom then
+        head84:SetWidth(column); head14:SetWidth(column); tracker.sizingHeaders=true
+    elseif tracker.sizingHeaders then
+        head84:SetWidth(math.max(64,P.Measure(head84,head84:GetText())+16))
+        head14:SetWidth(math.max(64,P.Measure(head14,head14:GetText())+16))
+    end
+    head84:SetHeight(math.max(14,12*q)); head84:SetJustifyH("RIGHT")
+    head14:SetHeight(math.max(14,12*q)); head14:SetJustifyH("RIGHT")
+    local zoneHeight=custom and math.max(17,26*q) or 17
+    local timeHeight=math.max(27,25*q)
+    local extra=custom and math.max(0,math.ceil(zoneHeight+timeHeight-44))+pad or 0
+    tracker.title:SetHeight(math.max(17,15*q)); tracker.strip:SetHeight(math.max(23,18*q))
+    zone:SetWidth(width-28); zone:SetHeight(zoneHeight)
+    time:SetWidth(width-28); time:SetHeight(timeHeight)
+    progress:SetWidth(width-28)
+    TrackerPoint(zone,"TOPLEFT",14,-35-pad)
+    TrackerPoint(time,"TOPLEFT",14,-38-pad-zoneHeight)
+    paceRow:SetWidth(width-28); accountRow:SetWidth(width-28)
+    paceRow:SetHeight(math.max(16,15*q)); accountRow:SetHeight(math.max(16,15*q))
+    paceRow.text:SetWidth(width-28); accountRow.text:SetWidth(width-28)
+    paceRow.text:SetHeight(math.max(16,15*q)); accountRow.text:SetHeight(math.max(16,15*q))
     paceExtra=K.pace.On() and (K.pace.AccountOn() and 36 or 18) or 0
-    TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra)
-    TrackerPoint(headBoss,"TOPLEFT",14,-105-paceExtra)
-    TrackerPoint(head84,"TOPRIGHT",-84,-105-paceExtra)
-    TrackerPoint(head14,"TOPRIGHT",-14,-105-paceExtra)
-    TrackerPoint(paceRow,"TOPLEFT",14,-83)
-    TrackerPoint(accountRow,"TOPLEFT",14,-101)
+    if custom then paceExtra=paceExtra*math.max(1,q) end
+    TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra-extra)
+    TrackerPoint(headBoss,"TOPLEFT",14,-105-paceExtra-extra)
+    TrackerPoint(head84,"TOPRIGHT",custom and -20-column or -84,-105-paceExtra-extra)
+    TrackerPoint(head14,"TOPRIGHT",-14,-105-paceExtra-extra)
+    TrackerPoint(paceRow,"TOPLEFT",14,-83-extra)
+    TrackerPoint(accountRow,"TOPLEFT",14,-83-extra-math.max(18,18*q))
+    local scheduleTop=123+paceExtra+extra+headExtra
+    local trackerFixed=136+paceExtra+extra+headExtra
+    if compact then
+        -- Two columns retain the full clock and both pace tooltips. This removes
+        -- vertical duplication without reducing the configured font size.
+        local clockWidth=P.Measure(time,"99:59 / 99:59")+8
+        width=P.Width("tracker",math.max(width,clockWidth+80*q+28))
+        tracker:SetWidth(width); tracker.title:SetWidth(width-26)
+        zone:SetWidth(math.max(30,width-36-clockWidth)); time:SetWidth(clockWidth)
+        TrackerPoint(time,"TOPRIGHT",-14,-35-pad)
+        local paceTop=35+pad+math.max(zoneHeight,timeHeight)+4
+        local half=(width-36)/2
+        paceRow:SetWidth(half); accountRow:SetWidth(half)
+        paceRow.text:SetWidth(half); accountRow.text:SetWidth(half)
+        TrackerPoint(paceRow,"TOPLEFT",14,-paceTop)
+        TrackerPoint(accountRow,"TOPRIGHT",-14,-paceTop)
+        local barTop=paceTop+(K.pace.On() and math.max(18,18*q) or 0)+4
+        progress:SetWidth(width-28); TrackerPoint(progress,"TOPLEFT",14,-barTop)
+        local headingTop=barTop+math.max(10,10*q)
+        TrackerPoint(headBoss,"TOPLEFT",14,-headingTop)
+        TrackerPoint(head84,"TOPRIGHT",-20-column,-headingTop)
+        TrackerPoint(head14,"TOPRIGHT",-14,-headingTop)
+        scheduleTop=headingTop+math.max(14,12*q)+4
+        trackerFixed=scheduleTop+9
+    end
     accountRow:Hide()
     local r=AZS_RUN
     local phase=AZS_GetPhase and AZS_GetPhase()
@@ -543,17 +635,42 @@ local function Update()
         time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
         if r.endl==1 then time:SetText(K.Clock(seconds).." · "..K.T("Endlos")) end
         progress:SetValue(math.min(1,seconds/duration))
+        if scheduleRun~=K.runStart then P.offsets.tracker=0; scheduleRun=K.runStart end
         local schedule=K.Schedule()
         local endless=r.endl==1
-        local count=endless and 1 or math.min(8,table.getn(schedule))
-        for i=1,count do
-            local v=schedule[i]; local row=ScheduleRow(i)
+        local total=endless and 1 or table.getn(schedule)
+        local count=custom and P.Config("tracker").rows or math.min(total,8)
+        local guardianSizing=custom and {width=width,q=q,step=step} or nil
+        -- Bound both lists before Layout.Clamp can shrink the compensated font again.
+        -- Guardians keep their own wheel area; the clock and pace never scroll.
+        if custom then
+            local available=P.AvailableHeight("tracker")
+            local fixed=trackerFixed-K.HeaderOffset(tracker)
+            local n=K.guardians.Count()
+            local heading=n>0 and (9+math.max(16,16*q)) or 0
+            local slots=math.max(0,math.floor((available-fixed-heading)/step))
+            local guardianRows=n>0 and math.max(1,math.min(n,slots-(total>0 and 1 or 0))) or 0
+            guardianSizing.visible=guardianRows
+            count=math.min(count,math.max(1,slots-guardianRows))
+        end
+        local scheduleOffset=P.Range("tracker",total,math.max(1,count))
+        if not custom then scheduleOffset=0 end
+        scheduleScroll:ClearAllPoints(); scheduleScroll:SetPoint("TOPLEFT",tracker,"TOPLEFT",14,-scheduleTop+K.HeaderOffset(tracker))
+        scheduleScroll:SetWidth(width-28); scheduleScroll:SetHeight(math.max(1,count*step)); scheduleScroll:Show()
+        for i=1,math.min(count,total) do
+            local v=schedule[i+scheduleOffset]; local row=ScheduleRow(i)
             if endless then
                 local left=K.Number(r.nb) and r.nb>=0 and r.nb or nil
                 if left and K.Number(r.t) then left=math.max(0,left-math.max(0,seconds-r.t)) end
                 v={name=K.T("Nächster Endlosboss"),at=left and seconds+left}
             end
-            TrackerPoint(row,"TOPLEFT",14,-123-(i-1)*18-paceExtra)
+            TrackerPoint(row,"TOPLEFT",14,-scheduleTop-(i-1)*step)
+            row:SetWidth(width-28); row:SetHeight(step-1)
+            local timeWidth=column
+            row.name:SetWidth(custom and width-28-2*timeWidth-10 or 130); row.name:SetHeight(custom and step-2 or 15)
+            row.boss:SetWidth(custom and timeWidth-4 or 62); row.boss:SetHeight(custom and step-2 or 15)
+            row.run:SetWidth(timeWidth); row.run:SetHeight(custom and step-2 or 15)
+            row.boss:ClearAllPoints(); row.boss:SetPoint("RIGHT",row,"RIGHT",-timeWidth-6,0)
             row.tint:Hide()
             row.name:SetText(v.name or "?")
             row.bossName=v.name
@@ -583,11 +700,11 @@ local function Update()
             end
             row:Show()
         end
-        for i=count+1,table.getn(schedules) do schedules[i]:Hide() end
-        DrawMarks(schedule,endless and 0 or count,duration)
+        for i=math.min(count,total)+1,table.getn(schedules) do schedules[i]:Hide() end
+        DrawMarks(schedule,endless and 0 or total,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
-        local guardians=K.guardians.Draw(guardianContent,-127-count*18-paceExtra+K.HeaderOffset(tracker))
-        tracker:SetHeight(136+count*18+guardians+paceExtra)
+        local guardians=K.guardians.Draw(guardianContent,-scheduleTop-4-count*step+K.HeaderOffset(tracker),guardianSizing)
+        tracker:SetHeight(trackerFixed+count*step+guardians)
         level:SetText("")
         tracker:Show(); H.Native("clock",true)
     else
@@ -597,7 +714,14 @@ local function Update()
         else
             zone:SetText((GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
             time:SetText(K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
-            level:SetText(K.T("Warte auf Spieldaten")); tracker:SetHeight(154); tracker:Show()
+            level:SetWidth(width-28); level:SetHeight(math.max(16,14*q))
+            level:SetText(K.T("Warte auf Spieldaten"))
+            if custom then
+                local count=math.max(1,math.min(P.Rows("tracker",1),math.floor((P.AvailableHeight("tracker")-154-extra)/step)))
+                P.Range("tracker",0,count); tracker:SetHeight(154+extra+count*step)
+            else tracker:SetHeight(154+extra) end
+            tracker:Show()
+            scheduleScroll:Hide()
             for _,row in ipairs(schedules) do row:Hide() end
             DrawMarks({},0,0)
             K.guardians.Hide()
@@ -634,6 +758,7 @@ local function Update()
         xpBar:SetValue(math.min(1,r.xp/r.xpn)); xp:Show()
     else xpBar:SetValue(0); if K.DB().hidden.xp then xp:Hide() else xp:Show() end end
 end
+P.Register("tracker",tracker,"Runübersicht",Update)
 K.Update("basisHud",Update)
 table.insert(K.updates,Support)
 local function MoveStock()

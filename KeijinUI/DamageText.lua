@@ -282,6 +282,7 @@ end
 function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
     local mode=K.CombatTextMode()
     if mode=="off" or mode=="native" or not K.Number(amount) or amount<=0 then return end
+    if K.damageText.list and K.damageText.list.On() then return K.damageText.list.PushDamage(amount,crit,targetName,school,periodic,spell) end
     local text=string.format("%.0f",amount)
     -- Merge a short burst of the same ability/kind, including area hits on
     -- several enemies. Critical and ordinary hits always stay separate.
@@ -313,6 +314,7 @@ end
 function K.damageText.SpawnMiss(missType,targetName,spell)
     local mode=K.CombatTextMode()
     if (mode~="scroll" and mode~="rise") or not MISS_TEXT[missType] then return end
+    if K.damageText.list and K.damageText.list.On() then return K.damageText.list.PushMiss(K.T(MISS_TEXT[missType]),targetName,spell,missType) end
     local icon
     if spell and K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
     local item=Add(K.T(MISS_TEXT[missType]),Presentation((mode=="rise" and RISE or SCROLL).miss),1,0.82,0.1,targetName,true,true,icon)

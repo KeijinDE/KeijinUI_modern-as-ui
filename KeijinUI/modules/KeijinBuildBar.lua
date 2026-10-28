@@ -81,7 +81,7 @@ EF.spots={
 	{0,0, 0,1, 0,1, "BOTTOMLEFT","TOPLEFT"},
 }
 -- Short lived banners and tooltips do not count (same exceptions as the overlap test).
-EF.ignore={effects=true, skills=true, achievements=true, bosses=true, cachearrow=true, combattext=true, healtext=true, takentext=true, tooltip=true}
+EF.ignore={effects=true, skills=true, achievements=true, bosses=true, cachearrow=true, guardianarrow=true, combattext=true, healtext=true, takentext=true, tooltip=true}
 function EF.Saved()
 	local layout=KeijinUI.DB().layout
 	local p=type(layout)=="table" and layout.effects

@@ -85,7 +85,7 @@ local function Members(revive)
         end
     end
     if table.getn(list)>0 then return list,"units" end
-    local lines=K.PartyMeter()
+    local lines=type(K.PartyMeter)=="function" and K.PartyMeter() or nil
     for _,line in ipairs(lines or {}) do
         if not Own(line.name) and table.getn(list)<MAXMEMBERS then
             table.insert(list,{name=line.name,class=type(line.class)=="string" and string.upper(line.class) or nil,

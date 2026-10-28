@@ -20,6 +20,7 @@ local MAX_POINTS=60
 local EDGE_INSET=8
 local SOURCES={"facing","model","move","north"}
 local inWorld=true
+local arrowModuleOn
 local known,baseline,lastRun={},false,nil
 local meas={}
 local lastX,lastY,moveHeading
@@ -250,13 +251,7 @@ end
 
 -- Frames --------------------------------------------------------------------------------------------------
 local arrow=CreateFrame("Frame","KeijinUICachesArrow",UIParent)
-arrow:SetWidth(96); arrow:SetHeight(92); arrow:SetFrameStrata("LOW"); arrow:EnableMouse(false); arrow:Hide()
-arrow.tex=arrow:CreateTexture(nil,"ARTWORK")
-arrow.tex:SetTexture(PATH.."Arrow.tga"); arrow.tex:SetWidth(56); arrow.tex:SetHeight(56)
-arrow.tex:SetPoint("TOP",arrow,"TOP",0,-2); Cell(arrow.tex,0)
-arrow.distance=K.Text(arrow,"",12,"TOP",0,-60)
-arrow.price=K.Text(arrow,"",9,"TOP",0,-76)
-arrow.price:SetTextColor(1,0.82,0.28)
+K.navigation.Hex(arrow,"Cache")
 local arrowOptions={hidden=false}
 K.layout.Register("cachearrow",arrow,"Cache Pfeil",function(f)
     f:ClearAllPoints(); f:SetPoint("TOP",UIParent,"TOP",0,-170)
@@ -453,6 +448,7 @@ end
 function C.Update()
     C.glideX,C.glideY=nil,nil
     if not K.ModuleOn("caches") then if C.Stop then C.Stop() end; return end
+    if not arrowModuleOn then arrowModuleOn=true; K.layout.Place("cachearrow") end
     if not inWorld then Clear("outside world"); return end
     local phase=RunPhase()
     if not PHASES[phase] or not K.navigation.Active() then Clear("inactive phase"); return end
@@ -483,11 +479,10 @@ function C.Update()
     Notice(total,nearest and nearest.dist or nil)
     C.reason=nil
     -- Screen arrow.
-    if C.ArrowOn() and nearest then
+    if C.ArrowOn() and nearest and K.navigation.ScreenFresh() and K.Fresh(AZS_CHESTS_UPDATED) then
         local facing,from=C.Facing()
-        local target=math.atan2(-nearest.east,nearest.north)
         C.facing,C.facingSource=facing,from
-        C.step=Cell(arrow.tex,facing-target)
+        C.step=K.navigation.HexDirection(arrow,nearest.east,nearest.north,facing,from)
         arrow.distance:SetText(K.T("%d Yards",math.floor(nearest.dist+0.5)))
         local price=type(AZS_RUN)=="table" and AZS_RUN.chest
         arrow.price:SetText(Finite(price) and K.T("%d Gold",math.floor(price+0.5)) or "")
@@ -629,4 +624,4 @@ K.On("PLAYER_ENTERING_WORLD",function() inWorld=true end,"caches")
 K.On("PLAYER_LEAVING_WORLD",function() C.selectedId=nil; inWorld=false; Clear("outside world") end,"caches")
 K.On("PLAYER_LOGOUT",function() inWorld=false; Clear("logout") end,"caches")
 K.Update("caches",C.Update)
-function C.Stop() Clear("disabled") end
+function C.Stop() arrowModuleOn=false; Clear("disabled") end

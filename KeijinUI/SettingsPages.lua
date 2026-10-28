@@ -5,7 +5,56 @@ local function Hidden(page,key,label)
     return O.Toggle(page,key,label,function() return not K.DB().hidden[key] end,function(on) K.DB().hidden[key]=not on end)
 end
 local p
-p=O.Page("display","Größe & Position","Layout","display")
+p=O.Page("general","Sprache & Schrift","Oberfläche & Layout","general")
+O.Section(p,"Sprache")
+local languageItems={}
+for _,entry in ipairs(K.Languages) do table.insert(languageItems,{entry.code,entry.key}) end
+local languageChoice=O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,languageItems)
+-- This menu includes native CJK language names even when the rest of a Russian
+-- interface uses a Cyrillic-only font. Keep those names in the universal font.
+O.Watch(function()
+    for _,option in ipairs(languageChoice.options) do
+        K.fontOverrides[option.text]=K.NeedsWideFont(K.lang) and K.WideFont or nil
+        K.SetFontSize(option.text,11)
+    end
+end)
+O.Help(p,"Übersetzungen außer Deutsch und Englisch sind maschinell erstellt und nicht muttersprachlich geprüft. Fehler bitte melden.")
+O.Section(p,"Schrift")
+O.FontChoice(p)
+local fontHint=O.Help(p,"Die gewählte Schrift enthält nicht alle Zeichen dieser Sprache. Es wird eine Ersatzschrift verwendet.")
+O.Watch(function() fontHint:SetAlpha(K.FontSubstituted() and 1 or 0) end)
+O.Finish(p)
+
+p=O.Page("appearance","Darstellung","Oberfläche & Layout","general")
+O.Section(p,"Darstellung")
+O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
+O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
+O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
+O.Section(p,"Hintergrund und Rahmen")
+local framedSection=p.sections[table.getn(p.sections)]
+O.Help(p,"Aus: Das Fenster zeigt nur seinen Inhalt, ohne Hintergrund und Rahmen.")
+-- Third entry: the module that owns the window. Its switch is hidden and not searchable while that module is off.
+local framedModules={}
+for _,w in ipairs({{"bosses","Begegnungen","basisHud"},{"skills","Aktionsleiste","action"},{"effects","Effekte","effects"},
+    {"build","Zauber, Schmuck und Buildtipps","build"},{"tally","Kills und Gold","basisHud"},{"xp","Erfahrung","basisHud"},
+    {"tracker","Runübersicht","basisHud"},{"statistics","Runstatistiken","basisHud"},{"meter","Schadensanzeige","basisHud"},
+    {"crits","Kritische Treffer","basisHud"},{"guardianOverview","Wächter","guardians"},{"analysisOverview","Run-Analyse","analysis"},
+    {"attributes","Charakterwerte","attributes"},{"party","Partyfenster","party"},{"loot","Beutemeldung","loot"},
+    {"chat","Chat","chat"},{"levels","Gespeicherte Level","storedLevels"}}) do
+    local key=w[1]   -- body local for the closures
+    if K.layout.entries[key] then   -- windows that do not exist are skipped
+        O.RowModule(p,O.Toggle(p,"framed_"..key,w[2],function() return K.Framed(key) end,function(on) K.SetFramed(key,on) end),w[3])
+        table.insert(framedModules,w[3])
+    end
+end
+-- The section disappears with its last switch.
+framedSection.active=function()
+    for _,module in ipairs(framedModules) do if K.ModuleOn(module) then return true end end
+    return false
+end
+O.Finish(p)
+
+p=O.Page("display","Größe & Position","Oberfläche & Layout","general")
 O.Section(p,"Größe & Position")
 O.Choice(p,"layoutModifier","Layouttaste",K.layout.Modifier,K.layout.SetModifier,{{"alt","Alt"},{"ctrl","Ctrl"},{"shift","Shift"},{"none","Keine Haltefunktion"}})
 O.Help(p,"Im Layoutmodus ziehen und mit dem Mausrad skalieren. /kui edit oder Layout bearbeiten schaltet den Modus um.")
@@ -20,10 +69,11 @@ O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
 O.Slider(p,"optionsScale","Menügröße",O.MenuScale,O.SetMenuScale,70,100)
 O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
 O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
+
 O.Finish(p)
 
-p=O.Page("windows","Fenster","Layout","display","basisHud")
-O.Section(p,"Fenster")
+p=O.Page("windows","HUD Fenster","Oberfläche & Layout","general","basisHud")
+O.Section(p,"HUD Fenster")
 Hidden(p,"tracker","Runübersicht")
 Hidden(p,"bosses","Begegnungen")
 Hidden(p,"statistics","Runstatistiken")
@@ -32,59 +82,17 @@ Hidden(p,"tally","Kills und Gold")
 Hidden(p,"xp","Erfahrung")
 O.Finish(p)
 
-p=O.Page("reset","Zurücksetzen","Layout","display")
-O.Section(p,"Zurücksetzen")
-O.Pair(p,"Layout zurücksetzen",K.layout.Reset,"Tooltip zurücksetzen",K.ResetTooltip)
-O.Pair(p,"UI Größen zurücksetzen",function() O.SetMenuScale(.8); O.SetUIScale(.9) end)
-O.Section(p,"Einstellungen zurücksetzen")
-local _,restoreSettings=O.Pair(p,"Einstellungen zurücksetzen",function() K.settingsReset.Open(false) end,
-    "Sicherung wiederherstellen",function() K.settingsReset.Open(true) end)
-O.Requires(restoreSettings,K.settingsReset.HasBackup)
-O.Help(p,"Setzt Anzeige, Module und Layout zurück. Die letzte Sicherung lässt sich hier wiederherstellen.")
-O.Help(p,"Sprache, Tastenbelegungen, Runhistorie und Sammlung bleiben erhalten.")
-O.Finish(p)
-
-p=O.Page("appearance","Darstellung","Oberfläche","general")
-O.Section(p,"Darstellung")
-O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
-O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
-O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
-O.Section(p,"Hintergrund und Rahmen")
-O.Help(p,"Aus: Das Fenster zeigt nur seinen Inhalt, ohne Hintergrund und Rahmen.")
-for _,w in ipairs({{"bosses","Begegnungen"},{"skills","Aktionsleiste"},{"effects","Effekte"},{"build","Zauber, Schmuck und Buildtipps"},
-    {"tally","Kills und Gold"},{"xp","Erfahrung"},{"tracker","Runübersicht"},{"statistics","Runstatistiken"},
-    {"meter","Schadensanzeige"},{"crits","Kritische Treffer"},{"guardianOverview","Wächter"},{"analysisOverview","Run-Analyse"},
-    {"attributes","Charakterwerte"},{"party","Partyfenster"},{"loot","Beutemeldung"},{"chat","Chat"},{"levels","Gespeicherte Level"}}) do
-    local key=w[1]   -- body local for the closures
-    O.Toggle(p,"framed_"..key,w[2],function() return K.Framed(key) end,function(on) K.SetFramed(key,on) end)
-end
-O.Finish(p)
-
-p=O.Page("general","Sprache","Oberfläche","general")
-O.Section(p,"Sprache")
-local languageItems={}
-for _,entry in ipairs(K.Languages) do table.insert(languageItems,{entry.code,entry.key}) end
-local languageChoice=O.Choice(p,"language","Sprache",function() return K.DB().lang end,K.SetLang,languageItems)
--- This menu includes native CJK language names even when the rest of a Russian
--- interface uses a Cyrillic-only font. Keep those names in the universal font.
-O.Watch(function()
-    for _,option in ipairs(languageChoice.options) do
-        K.fontOverrides[option.text]=K.NeedsWideFont(K.lang) and K.WideFont or nil
-        K.SetFontSize(option.text,11)
-    end
-end)
-O.Help(p,"Übersetzungen außer Deutsch und Englisch sind maschinell erstellt und nicht muttersprachlich geprüft. Fehler bitte melden.")
-O.Finish(p)
-
-p=O.Page("fonts","Schrift","Oberfläche","general")
-O.Section(p,"Schrift")
-O.FontChoice(p)
-local fontHint=O.Help(p,"Die gewählte Schrift enthält nicht alle Zeichen dieser Sprache. Es wird eine Ersatzschrift verwendet.")
-O.Watch(function() fontHint:SetAlpha(K.FontSubstituted() and 1 or 0) end)
-O.Finish(p)
-
-p=O.Page("fps","FPS","Oberfläche","general","fps")
-O.Section(p,"FPS")
+p=O.Page("gamewindows","Spielfenster & FPS","Oberfläche & Layout","general")
+O.Section(p,"Charakterfenster","characterWindow")
+O.Toggle(p,"characterWindowStyle","Charakterfenster im KeijinUI Stil",K.characterWindow.On,K.characterWindow.Set)
+O.Help(p,"Kompakte Ausrüstung und Runwerte mit der gewählten Schrift und Hintergrunddeckkraft. Aus: Originaldarstellung.")
+O.Section(p,"Weltkarte","worldMap")
+O.Toggle(p,"smallWorldMap","Kleine Weltkarte",K.worldMap.On,K.worldMap.Set)
+O.Help(p,"Die Weltkarte bleibt über ihre normale Taste erreichbar. Position und Größe im Layoutmodus ändern. Aus: native Vollbildkarte.")
+O.Section(p,"Erfolgsmeldungen","achievements")
+O.Pair(p,"Erfolgsvorschau",function() SlashCmdList.KEIJINACHIEVEMENTS("test") end)
+O.Help(p,"Zeigt das Erfolgsfenster mit einem Beispiel. /kachi move verschiebt es, /kachi sound schaltet den Ton.")
+O.Section(p,"FPS","fps")
 O.Toggle(p,"fps","FPS",K.fps.On,K.fps.Set)
 O.Requires(O.Toggle(p,"fpsFrame","Rahmen anzeigen",K.fps.Framed,K.fps.SetFrame),K.fps.On)
 O.Requires(O.Slider(p,"fpsAlpha","Hintergrund-Deckkraft",K.fps.Alpha,K.fps.SetAlpha,0,100),function() return K.fps.On() and K.fps.Framed() end)
@@ -109,28 +117,24 @@ fpsColor:SetScript("OnClick",function()
     picker:SetColorRGB(r,g,b); picker:SetFrameStrata("FULLSCREEN_DIALOG"); picker:Show()
 end)
 
--- Core windows: only show or hide. What a module adds is switched in that module's section further down.
 O.Finish(p)
 
-p=O.Page("gamewindows","Spielfenster","Oberfläche","general")
-O.Section(p,"Kleine Weltkarte","worldMap")
-O.Toggle(p,"smallWorldMap","Kleine Weltkarte",K.worldMap.On,K.worldMap.Set)
-O.Help(p,"Die Weltkarte bleibt über ihre normale Taste erreichbar. Position und Größe im Layoutmodus ändern. Aus: native Vollbildkarte.")
-O.Section(p,"Charakterfenster im KeijinUI Stil","characterWindow")
-O.Toggle(p,"characterWindowStyle","Charakterfenster im KeijinUI Stil",K.characterWindow.On,K.characterWindow.Set)
-O.Help(p,"Kompakte Ausrüstung und Runwerte mit der gewählten Schrift und Hintergrunddeckkraft. Aus: Originaldarstellung.")
-O.Finish(p)
-
-p=O.Page("achievements","Erfolgsmeldungen","Oberfläche","general","achievements")
-O.Section(p,"Erfolgsmeldungen","achievements")
-O.Pair(p,"Erfolgsvorschau",function() SlashCmdList.KEIJINACHIEVEMENTS("test") end)
-O.Help(p,"Zeigt das Erfolgsfenster mit einem Beispiel. /kachi move verschiebt es, /kachi sound schaltet den Ton.")
-O.Finish(p)
-
-p=O.Page("reload","Neu laden","Oberfläche","general")
+p=O.Page("maintenance","Verwaltung","Verwaltung","maintenance")
 O.Section(p,"Oberfläche")
 O.Pair(p,"Oberfläche neu laden",function() ReloadUI() end)
 O.Help(p,"/kui: Einstellungen, Layout und Sprache\n/kui runs: Rundenübersicht\n/kbb: Zauber, Schmuck und Buildtipps\n/kachi: Erfolgsmeldung")
+O.Section(p,"Zurücksetzen")
+O.Pair(p,"Layout zurücksetzen",K.layout.Reset,"Tooltip zurücksetzen",K.ResetTooltip)
+O.Pair(p,"UI Größen zurücksetzen",function() O.SetMenuScale(.8); O.SetUIScale(.9) end)
+O.Section(p,"Einstellungen zurücksetzen")
+local _,restoreSettings=O.Pair(p,"Einstellungen zurücksetzen",function() K.settingsReset.Open(false) end,
+    "Sicherung wiederherstellen",function() K.settingsReset.Open(true) end)
+O.Requires(restoreSettings,K.settingsReset.HasBackup)
+O.Help(p,"Setzt Anzeige, Module und Layout zurück. Die letzte Sicherung lässt sich hier wiederherstellen.")
+O.Help(p,"Sprache, Tastenbelegungen, Runhistorie und Sammlung bleiben erhalten.")
+O.Section(p,"Teilen")
+O.Pair(p,"Einstellungen exportieren",function() K.profiles.OpenExport() end,"Einstellungen importieren",function() K.profiles.OpenImport() end)
+O.Help(p,"Layout und Darstellung als Textcode teilen. Runs, Sammlung, Tastenbelegungen und Sprache sind nie enthalten.")
 O.Finish(p)
 
 p=O.Page("units","Einheitenrahmen","Kampf","combat","units")
@@ -174,6 +178,12 @@ O.Requires(O.Toggle(p,"merge","Flächentreffer bündeln",function() return K.DB(
 O.Help(p,"Fasst gleiche Treffer innerhalb kurzer Zeit zusammen.")
 O.Requires(O.Slider(p,"combatTextSize","Größe der Schadenszahlen",K.damageText.TextSize,K.damageText.SetTextSize,50,200),OwnNumbers)
 O.Requires(O.Choice(p,"combatTextPosition","Position",K.damageText.Position,K.damageText.SetPosition,{{"plate","Am Gegner"},{"fixed","Feste Stelle"}}),OwnNumbers)
+local list=K.damageText.list
+local function ListOn() return OwnNumbers() and list.Enabled() end
+O.Requires(O.Toggle(p,"combatTextList","Als Liste anzeigen",list.Enabled,list.SetEnabled),OwnNumbers)
+O.Requires(O.Slider(p,"combatTextListLines","Sichtbare Zeilen der Liste",list.Lines,list.SetLines,2,12,{unit="",factor=1}),ListOn)
+O.Requires(O.Slider(p,"combatTextListSize","Schriftgröße der Liste",list.Size,list.SetSize,50,200),ListOn)
+O.Help(p,"Liste: Treffer erscheinen untereinander in einem eigenen Bereich mit festem Zeilenabstand. Gleiche Treffer werden gebündelt, überzählige alte verworfen. Den Bereich im Layoutmodus verschieben und skalieren; die Position am Gegner gilt dann nicht.")
 local function PositionHelp()
     local mode=K.CombatTextMode()
     if mode=="native" then return K.T("Im Stil Spiel zeichnet das Spiel die Zahlen selbst. Ihre Position lässt sich nicht verschieben; für Feste Stelle Kompakt, Scrollend oder Aufsteigend wählen.") end
@@ -283,6 +293,7 @@ p=O.Page("guardians","Wächter","Run & Karte","run","guardians")
 O.Section(p,"Wächter","guardians")
 O.Toggle(p,"guardians","Wächter in der Runübersicht",K.guardians.On,K.guardians.Set)
 O.Toggle(p,"guardianGuide","Richtungspfeile bei Wächtern",K.guardianNav.On,K.guardianNav.Set)
+O.Toggle(p,"guardianArrow","Hort Bildschirmpfeil",K.guardianNav.ArrowOn,K.guardianNav.SetArrow)
 O.Toggle(p,"guardianPins","Hortmarker statt Spielflagge",K.guardianNav.PinsOn,K.guardianNav.SetPins)
 O.Requires(O.Toggle(p,"guardianTimers","Rückkehrzeit unter Hortmarkern",K.guardianNav.TimersOn,K.guardianNav.SetTimers),K.guardianNav.PinsOn)
 O.Requires(O.Choice(p,"guardianMarker","Hortmarker",K.guardianNav.MarkerStyle,K.guardianNav.SetMarker,{{"creatures","Kreaturen"},{"raid","Raidmarker"},{"skulls","Farbschädel mit Ziffer"},{"seals","Siegel mit Ziffer"},{"classic","Klassisch"}}),K.guardianNav.PinsOn)
@@ -400,18 +411,40 @@ O.Watch(function()
     if label then reloadNote:SetText(K.T("%s wurde umgeschaltet. Für einen sauberen Zustand die Oberfläche neu laden.",K.T(label)))
     else reloadNote:SetText(K.T("Module wirken sofort. Nur bei der Minimap ist ein Neuladen ratsam, falls nach dem Ausschalten etwas hängen bleibt.")) end
 end)
-O.Pair(p,"Oberfläche neu laden",function() ReloadUI() end)
 O.Finish(p)
 
-O.pageAliases={layout="display"}
+-- Direct layout sizing, with reset kept under administration.
+do
+local p=O.pages.display
+O.Section(p,"HUD Fenster")
+local sizing=K.panelSizing
+local sizeSection=p.sections[table.getn(p.sections)]
+sizeSection.active=function()
+    for _,v in ipairs(sizing.order) do if sizing.On(v[1]) then return true end end
+end
+-- Direct sizing in layout mode replaces the former selector and sliders.
+O.Pair(p,"Layout bearbeiten",function() K.layout.Toggle(); if K.settings.panel then K.settings.panel:Hide() end end)
+O.Help(p,"Fenstergröße im Layoutmodus an den Rändern ziehen oder das Fenster anklicken, um Werte einzugeben.")
+O.Pair(O.pages.maintenance,"Fenstermaße zurücksetzen",function()
+    sizing.Reset()
+    for _,entry in ipairs(sizing.order) do if sizing.On(entry[1]) then K.layout.Place(entry[1]) end end
+end)
+O.Finish(O.pages.maintenance)
+
+O.Finish(p)
+end
+
+O.defaultPage="general"
+O.pageAliases={layout="display",fonts="general",fps="gamewindows",achievements="gamewindows",reset="maintenance",reload="maintenance"}
+O.categoryAliases={display="general"}
 O.Navigation({
-    {"display","Layout",{"display","windows","reset"}},
-    {"general","Oberfläche",{"appearance","general","fonts","fps","gamewindows","achievements","reload"}},
+    {"general","Oberfläche & Layout",{"general","appearance","display","windows","gamewindows"}},
     {"combat","Kampf",{"units","action","combat","meter","nameplates","attributes"}},
     {"run","Run & Karte",{"run","minimap","caches","guardians","levels","loot"}},
     {"collection","Sammlungen",{"collection","history"}},
     {"comfort","Eingabehilfen",{"comfort","autowalk","shortcuts"}},
-    {"modules","Module",{"modules"}}
+    {"modules","Module",{"modules"}},
+    {"maintenance","Verwaltung",{"maintenance"}}
 })
-O.ShowPage("display")
-K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then O.ReflowAll(); O.ShowPage("display"); O.Fit() end end)
+O.ShowPage("general")
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then O.ReflowAll(); O.ShowPage("general"); O.Fit() end end)

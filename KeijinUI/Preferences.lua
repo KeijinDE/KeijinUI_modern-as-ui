@@ -19,12 +19,16 @@ function K.HeaderPoint(child,panel,point,x,y,relative)
     child:SetPoint(point,panel,relative or point,x,y+K.HeaderOffset(panel)*Sign(point))
     if panel.compactHeader then panel.headerPoints[child]={point,x,y,relative or point} end
 end
+-- The title strip is a background piece: hidden with the header off and with "Background and border" off.
+function H.Strip(f)
+    if H.Mode()~="off" and K.FrameFramed(f) then f.strip:Show() else f.strip:Hide() end
+end
 local function Apply(f)
     local mode=H.Mode()
     f.headerNativeHeight(f,f.headerHeight-K.HeaderOffset(f))
-    if mode=="off" then f.title:Hide(); f.strip:Hide()
+    if mode=="off" then f.title:Hide()
     else
-        f.title:Show(); f.strip:Show()
+        f.title:Show()
         K.SetFontSize(f.title,mode=="thin" and 10 or 12)
         f.title:ClearAllPoints()
         if mode=="thin" then
@@ -46,6 +50,7 @@ local function Apply(f)
     for child,p in pairs(f.headerPoints) do
         child:ClearAllPoints(); child:SetPoint(p[1],f,p[4],p[2],p[3]+K.HeaderOffset(f)*Sign(p[1]))
     end
+    H.Strip(f)
     if f.headerExtra then f.headerExtra(mode) end
 end
 H.Apply=Apply

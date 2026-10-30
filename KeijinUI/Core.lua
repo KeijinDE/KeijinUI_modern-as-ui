@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.5.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.6.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -14,7 +14,13 @@ function K.FontSize(size)
 end
 function K.SetFontSize(fs, size, flags)
     K.fontBase[fs] = size
-    fs:SetFont(K.fontOverrides[fs] or K.font, K.fontOverrides[fs] and size or K.FontSize(K.PanelFontSize and K.PanelFontSize(fs,size) or size), flags or "OUTLINE")
+    local path = K.fontOverrides[fs] or K.font
+    local effective = K.fontOverrides[fs] and size or K.FontSize(K.PanelFontSize and K.PanelFontSize(fs,size) or size)
+    flags = flags or "OUTLINE"
+    -- Re-applying the same font is a no-op for the player but would still invalidate the layout.
+    local currentPath, currentSize, currentFlags = fs:GetFont()
+    if currentPath == path and currentSize == effective and currentFlags == flags then return end
+    fs:SetFont(path, effective, flags)
 end
 K.flat = "Interface\\Buttons\\WHITE8X8"
 function K.Number(n) return type(n) == "number" and n == n and n >= 0 and n < 1e15 end
@@ -89,6 +95,20 @@ function K.DB()
     if db.schema ~= 2 then
         for _,key in ipairs({"player","target","skills","build","tally","xp"}) do db.layout[key]=nil end
         db.schema=2
+    end
+    -- Import the old combined switch once, without overwriting explicit new choices.
+    if type(db.frameless)=="table" then
+        if type(db.windowOptions)~="table" then db.windowOptions={} end
+        for key,on in pairs(db.frameless) do
+            if on==true then
+                local c=db.windowOptions[key]
+                if type(c)~="table" then c={}; db.windowOptions[key]=c end
+                if c.rim==nil then c.rim=false end
+                if c.back==nil then c.back=false end
+                if c.strip==nil then c.strip=false end
+            end
+        end
+        db.frameless=nil
     end
     return db
 end
@@ -260,42 +280,89 @@ function K.BackgroundAlpha()
     if not v then return K.BG_ALPHA end
     return math.max(0.2,math.min(1,v))
 end
+-- Window overrides are keyed by the stable layout key, never a translated title.
+function K.WindowKey(frame)
+    return frame and frame.layoutKey
+end
+function K.WindowConfig(key)
+    local t=K.DB().windowOptions
+    local c=type(t)=="table" and t[key]
+    return type(c)=="table" and c or {}
+end
+function K.WindowShown(key,part)
+    local value=K.WindowConfig(key)[part]
+    if type(value)=="boolean" then return value end
+    if key=="fps" and (part=="rim" or part=="back") then return K.DB().fpsFrame==true end
+    return true
+end
+function K.WindowAlpha(key)
+    local a=K.WindowConfig(key).alpha
+    if K.Number(a) then return math.max(0,math.min(1,a)) end
+    if key=="fps" and K.fps then return K.fps.Alpha() end
+    return K.BackgroundAlpha()
+end
+function K.WindowCapabilities(key)
+    local e=K.layout and K.layout.entries[key]
+    if not e then return {} end
+    local f=e.frame
+    local body=f.skinTracked or key=="player" or key=="target" or key=="fps"
+    return {rim=body,back=body,alpha=body,strip=f.strip and f.windowHasStrip,
+        headers=f.compactHeader}
+end
+function K.ApplyWindow(frame)
+    local key=K.WindowKey(frame)
+    if not key then return end
+    local s=frame.chamfer
+    if s and (frame.skinTracked or key=="fps") then
+        for _,t in ipairs(s.back) do if K.WindowShown(key,"back") then t:Show() else t:Hide() end end
+        for _,t in ipairs(s.rim) do if K.WindowShown(key,"rim") then t:Show() else t:Hide() end end
+        if s.background and (not frame.noOpacity or key=="fps") then
+            local c=s.background; frame:SetBackdropColor(c[1],c[2],c[3],K.WindowAlpha(key))
+        end
+    end
+    if frame.strip and frame.windowHasStrip then
+        if K.WindowShown(key,"strip") and (not frame.compactHeader or K.headers.Mode(frame)~="off") then frame.strip:Show()
+        else frame.strip:Hide() end
+    end
+end
 function K.ApplyBackground()
-    local a=K.BackgroundAlpha()
     for _,frame in ipairs(K.skinned) do
         local shape=frame.chamfer
         if shape and shape.background and not frame.noOpacity then
-            local c=shape.background; frame:SetBackdropColor(c[1],c[2],c[3],a)
+            local c=shape.background; frame:SetBackdropColor(c[1],c[2],c[3],math.max(frame.minBackgroundAlpha or 0,K.BackgroundAlpha()))
         end
+        K.ApplyWindow(frame)
     end
-    -- Windows switched to frameless (settings) keep only their content: background and rim pieces are hidden.
-    for key,e in pairs(K.layout and K.layout.entries or {}) do
-        local shape=e.frame.skinTracked and e.frame.chamfer
-        if shape then
-            local framed=K.Framed(key)
-            for _,t in ipairs(shape.back) do if framed then t:Show() else t:Hide() end end
-            for _,t in ipairs(shape.rim) do if framed then t:Show() else t:Hide() end end
-            if e.frame.compactHeader then K.headers.Strip(e.frame) end
-        end
-    end
+    if K.fps then K.ApplyWindow(K.fps.frame) end
     if K.ApplyUnitBackground then K.ApplyUnitBackground() end
 end
--- Background and rim of one layout window (settings). Only the frameless ones are stored.
-function K.Framed(key)
-    local t=K.DB().frameless
-    return not (type(t)=="table" and t[key]==true)
-end
--- Same for a panel frame; frames without a layout entry count as framed.
-function K.FrameFramed(frame)
-    for key,e in pairs(K.layout and K.layout.entries or {}) do
-        if e.frame==frame then return K.Framed(key) end
+function K.SetWindowOption(key,field,value)
+    if not K.WindowCapabilities(key)[field] then return false end
+    if field=="alpha" then
+        if value~=nil and not K.Number(value) then return false end
+        if value then value=math.max(0,math.min(1,value)) end
+    elseif field=="headers" then
+        if value~=nil and value~="normal" and value~="thin" and value~="off" then return false end
+    elseif value~=nil and type(value)~="boolean" then return false end
+    local db=K.DB()
+    if type(db.windowOptions)~="table" then db.windowOptions={} end
+    if type(db.windowOptions[key])~="table" then db.windowOptions[key]={} end
+    db.windowOptions[key][field]=value
+    if not next(db.windowOptions[key]) then db.windowOptions[key]=nil end
+    if K.headers and field=="headers" then
+        K.headers.Apply(K.layout.entries[key].frame)
+        if K.panelSizing then K.panelSizing.Refresh(key) end
     end
+    K.ApplyBackground()
+    if K.layout then K.layout.SyncFollowers() end
     return true
 end
-function K.SetFramed(key,on)
+function K.ResetWindowOptions(key)
     local db=K.DB()
-    if type(db.frameless)~="table" then db.frameless={} end
-    db.frameless[key]=not on or nil
+    if type(db.windowOptions)=="table" then db.windowOptions[key]=nil end
+    local e=K.layout.entries[key]
+    if e and e.frame.compactHeader then K.headers.Apply(e.frame) end
+    if K.panelSizing then K.panelSizing.Refresh(key) end
     K.ApplyBackground()
 end
 function K.SetBackgroundAlpha(v)
@@ -318,7 +385,7 @@ function K.Panel(name, title, width, height)
     strip:SetVertexColor(0.6, 0.53, 0.36, 0.55)
     strip:SetPoint("TOPLEFT", f, "TOPLEFT", 7, -5)
     strip:SetPoint("TOPRIGHT", f, "TOPRIGHT", -7, -5); strip:SetHeight(23)
-    f.strip = strip
+    f.strip = strip; f.windowHasStrip=title~=""
     f.title = K.Text(f, "", 12, "TOPLEFT", 13, -11, width - 26)
     K.Live(f.title, function() return K.T(title) end)
     f.title:SetTextColor(1, 0.82, 0.28)
@@ -425,11 +492,16 @@ function K.ListBarRow(parent, index, height)
     local fill = ListPieces(row, "ARTWORK", "Fill", height)
     -- Same calls as a StatusBar, so the panels need no special handling.
     local bar = { fill=fill, value=0 }
+    -- The row width is known from its own SetWidth, so SetValue never has to ask the layout for it.
+    local setWidth=row.SetWidth
+    row.SetWidth=function(self,v) width=v; return setWidth(self,v) end
+    local drawn,drawnWidth
     function bar:SetMinMaxValues() end
     function bar:GetValue() return self.value end
     function bar:SetValue(value)
         value = math.max(0, math.min(1, tonumber(value) or 0)); self.value = value
-        width=row:GetWidth()
+        if drawn==value and drawnWidth==width then return end
+        drawn,drawnWidth=value,width
         local w = width*value
         local a = math.min(w, CAP)
         local b = math.min(math.max(w-CAP, 0), width-2*CAP)
@@ -439,13 +511,15 @@ function K.ListBarRow(parent, index, height)
         if c > 0 then fill[3]:SetWidth(c); fill[3]:SetTexCoord(CAP_U,CAP_U*(1-c/CAP),0,1); fill[3]:Show() else fill[3]:Hide() end
     end
     function bar:SetStatusBarColor(r, g, b, a)
-        self.barcolor = {r, g, b, a}
+        local c = self.barcolor
+        if c and c[1]==r and c[2]==g and c[3]==b and c[4]==a then return end
+        if c then c[1],c[2],c[3],c[4]=r,g,b,a else self.barcolor = {r, g, b, a} end
         for _,t in ipairs(self.fill) do t:SetVertexColor(r, g, b, a or 1) end
     end
     function bar:GetStatusBarColor() return unpack(self.barcolor) end
     bar:SetStatusBarColor(1, 1, 1, 1); bar:SetValue(0)
     function row:ResizeArtwork()
-        width=self:GetWidth()
+        width=self:GetWidth(); drawn=nil
         ListFull(back,width); ListFull(rim,width)
         for _,pieces in ipairs({back,rim,fill}) do
             for _,t in ipairs(pieces) do t:SetHeight(self:GetHeight()) end

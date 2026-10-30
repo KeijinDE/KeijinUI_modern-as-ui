@@ -308,9 +308,9 @@ local function Build()
     return true
 end
 local function HideDraw()
-    if icons then for _,b in ipairs(icons) do b:Hide() end end
-    if edge then edge:Hide() end
-    arrow:Hide()
+    if icons then for _,b in ipairs(icons) do K.Shown(b,false) end end
+    if edge then K.Shown(edge,false) end
+    K.Shown(arrow,false)
 end
 local function Clear(reason)
     C.reason=reason; C.clusters=nil; C.nearest=nil

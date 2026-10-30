@@ -196,9 +196,9 @@ local function Enforce()
     -- The native tab is also a UIParent child; match the chat's effective scale.
     if ChatFrame1Tab then ChatFrame1Tab:SetScale(panel:GetEffectiveScale()/UIParent:GetEffectiveScale()) end
     if chat.AtBottom then
-        if chat:AtBottom() then bottom:Hide() else bottom:Show() end
+        if chat:AtBottom() then K.Shown(bottom,false) else K.Shown(bottom,true) end
     end
-    panel:Show()
+    K.Shown(panel,true)
     busy=false
 end
 K.chat.Enforce=Enforce

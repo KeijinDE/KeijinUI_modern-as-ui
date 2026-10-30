@@ -3,7 +3,8 @@ local K=KeijinUI
 local N=K.navigation
 local G={pins={}}
 K.guardianNav=G
-local selected,awaitLairs
+local selected,awaitLairs -- selected: manual choice only (Select, Cycle, pin click); the automatic one is made per update
+local autoKey -- key of the last automatic target, kept by the hysteresis against near ties
 local inWorld=true
 local PATH="Interface\\AddOns\\KeijinUI\\media\\caches\\Arrow.tga"
 local rows={}
@@ -123,7 +124,7 @@ local function Identity(lair) return tostring(lair.index)..":"..tostring(lair.id
 function G.List(includeEmpty)
     local out={}
     if not N.Active() or awaitLairs or type(AZS_LAIRS)~="table" or not K.Fresh(AZS_LAIRS_UPDATED) then return out end
-    if runStamp~=AZS_ZONE_UPDATED then runStamp=AZS_ZONE_UPDATED; seenAlive={} end
+    if runStamp~=AZS_ZONE_UPDATED then runStamp=AZS_ZONE_UPDATED; seenAlive={}; selected=nil; autoKey=nil end
     for i,lair in ipairs(AZS_LAIRS) do
         if type(lair)=="table" and (lair.state=="asleep" or lair.state=="awake") then seenAlive[lair.index or i]=true end
         if type(lair)=="table" and (lair.state=="asleep" or lair.state=="awake" or (includeEmpty and lair.state=="empty")) and N.Finite(lair.x) and N.Finite(lair.y) then
@@ -138,6 +139,48 @@ local function Nearest(list)
     for _,v in ipairs(list) do if not best or (v.dist and (not best.dist or v.dist<best.dist)) then best=v end end
     return best
 end
+-- Health share of a fighting guardian, same lookup as Unit/Health in Guardians.lua (not exported there):
+-- unit of AZS_UNITS by lair id, units from the run before do not count. nil without a value.
+local function Share(lair)
+    if type(AZS_UNITS)~="table" or not K.Fresh(AZS_UNITS_UPDATED) then return nil end
+    if not K.Number(lair.id) or lair.id==0 then return nil end
+    for _,u in ipairs(AZS_UNITS) do
+        if u.kind=="guardian" and u.id==lair.id then
+            if K.Number(u.hp) and K.Number(u.hpm) and u.hpm>0 then return u.hp/u.hpm end
+            return nil
+        end
+    end
+end
+local function Closer(a,b)
+    return a.dist and (not b.dist or a.dist<b.dist)
+end
+-- Automatic target: the fighting guardian with the least health (without a value after those with one,
+-- ties by distance); nobody fighting means the nearest lair. Without a fight the previous automatic target
+-- stays until another one is at least 10 yards or 10 percent (the larger) nearer, so equal distances do not flip it.
+local function Pick(list)
+    local best,bestShare
+    for _,v in ipairs(list) do
+        if v.lair.state=="awake" then
+            local share=Share(v.lair)
+            local better=not best
+            if best and share and (not bestShare or share<bestShare) then better=true
+            elseif best and share==bestShare and Closer(v,best) then better=true end
+            if better then best,bestShare=v,share end
+        end
+    end
+    if best then return best,true end
+    return Nearest(list),false
+end
+local function Automatic(list)
+    local best,fighting=Pick(list)
+    if best and not fighting and autoKey and best.key~=autoKey then
+        for _,v in ipairs(list) do
+            if v.key==autoKey and v.dist and best.dist and v.dist-best.dist<math.max(10,v.dist*.1) then best=v; break end
+        end
+    end
+    autoKey=best and best.key
+    return best
+end
 function G.Select(index)
     for _,v in ipairs(G.List()) do
         if v.index==index or v.lair.index==index then selected=v.key; G.Update(); return true end
@@ -148,11 +191,20 @@ function G.Cycle(step)
     local list=G.List(); local count=table.getn(list)
     if count==0 then return end
     local index=0
-    for i,v in ipairs(list) do if v.key==selected then index=i; break end end
-    index=math.mod(index-1+(step or 1),count)+1
+    local shown=G.current and G.current.key
+    for i,v in ipairs(list) do if v.key==shown then index=i; break end end
+    index=math.mod(index-1+(step or 1)+count,count)+1
     selected=list[index].key; G.Update()
 end
-function G.Nearest() selected=nil; G.Update() end
+-- A click on the guardian already chosen by hand gives the choice back to the automatic target.
+function G.Click(index)
+    local current=G.current
+    if selected and current and current.key==selected and (current.index==index or current.lair.index==index) then
+        selected=nil; autoKey=nil; G.Update(); return true
+    end
+    return G.Select(index)
+end
+function G.Nearest() selected=nil; autoKey=nil; G.Update() end
 -- Each row gets its own direction. The overview keeps its size and status column.
 function G.Decorate(row)
     rows[row]=true
@@ -198,6 +250,7 @@ function G.AddTooltip(lair)
             GameTooltip:AddLine(K.T("Richtung und Entfernung zeigen zum Hort, nicht zum bewegten Wächter."),.7,.7,.7,true)
             local _,from=N.Facing()
             if lair.state~="empty" and G.On() and v.dist and v.dist>.5 and from=="north" then GameTooltip:AddLine(K.T("Keine Blickrichtung verfügbar: Pfeil ist nordorientiert."),1,.82,.28,true) end
+            if G.current and G.current.key==v.key and selected==v.key then GameTooltip:AddLine(K.T("Erneut klicken: automatisch"),.7,.7,.7,true) end
             return
         end
     end
@@ -245,7 +298,7 @@ local function Pin(i)
         pin.badge.mark=pin.badge:CreateTexture(nil,"OVERLAY")
         pin.badge.mark:SetWidth(8); pin.badge.mark:SetHeight(8)
         pin.badge.mark:SetPoint("CENTER",pin,"BOTTOMRIGHT",-1,1)
-        pin:SetScript("OnClick",function() if this.destination and this.destination.lair.state~="empty" then G.Select(this.destination.lair.index or this.destination.index) end end)
+        pin:SetScript("OnClick",function() if this.destination and this.destination.lair.state~="empty" then G.Click(this.destination.lair.index or this.destination.index) end end)
         pin:SetScript("OnEnter",function() Tip(this.destination,this) end)
         pin:SetScript("OnLeave",function() GameTooltip:Hide() end)
         pin:SetScript("OnHide",function() if GameTooltip.GetOwner and GameTooltip:GetOwner()==this then GameTooltip:Hide() end end)
@@ -337,7 +390,7 @@ local arrowModuleOn
 local function ScreenArrow(chosen)
     arrowOptions.hidden=G.ArrowOn()
     if not G.ArrowOn() or not inWorld or not N.ScreenFresh() or not chosen or not chosen.dist then
-        arrow.destination=nil; arrow:Hide(); return
+        arrow.destination=nil; K.Shown(arrow,false); return
     end
     local slot=G.Slot(chosen.lair,chosen.index)
     local tint=SKULLTINT[slot]
@@ -371,7 +424,8 @@ function G.Update()
     local tickX,tickY=N.WorldPosition()
     local list=G.List(); local chosen
     for _,v in ipairs(list) do if selected==v.key then chosen=v; break end end
-    chosen=chosen or Nearest(list); selected=chosen and chosen.key or nil; G.current=chosen
+    if not chosen then selected=nil; chosen=Automatic(list) end
+    G.current=chosen
     ScreenArrow(chosen)
     local count=0
     -- With the 0.102 flag switch our skulls stand for every lair and replace the native flag.
@@ -408,11 +462,11 @@ function G.Update()
     end
 end
 K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then selected=nil; awaitLairs=true; G.Update()
+    if prefix=="AZSZONE" then selected=nil; autoKey=nil; awaitLairs=true; G.Update()
     elseif prefix=="AZSLAIRS" then awaitLairs=false end
 end)
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then K.layout.Place("guardianarrow") end end)
 K.On("PLAYER_ENTERING_WORLD",function() inWorld=true; G.Update() end)
-K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
+K.On("PLAYER_LEAVING_WORLD",function() inWorld=false; selected=nil; autoKey=nil; awaitLairs=true; G.Update() end)
 K.On("PLAYER_LOGOUT",function() inWorld=false; selected=nil; awaitLairs=true; G.Update() end)
 K.Update("guardians",G.Update)

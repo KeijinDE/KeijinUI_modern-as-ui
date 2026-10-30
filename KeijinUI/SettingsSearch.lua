@@ -30,18 +30,14 @@ local aliases={
     executeMarker="target ziel health execute 30 prozent",
     guardianMarker="marker markers raid raidmarker symbol symbole totenkopf skull schaedel kreatur kreaturen creature siegel seal ziffer number hort lair minimap wächter guardian",
     shortcutAction="binding keybind raidmarker layout taste tastenbelegung",
-    layoutKey="binding keybind layout taste tastenbelegung",
+    layoutTap="binding keybind layout taste tastenbelegung alt ctrl shift antippen tap",
+    shortcut_TOGGLEAUTORUN="binding keybind autorun autowalk automatisch laufen taste maus mouse",
     fps="fps framerate frames bildrate performance leistung",
-    fpsFrame="fps border frame rahmen",
-    fpsAlpha="fps opacity alpha transparenz deckkraft",
     fpsOpacity="fps opacity alpha transparenz deckkraft text",
     fpsSize="fps font size schriftgröße",
     fpsColor="fps font color schriftfarbe",
-    autoWalk="autorun autowalk automatisch laufen taste key maus mouse",
     attributes="player spieler character stats charakterwerte",
     attributesMaster="player spieler character stats charakterwerte",
-    optionsScale="settings menu menue einstellungen size groesse scale skalierung",
-    uiScale="interface ui gesamt scale skalierung groesse",
     cache_size="minimap minikarte chest chests truhe truhen symbol icon groesse size scale skalierung",
     guardian_size="minimap minikarte hort lair wächter waechter guardian marker symbol icon groesse size scale skalierung",
     combatTextSize="damage schaden zahlen numbers kampftext combat text groesse size scale skalierung textgroesse",
@@ -98,6 +94,7 @@ local function Corpus(entry)
     Add(entry.label); Add(entry.page.caption); Add(entry.page.description); Add(entry.section)
     table.insert(parts,entry.key or "")
     table.insert(parts,aliases[entry.key] or "")
+    if entry.page.key=="shortcuts" then table.insert(parts,"binding keybind raidmarker layout taste tastenbelegung") end
     if entry.page.key=="attributes" then table.insert(parts,"player spieler character stats charakterwerte") end
     for _,help in ipairs(entry.help) do Add(help) end
     for _,item in ipairs(entry.items or {}) do Add(item[2]) end
@@ -209,7 +206,7 @@ local function Render(query)
         for j,help in ipairs(entry.help) do
             local fs=view.help[j]
             if not fs then fs=K.Text(page,"",10,"TOPLEFT",0,0,512); fs:SetHeight(32); fs:SetTextColor(.68,.67,.62); view.help[j]=fs end
-            fs:ClearAllPoints(); fs:SetPoint("TOPLEFT",page,"TOPLEFT",0,-y); fs:SetText(K.T(help)); fs:Show(); y=y+36
+            fs:ClearAllPoints(); fs:SetPoint("TOPLEFT",page,"TOPLEFT",0,-y); fs:SetText(K.T(help)); fs:SetHeight(32); fs:Show(); y=y+36
         end
         y=y+12
     end
@@ -242,7 +239,7 @@ edit:SetScript("OnEditFocusLost",function() O.searchFocused=false; Hint() end)
 local onHide=panel:GetScript("OnHide")
 panel:SetScript("OnHide",function()
     if onHide then onHide() end
-    O.SetSearch(""); edit:ClearFocus()
+    edit:ClearFocus(); O.searchFocused=false
 end)
 K.OnLang(function()
     if O.searchQuery and O.searchQuery~="" then O.SetSearch(O.searchQuery) else Hint() end

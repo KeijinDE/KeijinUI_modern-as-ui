@@ -1,6 +1,12 @@
 -- Simplified Chinese UI. German source keys share their English lookup labels.
 local K=KeijinUI
 local text={
+ ["Alt"]="Alt", ["Ctrl"]="Ctrl", ["Shift"]="Shift",
+ ["Tap for layout mode"]="轻点切换布局模式",
+ ["Key or tap toggles layout mode. Both work together."]="绑定按键或轻点均可切换布局模式，两者可同时使用。",
+
+ ["The assigned key opens and closes layout mode. Without a key: /kui edit or Edit layout."]="指定按键可开启和关闭布局模式。未绑定时：使用 /kui edit 或编辑布局。",
+ ["Press Escape, %s or Done to finish"]="按 Escape、%s 或完成以结束",
  ["Width %d · Height %d (%d rows)"]="宽度 %d · 高度 %d (%d 行)",
  ["Width %d · Height %d (%d rows, max.)"]="宽度 %d · 高度 %d (%d 行,最大)",
  ["Height"]="高度",
@@ -88,10 +94,6 @@ local text={
  ["Shows up to 4 teammates with health, status and revive progress."]="显示最多4名队友的生命、状态和复活进度。",
  ["At the enemy: numbers rise above the nameplate. Fixed spot: all numbers start at the combat text anchor."]="敌人位置：数字在姓名上方升起。固定位置：所有数字从战斗文字锚点出现。",
  ["Hold Shift when releasing: do not snap."]="松开时按住 Shift 可禁用吸附。",
- ["Layout modifier"]="布局按键",
- ["No hold key"]="无需按住",
- ["In layout mode, drag to move and use the mouse wheel to resize. Toggle with /kui edit or Edit layout."]="在布局模式中拖动窗口，用鼠标滚轮调整大小。使用 /kui edit 或编辑布局切换。",
- ["Assign a toggle key in the game key bindings under KeijinUI. No hold key leaves Alt free for push to talk."]="在游戏按键设置的 KeijinUI 分类中指定切换键。选择无需按住可将 Alt 留给按键通话。",
  ["Change position and size in layout mode."]="在布局模式中更改位置和大小。",
  ["Game windows"]="游戏窗口",
  ["Small world map"]="小型世界地图",
@@ -125,7 +127,7 @@ local text={
  ["Mouse wheel: size"]="鼠标滚轮：调整大小", ["Layout"]="布局", ["Display"]="显示",
  ["Layout & Display"]="布局与显示", ["Size & position"]="大小与位置", ["Edit layout"]="编辑布局",
  ["Reset layout"]="重置布局", ["Reset tooltip"]="重置提示框", ["Reset UI sizes"]="重置界面大小",
- ["Entire UI"]="整个界面", ["Menu size"]="菜单大小", ["Background opacity"]="背景不透明度",
+ ["Entire UI"]="整个界面", ["Background opacity"]="背景不透明度",
  ["Changes are saved immediately."]="更改会立即保存。", ["Layout mode active"]="布局编辑已开启",
  ["Press Escape or Done to finish"]="按 Escape 或完成以结束", ["Done"]="完成", ["Close"]="关闭",
  ["Reset"]="重置", ["Reload"]="重新加载", ["Reload interface"]="重新加载界面",
@@ -207,6 +209,7 @@ local text={
  ["Small direction arrows to the right of guardian names. Hover for distance to the fixed lair. Moves with the run overview."]="在守卫名称右侧显示方向箭头。悬停查看到固定巢穴的距离，随冒险概览一起移动。",
  ["Every lair keeps its own symbol for the whole run, on the minimap and before the name in the run overview. With ! in combat, dimmed with x when empty. Replaces the game's red flag (0.102 or newer), before that only symbols for defeated lairs. Hover for return time."]="每个巢穴整局使用同一标记，显示在小地图及概览名称前。战斗中显示!，空巢变暗并显示x。0.102起可替代游戏红旗，旧版本仅标记已击败的巢穴。悬停查看返回时间。",
  ["Direction and distance lead to the lair, not to the moving guardian."]="方向和距离指向固定巢穴，并非移动中的守卫。",
+ ["Click again: automatic"]="再次点击：自动",
  ["Caches"]="宝箱", ["Cache icons"]="宝箱图标", ["Cache icon size"]="宝箱图标大小", ["Cache edge arrow"]="宝箱边缘箭头",
  ["Cache screen arrow"]="宝箱屏幕箭头", ["Cache message"]="宝箱提示", ["Cache arrow"]="宝箱箭头", ["Next cache"]="下个宝箱",
  ["Current gold"]="当前金币", ["Price of the next cache"]="下个宝箱价格", ["The next cache costs %d gold"]="下个宝箱需要%d金币",
@@ -409,6 +412,14 @@ local text={
  ["Reset to default: %s"]="已重置为默认：%s",
  ["Note: font not available, your font is kept: %s"]="注意：字体不可用，保留你当前的字体：%s",
  ["Replaces your layout and appearance. Values not in the code are reset to default."]="将替换你的布局和外观。代码中没有的值会重置为默认。",
+ ["Background (%)"]="背景 (%)",
+ ["Show background"]="显示背景",
+ ["Show header artwork"]="显示标题条图案",
+ ["Reset appearance"]="重置外观",
+ ["Appearance saves now. Apply saves size."]="外观立即保存。尺寸点击应用后保存。",
+ ["Default"]="默认",
+ ["Defaults for all windows. In layout mode, click a window to change its own appearance."]="所有窗口的默认值。在布局模式下点击窗口可单独调整其外观。",
+ ["Window appearance"]="窗口外观",
 }
 -- Untranslated diagnostic commands and symbols remain readable in English.
 local common={Boss="首领",Gold="金币",Cache="宝箱",Kills="击杀",Items="物品",Item="物品",Spells="技能",Minimap="小地图",Tooltip="提示框",Buffs="增益",Chat="聊天",["in"]="还有"}

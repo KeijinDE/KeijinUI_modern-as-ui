@@ -566,36 +566,35 @@ local function Paint(pool, rows, top, pitch)
 		cell:SetScript("OnDragStart", DragStart)
 		cell:SetScript("OnDragStop", DragStop)
 		if row.recommended then cell.color = row.safety and {0.35,0.9,0.5} or {0.9,0.75,0.2} end
-		cell:ClearAllPoints()
 		local columns = pool == spellCells and COLUMNS or 5
 		local start = ROWSTART
-		cell:SetPoint("TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*(pitch or PITCH))
+		KeijinUI.Anchor(cell,"TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*(pitch or PITCH))
 		if row.kind == "emptySpell" then
-			cell.icon:SetTexture(nil); cell.icon:Hide()
+			cell.icon:SetTexture(nil); KeijinUI.Shown(cell.icon,false)
 		else
 			cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
 			cell.icon:SetVertexColor(1, 1, 1, 1)
-			cell.icon:SetWidth(ICON - 4); cell.icon:SetHeight(ICON - 4)
+			KeijinUI.SetW(cell.icon,ICON - 4); KeijinUI.SetH(cell.icon,ICON - 4)
 			cell.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 			-- Empty jewelry slots: the full-size paperdoll silhouette, cropped like an item icon, slightly greyed.
 			if row.kind == "emptyItem" then cell.icon:SetVertexColor(0.85, 0.85, 0.85, 1) end
-			cell.icon:Show()
+			KeijinUI.Shown(cell.icon,true)
 		end
         if row.kind=="item" and KeijinUI.collection and KeijinUI.collection.CooldownsOn() then
             if not cell.nativeCooldown then cell.nativeCooldown=KeijinUI.Text(cell,"",9,"BOTTOM",0,1) end
             local left=KeijinUI.collection.Cooldown(row.slot)
             cell.nativeCooldown:SetText(left and left>0 and KeijinUI.Clock(math.ceil(left)) or "")
-            cell.nativeCooldown:Show()
-        elseif cell.nativeCooldown then cell.nativeCooldown:Hide() end
+            KeijinUI.Shown(cell.nativeCooldown,true)
+        elseif cell.nativeCooldown then KeijinUI.Shown(cell.nativeCooldown,false) end
 		if row.kind == "spell" then
 			cell.rank:SetText(string.format("%.0f", row.rank))
-			cell.rank:Show(); cell.rankBackground:Show()
+			KeijinUI.Shown(cell.rank,true); KeijinUI.Shown(cell.rankBackground,true)
 		else
-			cell.rank:Hide(); cell.rankBackground:Hide()
+			KeijinUI.Shown(cell.rank,false); KeijinUI.Shown(cell.rankBackground,false)
 		end
 		local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
 		cell.runCooldown:SetText(cooldown)
-		if cooldown ~= "" then cell.cooldownPlate:Show() else cell.cooldownPlate:Hide() end
+		if cooldown ~= "" then KeijinUI.Shown(cell.cooldownPlate,true) else KeijinUI.Shown(cell.cooldownPlate,false) end
 		-- Gold below one second: about where more cooldown reduction stops paying off.
 		if Number(row.cdmax) and row.cdmax < 1 then cell.runCooldown:SetTextColor(1, 0.82, 0)
 		else cell.runCooldown:SetTextColor(0.86, 0.86, 0.88) end
@@ -605,13 +604,13 @@ local function Paint(pool, rows, top, pitch)
 			cell.border:SetBackdropBorderColor(cell.color[1], cell.color[2], cell.color[3], 0.8)
 		end
 		if hovered == cell and changed then Tooltip(cell) end
-		cell:Show()
+		KeijinUI.Shown(cell,true)
 	end
 	for index = table.getn(rows) + 1, table.getn(pool) do
 		local cell = pool[index]
 		if hovered == cell then hovered = nil; GameTooltip:Hide() end
 		cell.row = nil
-		cell:Hide()
+		KeijinUI.Shown(cell,false)
 	end
 end
 local function BuildLayout(spells)
@@ -619,10 +618,10 @@ local function BuildLayout(spells)
 	-- Each spell row gets a strip above it for the cooldown numbers; without them the original size.
 	local strip = CooldownStrip()
 	local spellTop, itemTop = 8 + strip, 8 + spellRows * (PITCH + strip) + 6
-	panel:SetHeight(itemTop + ICON + 10)
-	spellsLabel:ClearAllPoints(); spellsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); spellsLabel:Show()
-	itemsLabel:ClearAllPoints(); itemsLabel:SetPoint("TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10)); itemsLabel:Show()
-	divider:ClearAllPoints(); divider:SetPoint("TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); divider:Show()
+	KeijinUI.SetH(panel,itemTop + ICON + 10)
+	KeijinUI.Anchor(spellsLabel,"TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); KeijinUI.Shown(spellsLabel,true)
+	KeijinUI.Anchor(itemsLabel,"TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10)); KeijinUI.Shown(itemsLabel,true)
+	KeijinUI.Anchor(divider,"TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); KeijinUI.Shown(divider,true)
 	return spellTop, itemTop, PITCH + strip
 end
 -- Cooldown style of the action bar: clockwise sweep (default, like stock action buttons) or the
@@ -631,7 +630,7 @@ function KeijinUI.CooldownClockwise() return KeijinUI.DB().cooldownStyle ~= "dow
 function KeijinUI.SetCooldownStyle(style) KeijinUI.DB().cooldownStyle = style == "down" and "down" or nil end
 local function StopClock(cell)
 	if cell.clockStart then CooldownFrame_SetTimer(cell.clock, 0, 0, 0) end
-	cell.clock:Hide(); cell.clockStart, cell.clockFull = nil, nil
+	KeijinUI.Shown(cell.clock,false); cell.clockStart, cell.clockFull = nil, nil
 end
 -- Game 0.115: use the run-clock based API directly, never estimate talent intervals.
 local function TimerIcon(value,name)
@@ -671,20 +670,20 @@ end
 local function MakeCell(store, parent, prefix, index)
 	if store[index] then return store[index] end
 	local cell = CreateFrame("Frame", nil, parent)
-	cell:SetWidth(ACTION_ICON); cell:SetHeight(ACTION_ICON)
+	KeijinUI.SetW(cell,ACTION_ICON); KeijinUI.SetH(cell,ACTION_ICON)
 	cell:EnableMouse(false)
 	cell:SetScript("OnEnter",function() this.timerHover=true; TimerTip(this) end)
 	cell:SetScript("OnLeave",function() this.timerHover=nil; GameTooltip:Hide() end)
 	cell:SetScript("OnHide",function() if this.timerHover then this.timerHover=nil; GameTooltip:Hide() end end)
 	KeijinUI.Chamfer(cell,2,{0.02,0.02,0.025,0.85})
 	cell.icon = cell:CreateTexture(nil, "ARTWORK")
-	cell.icon:SetWidth(ACTION_ICON - 4); cell.icon:SetHeight(ACTION_ICON - 4)
+	KeijinUI.SetW(cell.icon,ACTION_ICON - 4); KeijinUI.SetH(cell.icon,ACTION_ICON - 4)
 	cell.icon:SetPoint("CENTER", cell, "CENTER", 0, 0)
 	cell.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	cell.sweep = Fill(cell, "OVERLAY", 0, 0, 0, 0.6)
 	cell.sweep:SetPoint("BOTTOMLEFT", cell.icon, "BOTTOMLEFT", 0, 0)
 	cell.sweep:SetPoint("BOTTOMRIGHT", cell.icon, "BOTTOMRIGHT", 0, 0)
-	cell.sweep:SetHeight(1); cell.sweep:Hide()
+	KeijinUI.SetH(cell.sweep,1); KeijinUI.Shown(cell.sweep,false)
 	cell.frame = cell
 	-- Clockwise sweep: the game's own cooldown model (CooldownFrameTemplate, as on every stock action
 	-- button). Template frames need a name in this client. The number sits on a layer above the model.
@@ -692,7 +691,7 @@ local function MakeCell(store, parent, prefix, index)
 		cell.clock = CreateFrame("Model", prefix..index, cell, "CooldownFrameTemplate")
 		cell.clock:SetAllPoints(cell.icon)
 		cell.clock:SetFrameLevel(cell:GetFrameLevel() + 1)
-		cell.clock:Hide()
+		KeijinUI.Shown(cell.clock,false)
 	end
 	local text = CreateFrame("Frame", nil, cell)
 	text:SetAllPoints(cell); text:SetFrameLevel(cell:GetFrameLevel() + 2)
@@ -711,7 +710,7 @@ local function PaintCell(cell,row)
 	if cell.timerHover and (not row or row.kind~="talentTimer") then cell.timerHover=nil; GameTooltip:Hide() end
 	if row then
 		cell.icon:SetTexture(row.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-		cell.icon:Show()
+		KeijinUI.Shown(cell.icon,true)
 		cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
 		local left = Number(row.cd) and row.cd > 0 and row.cd or nil
 		cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
@@ -723,18 +722,18 @@ local function PaintCell(cell,row)
 				cell.clockStart, cell.clockFull = start, full
 				CooldownFrame_SetTimer(cell.clock, start, full, 1)
 			end
-			cell.sweep:Hide()
+			KeijinUI.Shown(cell.sweep,false)
 		elseif left then
 			if cell.clock then StopClock(cell) end
 			local fraction = full and math.min(1, left / full) or 1
-			cell.sweep:SetHeight(math.max(1, (ACTION_ICON - 4) * fraction)); cell.sweep:Show()
-		else cell.sweep:Hide(); if cell.clock then StopClock(cell) end end
+			KeijinUI.SetH(cell.sweep,math.max(1, (ACTION_ICON - 4) * fraction)); KeijinUI.Shown(cell.sweep,true)
+		else KeijinUI.Shown(cell.sweep,false); if cell.clock then StopClock(cell) end end
 	else
-		cell.icon:Hide(); cell.sweep:Hide(); cell.cooldown:SetText("")
+		KeijinUI.Shown(cell.icon,false); KeijinUI.Shown(cell.sweep,false); cell.cooldown:SetText("")
 		if cell.clock then StopClock(cell) end
 		cell.frame:SetBackdropBorderColor(0.35,0.33,0.28,0.8)
 	end
-	cell:Show()
+	KeijinUI.Shown(cell,true)
 	if cell.timerHover then TimerTip(cell) end
 end
 -- Talent countdowns in their own bar ("Effekte", default) or, with the option off, in the action bar.
@@ -751,8 +750,7 @@ local function PaintEffects(timers)
 	if effectShown == 0 and EffectsSplit() and Arranging() then effectShown = EFFECT_PLACEHOLDER end
 	for index = 1, effectShown do
 		local cell = EffectCell(index)
-		cell:ClearAllPoints()
-		cell:SetPoint("TOPLEFT", effects, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
+		KeijinUI.Anchor(cell,"TOPLEFT", effects, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		cell.racial = false
 		PaintCell(cell, timers[index])
 	end
@@ -761,16 +759,16 @@ local function PaintEffects(timers)
 		if effectCells[index].timerHover then effectCells[index].timerHover=nil; GameTooltip:Hide() end
 	end
 	if effectShown > 0 then
-		effects:SetWidth(16 + (effectShown - 1) * ACTION_PITCH + ACTION_ICON)
-		effects:SetHeight(16 + ACTION_ICON)
+		KeijinUI.SetW(effects,16 + (effectShown - 1) * ACTION_PITCH + ACTION_ICON)
+		KeijinUI.SetH(effects,16 + ACTION_ICON)
 	end
 end
 local function ShowEffects(effectsOn)
 	if effectsOn and effectShown > 0 then
 		-- Appearing: choose anew; shown: only move when the chosen spot got covered.
 		EF.Pick(effects, effects:IsShown() and true or false)
-		effects:Show()
-	else effects:Hide() end
+		KeijinUI.Shown(effects,true)
+	else KeijinUI.Shown(effects,false) end
 end
 local function PaintActions(rows, timers)
 	local total = table.getn(rows)
@@ -782,13 +780,12 @@ local function PaintActions(rows, timers)
 		local row, cell = nil, ActionCell(index)
 		if index == count then row = racial elseif index <= normal then row = rows[index] else row=timers[index-normal] end
 		cell.racial = index == count
-		cell:ClearAllPoints()
-		cell:SetPoint("TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
+		KeijinUI.Anchor(cell,"TOPLEFT", skills, "TOPLEFT", 8 + (index-1) * ACTION_PITCH, -8)
 		PaintCell(cell, row)
 	end
 	for index = count + 1, table.getn(actionCells) do actionCells[index]:Hide() end
-	skills:SetWidth(16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
-	skills:SetHeight(16 + ACTION_ICON)
+	KeijinUI.SetW(skills,16 + math.max(0,count - 1) * ACTION_PITCH + ACTION_ICON)
+	KeijinUI.SetH(skills,16 + ACTION_ICON)
 end
 local function BuildOn() return KeijinUI.ModuleOn("build") and Settings().enabled and true or false end
 local function ActionOn() return KeijinUI.ModuleOn("action") and Settings().actionBar and true or false end
@@ -796,7 +793,7 @@ local function AdvisorOn() return KeijinUI.ModuleOn("advisor") and KeijinBuildAd
 local function PanelOn() return BuildOn() or AdvisorOn() end
 -- Register before Hud.lua so the shared carrier always has its inactivity predicate, even on first load.
 KeijinUI.layout.Register("build", panel, "Zauber, Schmuck und Buildtipps", function(f)
-	f:ClearAllPoints(); f:SetPoint("BOTTOM", UIParent, "BOTTOM", 0, 42)
+	KeijinUI.Anchor(f,"BOTTOM", UIParent, "BOTTOM", 0, 42)
 end, {keepBottom=true, legacyHeight=82, inactive=function() return not PanelOn() end})
 local function Update()
 	local settings, run = Settings(), AZS_RUN
@@ -842,40 +839,40 @@ local function Update()
 	if actionOn then
 		-- The former inline selection remains an action preference; an off effects module adds no timer cells.
 		local inline = KeijinUI.ModuleOn("effects") and not effectsOn and timers or {}
-		PaintActions(activeRun and spells or {}, inline); skills:Show()
-	else skills:Hide() end
+		PaintActions(activeRun and spells or {}, inline); KeijinUI.Shown(skills,true)
+	else KeijinUI.Shown(skills,false) end
 	if advisorOn and activeRun then
 		local result = KeijinBuildAdvisor.Get(spells, run, AZS_STATS, AZS_ZONE, settings.focus)
 		advice.result = result
 		advice.heading:SetText(result.heading); advice.title:SetText(result.title)
 		if result.safety then advice.title:SetTextColor(0.4,1,0.6) else advice.title:SetTextColor(1,0.82,0) end
-		advice:Show()
+		KeijinUI.Shown(advice,true)
 		for index = 1, table.getn(spells) do
 			local row = spells[index]
 			row.recommended = row.key == result.key
 			row.adviceHeading, row.safety = result.heading, result.safety
 		end
 	else
-		advice.result = nil; advice:Hide()
+		advice.result = nil; KeijinUI.Shown(advice,false)
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered == advice then hovered = nil; GameTooltip:Hide() end
 	end
 	if panelOn then
 		local displaySpells = SpellSlots(activeRun and spells or {})
 		local spellTop, itemTop, spellPitch = BuildLayout(displaySpells)
-		panel:SetWidth(WIDTH)
+		KeijinUI.SetW(panel,WIDTH)
 		Paint(spellCells, displaySpells, spellTop, spellPitch)
 		Paint(itemCells, items, itemTop)
-		advice:ClearAllPoints(); advice:SetPoint("TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
+		KeijinUI.Anchor(advice,"TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
 	else
 		-- Reuse the proven movable carrier, with no spell/jewelry rows or native HUD ownership.
 		Paint(spellCells, {}, 0); Paint(itemCells, {}, 0)
-		spellsLabel:Hide(); itemsLabel:Hide(); divider:Hide()
-		panel:SetWidth(140); panel:SetHeight(48)
-		advice:ClearAllPoints(); advice:SetPoint("TOPLEFT", panel, "TOPLEFT", 12, -8)
+		KeijinUI.Shown(spellsLabel,false); KeijinUI.Shown(itemsLabel,false); KeijinUI.Shown(divider,false)
+		KeijinUI.SetW(panel,140); KeijinUI.SetH(panel,48)
+		KeijinUI.Anchor(advice,"TOPLEFT", panel, "TOPLEFT", 12, -8)
 	end
-	if panelOn or (advisorOn and activeRun) then panel:Show()
-	else panel:Hide(); if hovered then hovered = nil; GameTooltip:Hide() end end
+	if panelOn or (advisorOn and activeRun) then KeijinUI.Shown(panel,true)
+	else KeijinUI.Shown(panel,false); if hovered then hovered = nil; GameTooltip:Hide() end end
 end
 
 -- One setting shared by the menu and /kbb; restore the native HUD on disable.

@@ -26,8 +26,8 @@ function F.Color()
 end
 local function Fit()
     local _,size=text:GetFont()
-    frame:SetWidth(math.max(76,text:GetStringWidth()+16))
-    frame:SetHeight(math.ceil(size or 12)+12)
+    K.SetW(frame,math.max(76,text:GetStringWidth()+16))
+    K.SetH(frame,math.ceil(size or 12)+12)
 end
 local function Sample(force)
     local now=GetTime()
@@ -43,8 +43,9 @@ function F.Refresh()
     K.SetFontSize(text,12*F.Size())
     text:SetTextColor(F.Color())
     frame:SetAlpha(F.Opacity())
-    local bg=F.Framed() and {.055,.055,.065,F.Alpha()} or nil
-    K.Chamfer(frame,4,bg,{.62,.57,.43,F.Framed() and 1 or 0})
+    local bg={.055,.055,.065,F.Alpha()}
+    K.Chamfer(frame,4,bg,{.62,.57,.43,1})
+    K.ApplyWindow(frame)
     if F.On() then frame:Show(); Sample(true) else frame:Hide() end
 end
 function F.Set(on)
@@ -70,7 +71,7 @@ end,{inactive=function() return not F.On() end})
 K.On("ADDON_LOADED",F.Refresh)
 K.On("PLAYER_ENTERING_WORLD",F.Refresh)
 K.OnLang(F.Refresh)
-K.Update("fps",function() if F.On() then frame:Show(); Sample(false) else frame:Hide() end end)
+K.Update("fps",function() if F.On() then K.Shown(frame,true); Sample(false) else K.Shown(frame,false) end end)
 F.Refresh()
 
 K.moduleRefresh.fps=F.Refresh

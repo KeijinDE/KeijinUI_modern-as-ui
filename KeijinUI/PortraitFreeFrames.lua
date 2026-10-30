@@ -42,18 +42,26 @@ function P.Build(parent,name,mirror)
     bar.parts=fill.parts
     function bar:SetValue(value)
         self.value=math.max(0,math.min(1,tonumber(value) or 0))
+        -- Unchanged share: the pieces already have this size.
+        if self.drawnValue==self.value then return end
+        self.drawnValue=self.value
         for _,part in ipairs(self.parts) do
             local visible=math.min(part.width,math.max(0,W*self.value-part.start))
             if visible>0 then
                 local stop=part.u+(part.v-part.u)*visible/part.width
                 part.texture:SetWidth(visible)
                 part.texture:SetTexCoord(mirror and stop or part.u,mirror and part.u or stop,0,1)
-                part.texture:Show()
-            else part.texture:Hide() end
+                K.Shown(part.texture,true)
+            else K.Shown(part.texture,false) end
         end
     end
     function bar:GetValue() return self.value end
-    function bar:SetStatusBarColor(r,g,b) self.color={r,g,b}; fill:SetVertexColor(r,g,b,1) end
+    function bar:SetStatusBarColor(r,g,b)
+        local c=self.color
+        if c and c[1]==r and c[2]==g and c[3]==b then return end
+        if c then c[1],c[2],c[3]=r,g,b else self.color={r,g,b} end
+        fill:SetVertexColor(r,g,b,1)
+    end
     function bar:GetStatusBarColor() return unpack(self.color) end
     bar:SetStatusBarColor(1,1,1); bar:SetValue(0)
     g.bar=bar

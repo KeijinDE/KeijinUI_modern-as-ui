@@ -71,11 +71,10 @@ function K.UpdateDebuffRow(row,unit)
     for i=1,DEBUFF_MAX do
         local icon=row.icons[i]
         if i<=n then
-            icon:ClearAllPoints()
-            if row.centered then icon:SetPoint("LEFT",row,"CENTER",-n*step/2+(i-1)*step,0)
-            else icon:SetPoint("LEFT",row,"LEFT",(i-1)*step,0) end
-            icon:Show()
-        else icon:Hide() end
+            if row.centered then K.Anchor(icon,"LEFT",row,"CENTER",-n*step/2+(i-1)*step,0)
+            else K.Anchor(icon,"LEFT",row,"LEFT",(i-1)*step,0) end
+            K.Shown(icon,true)
+        else K.Shown(icon,false) end
     end
     row.shown=n
     return n
@@ -95,7 +94,7 @@ local function CleanStyle() return K.DB().portraits==false end
 -- Only real unit tokens are queried; never infer marks from names or AZS unit rows.
 local function UpdateRaidMarker(f)
     local index=GetRaidTargetIndex and UnitExists(f.unit) and GetRaidTargetIndex(f.unit)
-    if not K.Number(index) or index<1 or index>8 or index~=math.floor(index) then f.raidMarker:Hide(); return end
+    if not K.Number(index) or index<1 or index>8 or index~=math.floor(index) then K.Shown(f.raidMarker,false); return end
     local n=index-1
     local left=math.mod(n,4)/4
     local top=math.floor(n/4)/4
@@ -117,7 +116,7 @@ local FIELDS={"label","level","health","percent","bar","rim","body"}
 local function ApplyStyle(f,clean)
     if f.clean==clean then return end
     local set=clean and f.sets.clean or f.sets.classic
-    f.clean=clean
+    f.clean=clean; f.windowAppearanceDirty=true
     if clean then f.sets.classic.root:Hide(); f.sets.clean.root:Show()
     else f.sets.clean.root:Hide(); f.sets.classic.root:Show() end
     for _,key in ipairs(FIELDS) do f[key]=set[key] end
@@ -301,7 +300,7 @@ local function Update()
                 f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
             -- The compact style has no portrait; the pointer is not touched there.
-            if not f.clean and f.portrait then SetPortraitTexture(f.portrait,unit); f.portrait:Show() end
+            if not f.clean and f.portrait then SetPortraitTexture(f.portrait,unit); K.Shown(f.portrait,true) end
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
             f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
@@ -313,22 +312,39 @@ local function Update()
             -- No target: the whole frame is gone. Alt or layout editing keeps an invisible,
             -- movable frame so the position can still be set.
             if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(f) then GameTooltip:Hide() end
-            if K.layout.Active() then f:SetAlpha(0); f:Show()
-            else f:SetAlpha(1); f:Hide() end
-        else f:SetAlpha(1); f:Show() end
+            if K.layout.Active() then f:SetAlpha(0); K.Shown(f,true)
+            else f:SetAlpha(1); K.Shown(f,false) end
+        else f:SetAlpha(1); K.Shown(f,true) end
         if unit=="target" and not UnitExists(unit) then K.combatDetails.Execute(f,f.bar,nil,true) end
         if f.debuffs then K.RefreshTargetDebuffs() end
     end
 end
 function K.ApplyUnitBackground()
-    local alpha=K.BackgroundAlpha()/K.BG_ALPHA
-    -- Only the backgrounds of both geometries; fill, text and rim keep their own alpha.
-    for _,f in pairs(K.units) do
-        f.sets.classic.body:SetVertexColor(1,1,1,math.min(1,alpha))
-        f.sets.clean.body:SetVertexColor(1,1,1,math.min(1,alpha))
+    for key,f in pairs(K.units) do
+        local alpha=K.WindowAlpha(key)/K.BG_ALPHA
+        local back,rim=K.WindowShown(key,"back"),K.WindowShown(key,"rim")
+        f.windowAppearanceDirty=nil
+        for _,set in pairs(f.sets) do
+            set.body:SetVertexColor(1,1,1,math.min(1,alpha))
+            for _,part in ipairs(set.body.parts) do
+                local t=part.Show and part or part.texture
+                if back then t:Show() else t:Hide() end
+            end
+            for _,part in ipairs(set.rim.parts) do
+                local t=part.Show and part or part.texture
+                if rim then t:Show() else t:Hide() end
+            end
+        end
     end
 end
-K.UpdateUnits=function() Update(); K.ApplyUnitBackground() end
+local updateUnits=Update
+Update=function()
+    updateUnits()
+    for _,f in pairs(K.units) do
+        if f.windowAppearanceDirty then K.ApplyUnitBackground(); break end
+    end
+end
+K.UpdateUnits=Update
 for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update,"units") end
 K.Update("units",Update)
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)

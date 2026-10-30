@@ -119,15 +119,15 @@ function P.Refresh()
     local n=table.getn(members)
     local own=K.ModuleOn("party") and revive and (revive.down==1 or revive.down==true)
     if n==0 and not own then
-        for _,row in ipairs(rows) do row.unit=nil; row:Hide() end
-        hint:Hide(); panel:Hide(); StockFrames(false); NativeRevive(false)
+        for _,row in ipairs(rows) do row.unit=nil; K.Shown(row,false) end
+        K.Shown(hint,false); K.Shown(panel,false); StockFrames(false); NativeRevive(false)
         return
     end
     local covered=own and K.Number(revive.share) and true or false
     for i,row in ipairs(rows) do
         local m=members[i]
         row.unit=m and m.unit or nil
-        if not m then row:Hide()
+        if not m then K.Shown(row,false)
         else
             local red,green,blue=K.PartyClassColor(m.class)
             local reviveShare=revive and revive.reviving==m.name and Fraction(revive.rshare) or nil
@@ -159,7 +159,7 @@ function P.Refresh()
                     row.value:SetText(""); row.bar:SetValue(0)
                 end
             end
-            row:Show()
+            K.Shown(row,true)
         end
     end
     -- Own hero downed: who revives and how far (shown at the bottom of the window).
@@ -167,16 +167,16 @@ function P.Refresh()
         local percent=math.floor(Fraction(revive.share)*100+0.5)
         -- Without the reviver's name: a long hero name would cut the line off in some languages.
         hint:SetText(K.T("Du wirst belebt: %d%%",percent))
-        hint:Show()
-    else hint:Hide() end
-    panel:SetHeight(TOP+n*(ROW+0)+BOTTOM+(own and HINT or 0))
-    panel:Show()
+        K.Shown(hint,true)
+    else K.Shown(hint,false) end
+    K.SetH(panel,TOP+n*(ROW+0)+BOTTOM+(own and HINT or 0))
+    K.Shown(panel,true)
     if mode=="units" then StockFrames(true) else StockFrames(false) end
     NativeRevive(covered)
 end
 function P.Stop()
-    for _,row in ipairs(rows) do row.unit=nil; row:Hide() end
-    hint:Hide(); panel:Hide(); StockFrames(false)
+    for _,row in ipairs(rows) do row.unit=nil; K.Shown(row,false) end
+    K.Shown(hint,false); K.Shown(panel,false); StockFrames(false)
     NativeRevive(false)
 end
 

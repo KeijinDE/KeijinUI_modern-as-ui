@@ -1,20 +1,21 @@
 -- Share layout and appearance as a text code (Settings, Administration).
--- Format: "KUI1:" records "~" checksum. Records are separated by ";", fields by ",", and use only letters, digits,
+-- Format: "KUI2:" (reads KUI1 as well), records "~" checksum. Records are separated by ";", fields by ",", and use only letters, digits,
 -- "_", "." and "-". The text is parsed field by field against a whitelist; it is never run as Lua code.
 -- Never included: runs, collection, logs, native restore values, key bindings, language, client settings.
 local K=KeijinUI
 local O=K.settings
 local S={}
 K.profiles=S
-S.PREFIX,S.VERSION,S.MAX_LENGTH,S.MAX_RECORDS="KUI",1,6000,160
+S.PREFIX,S.VERSION,S.MAX_LENGTH,S.MAX_RECORDS="KUI",2,6000,160
 -- Window keys of K.layout.Register (some are registered late, so the list is fixed here).
 local KEYS={}
 for key in string.gfind("achievements analysisOverview attributes bosses buffs build cachearrow characterwindow chat combattext combattextlist crits effects fps guardianOverview guardianarrow healtext levels loot meter minimap party player resources skills statistics summons takentext tally target tooltip tracker worldmap xp","%S+") do KEYS[key]=true end
 S.windowKeys=KEYS
--- Same lists as SettingsReset.lua: what a backup leaves out of the options.
+-- Local preferences stay outside profile replacement backups. SettingsReset
+-- deliberately includes layoutTap in its backup and restores Alt on reset.
 local KEEP={lang=true,runs=true,runSnapshots=true,snapshotSerial=true,runTrace=true,
     paceHistory=true,itemDiary=true,autoWalkKey=true,autoWalkSet=true,autoWalkPrevious=true,
-    autoWalkHeld=true,shortcuts=true,shortcutsHeld=true}
+    autoWalkHeld=true,layoutTap=true,shortcuts=true,shortcutsHeld=true}
 local TRANSIENT={settingsBackup=true,native=true,originalCombatDamage=true,originalShowCombatText=true}
 local function Finite(v) return type(v)=="number" and v==v and math.abs(v)<1e15 end
 local function Clamp(v,low,high) return math.max(low,math.min(high,v)) end
@@ -59,7 +60,7 @@ end
 -- Reads the current settings into a plain table; only whitelisted keys, every value clamped into its range.
 function S.Collect(withModules)
     local db=K.DB()
-    local p={w=math.floor(K.UIWidth()+.5),h=math.floor(K.UIHeight()+.5),layout={},sizing={},frameless={},modules=withModules and {} or nil}
+    local p={w=math.floor(K.UIWidth()+.5),h=math.floor(K.UIHeight()+.5),layout={},sizing={},frameless={},windowOptions={},modules=withModules and {} or nil}
     for key,v in pairs(db.layout) do
         if KEYS[key] and type(v)=="table" and Finite(v.x) and Finite(v.y) and Finite(v.scale) and v.scale>0 then
             local item={x=Clamp(v.x,-.5,1.5),y=Clamp(v.y,-.5,1.5),scale=Clamp(v.scale,.5,1.8),ref=v.ref=="bar",bottom=v.bottom==true}
@@ -78,8 +79,14 @@ function S.Collect(withModules)
     if type(db.fontFace)=="string" and FontKnown(db.fontFace) then p.font=db.fontFace end
     if Finite(db.bgAlpha) then p.alpha=Clamp(db.bgAlpha,.2,1) end
     if db.panelHeaders=="thin" or db.panelHeaders=="off" then p.headers=db.panelHeaders end
-    if type(db.frameless)=="table" then
-        for key,v in pairs(db.frameless) do if KEYS[key] and v==true then p.frameless[key]=true end end
+    for key,c in pairs(type(db.windowOptions)=="table" and db.windowOptions or {}) do
+        if KEYS[key] and type(c)=="table" then
+            local v={}
+            for _,field in ipairs({"rim","back","strip"}) do if type(c[field])=="boolean" then v[field]=c[field] end end
+            v.alpha=Bounded(c,"alpha",0,1)
+            if c.headers=="normal" or c.headers=="thin" or c.headers=="off" then v.headers=c.headers end
+            if next(v) then p.windowOptions[key]=v end
+        end
     end
     local lines,size=db.combatTextListLines,db.combatTextListSize
     if db.combatTextList==true or K.Number(lines) or K.Number(size) then
@@ -107,7 +114,12 @@ function S.Encode(p)
     if p.font then table.insert(r,"f,"..p.font) end
     if p.alpha then table.insert(r,"a,"..Num(p.alpha)) end
     if p.headers then table.insert(r,"h,"..p.headers) end
-    for _,key in ipairs(Sorted(p.frameless)) do table.insert(r,"n,"..key) end
+    for _,key in ipairs(Sorted(p.windowOptions or {})) do
+        local v=p.windowOptions[key]
+        local function OptionalFlag(value) if value==nil then return "" end; return Bit(value) end
+        table.insert(r,"o,"..key..","..OptionalFlag(v.rim)..","..OptionalFlag(v.back)..","..OptionalFlag(v.strip)..","..(v.alpha and Num(v.alpha) or "")..","..(v.headers or ""))
+    end
+    for _,key in ipairs(Sorted(p.frameless or {})) do table.insert(r,"n,"..key) end
     if p.list then table.insert(r,"t,"..Bit(p.list.on)..","..(p.list.lines and Num(p.list.lines) or "")..","..(p.list.size and Num(p.list.size) or "")) end
     for _,key in ipairs(Sorted(p.modules or {})) do table.insert(r,"m,"..key..","..Bit(p.modules[key])) end
     local body=table.concat(r,";")
@@ -191,6 +203,30 @@ function READ.n(p,f)
     if KEYS[f[2]] then p.frameless[f[2]]=true else p.unknown=p.unknown+1 end
     return true
 end
+function READ.o(p,f)
+    if table.getn(f)~=7 then return false end
+    local v={}
+    for i,field in ipairs({"rim","back","strip"}) do
+        if f[i+2]~="" then
+            local value=Flag(f[i+2]); if value==nil then return false end
+            v[field]=value
+        end
+    end
+    local alpha,valid=Optional(f[6],0,1)
+    if not valid then return false end
+    v.alpha=alpha
+    if f[7]~="" then
+        if f[7]~="normal" and f[7]~="thin" and f[7]~="off" then return false end
+        v.headers=f[7]
+    end
+    if KEYS[f[2]] then
+        local cap=K.WindowCapabilities(f[2])
+        if not cap.strip then v.strip=nil end
+        if not cap.headers then v.headers=nil end
+        if next(v) then p.windowOptions[f[2]]=v end
+    elseif next(v) then p.unknown=p.unknown+1 end
+    return true
+end
 function READ.t(p,f)
     if table.getn(f)~=4 then return false end
     local on=Flag(f[2])
@@ -233,11 +269,11 @@ function S.Decode(code)
     local _,_,digits,rest=string.find(code,"^"..S.PREFIX.."(%d+):(.*)$")
     if not digits or string.len(digits)>3 then return nil,"format" end
     local version=tonumber(digits)
-    if version>S.VERSION then return nil,"newer" elseif version<S.VERSION then return nil,"old" end
+    if version>S.VERSION then return nil,"newer" elseif version<1 then return nil,"old" end
     local _,_,body,check=string.find(rest,"^([^~]*)~(%d+)$")
     if not body or string.len(check)>10 then return nil,"format" end
     if string.find(body,"[^%w_%.,;%-]") or tonumber(check)~=Sum(body) then return nil,"damaged" end
-    local p={layout={},sizing={},frameless={},modules={},missingFonts={},unknown=0,unknownModules=0}
+    local p={layout={},sizing={},frameless={},windowOptions={},modules={},missingFonts={},unknown=0,unknownModules=0}
     local records=Split(body,";",S.MAX_RECORDS+1)
     if table.getn(records)>S.MAX_RECORDS then return nil,"long" end
     for _,record in ipairs(records) do
@@ -259,6 +295,7 @@ function S.Counts(p)
     for _ in pairs(p.layout) do windows=windows+1 end
     for _ in pairs(p.sizing) do sizes=sizes+1 end
     for _ in pairs(p.frameless) do looks=looks+1 end
+    for _ in pairs(p.windowOptions or {}) do looks=looks+1 end
     for _ in pairs(p.modules or {}) do modules=modules+1 end
     if p.font then looks=looks+1 end
     if p.alpha then looks=looks+1 end
@@ -292,7 +329,7 @@ function S.Resets(p)
     if not p.font and not p.keepFont then table.insert(names,K.T("Schrift")) end
     if not p.alpha then table.insert(names,K.T("Hintergrund-Deckkraft")) end
     if not p.headers then table.insert(names,K.T("Abschnittstitel")) end
-    if not next(p.frameless) then table.insert(names,K.T("Fenster ohne Rahmen")) end
+    if not next(p.frameless) and not next(p.windowOptions or {}) then table.insert(names,K.T("Fensterdarstellung")) end
     if not p.list then table.insert(names,K.T("Kampftextliste")) end
     return names
 end
@@ -340,10 +377,12 @@ function S.Apply(p)
     end
     if not p.keepFont then db.fontFace=p.font end
     db.bgAlpha,db.panelHeaders=p.alpha,p.headers
-    db.frameless=nil
+    db.frameless=nil; db.windowOptions=Copy(p.windowOptions or {})
     for key in pairs(p.frameless) do
-        if not db.frameless then db.frameless={} end
-        db.frameless[key]=true
+        local c=db.windowOptions[key] or {}; db.windowOptions[key]=c
+        if c.rim==nil then c.rim=false end
+        if c.back==nil then c.back=false end
+        if c.strip==nil then c.strip=false end
     end
     local list=p.list
     db.combatTextList=list and list.on and true or nil
@@ -441,6 +480,7 @@ edit:SetScript("OnTextChanged",function()
     elseif mode=="export" and edit:GetText()~=S.shown then edit:SetText(S.shown or "") end
 end)
 edit:SetScript("OnEditFocusGained",function() if mode=="export" then Cut() end end)
+if K.layoutTap then K.layoutTap.WatchEditFocus(edit,dialog) end
 edit:SetScript("OnEscapePressed",function() dialog:Hide() end)
 check:SetScript("OnClick",function() includeModules=not includeModules; Fill() end)
 O.Button(dialog,"Abbrechen",380,-368,160,function() dialog:Hide() end)

@@ -30,46 +30,7 @@ O.Section(p,"Darstellung")
 O.Slider(p,"bgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
 O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
-O.Section(p,"Hintergrund und Rahmen")
-local framedSection=p.sections[table.getn(p.sections)]
-O.Help(p,"Aus: Das Fenster zeigt nur seinen Inhalt, ohne Hintergrund und Rahmen.")
--- Third entry: the module that owns the window. Its switch is hidden and not searchable while that module is off.
-local framedModules={}
-for _,w in ipairs({{"bosses","Begegnungen","basisHud"},{"skills","Aktionsleiste","action"},{"effects","Effekte","effects"},
-    {"build","Zauber, Schmuck und Buildtipps","build"},{"tally","Kills und Gold","basisHud"},{"xp","Erfahrung","basisHud"},
-    {"tracker","Runübersicht","basisHud"},{"statistics","Runstatistiken","basisHud"},{"meter","Schadensanzeige","basisHud"},
-    {"crits","Kritische Treffer","basisHud"},{"guardianOverview","Wächter","guardians"},{"analysisOverview","Run-Analyse","analysis"},
-    {"attributes","Charakterwerte","attributes"},{"party","Partyfenster","party"},{"loot","Beutemeldung","loot"},
-    {"chat","Chat","chat"},{"levels","Gespeicherte Level","storedLevels"}}) do
-    local key=w[1]   -- body local for the closures
-    if K.layout.entries[key] then   -- windows that do not exist are skipped
-        O.RowModule(p,O.Toggle(p,"framed_"..key,w[2],function() return K.Framed(key) end,function(on) K.SetFramed(key,on) end),w[3])
-        table.insert(framedModules,w[3])
-    end
-end
--- The section disappears with its last switch.
-framedSection.active=function()
-    for _,module in ipairs(framedModules) do if K.ModuleOn(module) then return true end end
-    return false
-end
-O.Finish(p)
-
-p=O.Page("display","Größe & Position","Oberfläche & Layout","general")
-O.Section(p,"Größe & Position")
-O.Choice(p,"layoutModifier","Layouttaste",K.layout.Modifier,K.layout.SetModifier,{{"alt","Alt"},{"ctrl","Ctrl"},{"shift","Shift"},{"none","Keine Haltefunktion"}})
-O.Help(p,"Im Layoutmodus ziehen und mit dem Mausrad skalieren. /kui edit oder Layout bearbeiten schaltet den Modus um.")
-local layoutKey=O.Row(p,"layoutKey","Layout bearbeiten")
-layoutKey.value=K.Text(layoutKey,"",11,"RIGHT",-4,0)
-O.Watch(function() layoutKey.value:SetText(K.shortcuts.Label("KEIJINUI_LAYOUT")) end)
-O.Pair(p,"Taste zuweisen",function() K.shortcuts.Capture("KEIJINUI_LAYOUT") end,"Eigene Belegung entfernen",function() K.shortcuts.Clear("KEIJINUI_LAYOUT") end)
-O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then K.layout.ToggleGrid() end end)
-O.Help(p,"Layout bearbeiten öffnet den Bearbeitungsmodus. Änderungen werden gespeichert.")
-O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
-
-O.Slider(p,"optionsScale","Menügröße",O.MenuScale,O.SetMenuScale,70,100)
-O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
-O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
-
+O.Help(p,"Vorgaben für alle Fenster. Im Layoutmodus ein Fenster anklicken, um seine Darstellung einzeln zu ändern.")
 O.Finish(p)
 
 p=O.Page("windows","HUD Fenster","Oberfläche & Layout","general","basisHud")
@@ -94,8 +55,6 @@ O.Pair(p,"Erfolgsvorschau",function() SlashCmdList.KEIJINACHIEVEMENTS("test") en
 O.Help(p,"Zeigt das Erfolgsfenster mit einem Beispiel. /kachi move verschiebt es, /kachi sound schaltet den Ton.")
 O.Section(p,"FPS","fps")
 O.Toggle(p,"fps","FPS",K.fps.On,K.fps.Set)
-O.Requires(O.Toggle(p,"fpsFrame","Rahmen anzeigen",K.fps.Framed,K.fps.SetFrame),K.fps.On)
-O.Requires(O.Slider(p,"fpsAlpha","Hintergrund-Deckkraft",K.fps.Alpha,K.fps.SetAlpha,0,100),function() return K.fps.On() and K.fps.Framed() end)
 O.Requires(O.Slider(p,"fpsOpacity","Deckkraft",K.fps.Opacity,K.fps.SetOpacity,0,100),K.fps.On)
 O.Requires(O.Slider(p,"fpsSize","Schriftgröße",K.fps.Size,K.fps.SetSize,75,200),K.fps.On)
 local fpsColor=O.Row(p,"fpsColor","Schriftfarbe",36)
@@ -375,24 +334,18 @@ colorRow:SetScript("OnClick",function()
 end)
 O.Finish(p)
 
-p=O.Page("autowalk","Automatisch laufen","Eingabehilfen","comfort","autowalk")
-O.Section(p,"Automatisch laufen","autowalk")
-local walk=O.Row(p,"autoWalk","Aktuelle Taste")
-walk.value=K.Text(walk,"",11,"RIGHT",-4,0)
-O.Watch(function() walk.value:SetText(K.autoWalk.Label()) end)
-O.Pair(p,"Taste zuweisen",function() K.autoWalk.Capture() end,"Eigene Belegung entfernen",K.autoWalk.Clear)
-O.Help(p,"Belegte Tasten müssen zum Ersetzen zweimal gedrückt werden. Escape bricht ab.")
+p=O.Page("shortcuts","Tastenbelegung","Tastenbelegung","shortcuts")
+O.Section(p,"Tastenbelegung")
+for _,entry in ipairs(K.shortcuts.actions) do
+    local row=O.ShortcutRow(p,entry[1],entry[2])
+    if entry[1]=="KEIJINUI_LAYOUT" then
+        O.Choice(p,"layoutTap","Layoutmodus antippen",K.layoutTap.Get,K.layoutTap.Set,{{"off","Aus"},{"ALT","Alt"},{"CTRL","Strg"},{"SHIFT","Shift"}})
+        O.Help(p,"Taste oder Antippen schaltet den Layoutmodus um. Beides funktioniert zugleich.")
+        table.insert(row.searchEntry.help,"Taste oder Antippen schaltet den Layoutmodus um. Beides funktioniert zugleich.")
+    else O.RowModule(p,row,"shortcuts") end
+end
+O.RowModule(p,O.ShortcutRow(p,"TOGGLEAUTORUN","Automatisch laufen"),"autowalk")
 K.autoWalk.onChange=O.Refresh
-O.Finish(p)
-
-p=O.Page("shortcuts","Tastenbelegung","Eingabehilfen","comfort","shortcuts")
-O.Section(p,"Tastenbelegung","shortcuts")
-local shortcutAction="KEIJINUI_LAYOUT"
-O.Choice(p,"shortcutAction","Taste zuweisen",function() return shortcutAction end,function(value) shortcutAction=value end,K.shortcuts.actions)
-local shortcut=O.Row(p,"shortcutKey","Aktuelle Taste")
-shortcut.value=K.Text(shortcut,"",11,"RIGHT",-4,0)
-O.Watch(function() shortcut.value:SetText(K.shortcuts.Label(shortcutAction)) end)
-O.Pair(p,"Taste zuweisen",function() K.shortcuts.Capture(shortcutAction) end,"Eigene Belegung entfernen",function() K.shortcuts.Clear(shortcutAction) end)
 O.Help(p,"Belegte Tasten müssen zum Ersetzen zweimal gedrückt werden. Escape bricht ab.")
 K.shortcuts.onChange=O.Refresh
 O.Finish(p)
@@ -413,36 +366,40 @@ O.Watch(function()
 end)
 O.Finish(p)
 
--- Direct layout sizing, with reset kept under administration.
+-- Global layout controls live in the always-visible layout hint, not the per-window editor.
 do
-local p=O.pages.display
-O.Section(p,"HUD Fenster")
-local sizing=K.panelSizing
-local sizeSection=p.sections[table.getn(p.sections)]
-sizeSection.active=function()
-    for _,v in ipairs(sizing.order) do if sizing.On(v[1]) then return true end end
-end
--- Direct sizing in layout mode replaces the former selector and sliders.
-O.Pair(p,"Layout bearbeiten",function() K.layout.Toggle(); if K.settings.panel then K.settings.panel:Hide() end end)
+local layout=K.layout
+local p=CreateFrame("Frame",nil,layout.hint)
+p:SetWidth(516); p:SetHeight(220); p:SetPoint("TOPLEFT",layout.hint,"TOPLEFT",14,-76)
+p.y=0
+layout.controls=p
+-- Deliberately built without a key so O.SearchEntry (SettingsWidgets.lua) creates no search entries for these layout controls.
+local snap=O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then layout.ToggleGrid() end end)
+O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
+local scale=O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
+local help=O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
+help:SetHeight(48); p.y=p.y-12
 O.Help(p,"Fenstergröße im Layoutmodus an den Rändern ziehen oder das Fenster anklicken, um Werte einzugeben.")
+-- These controls must never scroll the hidden settings page.
+for _,frame in ipairs({snap,scale,scale.slider}) do frame:EnableMouseWheel(false); frame:SetScript("OnMouseWheel",nil) end
+local sizing=K.panelSizing
 O.Pair(O.pages.maintenance,"Fenstermaße zurücksetzen",function()
     sizing.Reset()
     for _,entry in ipairs(sizing.order) do if sizing.On(entry[1]) then K.layout.Place(entry[1]) end end
 end)
 O.Finish(O.pages.maintenance)
-
-O.Finish(p)
 end
 
 O.defaultPage="general"
-O.pageAliases={layout="display",fonts="general",fps="gamewindows",achievements="gamewindows",reset="maintenance",reload="maintenance"}
+O.pageAliases={layout="general",display="general",fonts="general",fps="gamewindows",achievements="gamewindows",reset="maintenance",reload="maintenance"}
 O.categoryAliases={display="general"}
 O.Navigation({
-    {"general","Oberfläche & Layout",{"general","appearance","display","windows","gamewindows"}},
+    {"general","Oberfläche & Layout",{"general","appearance","windows","gamewindows"}},
     {"combat","Kampf",{"units","action","combat","meter","nameplates","attributes"}},
     {"run","Run & Karte",{"run","minimap","caches","guardians","levels","loot"}},
     {"collection","Sammlungen",{"collection","history"}},
-    {"comfort","Eingabehilfen",{"comfort","autowalk","shortcuts"}},
+    {"shortcuts","Tastenbelegung",{"shortcuts"}},
+    {"comfort","Eingabehilfen",{"comfort"}},
     {"modules","Module",{"modules"}},
     {"maintenance","Verwaltung",{"maintenance"}}
 })

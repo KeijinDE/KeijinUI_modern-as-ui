@@ -459,7 +459,7 @@ local function Update()
     CheckRun()
     if mode~="notice" then RenderList(mode); return end
     if not Enabled() or not current or GetTime()>=current.expires then
-        current=nil; notice:Hide(); return
+        current=nil; K.Shown(notice,false); return
     end
     Icon()
     Place()

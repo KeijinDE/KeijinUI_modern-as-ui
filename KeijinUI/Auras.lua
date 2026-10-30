@@ -138,7 +138,7 @@ Layout=function(force)
     if Inactive() then Release(); return end
     if busy then return end
     busy=true
-    container:Show()
+    K.Shown(container,true)
     NativeAnchor(BuffFrame); NativeAnchor(TemporaryEnchantFrame)
     for i=0,23 do Add("BuffButton"..i) end
     Add("TempEnchant1"); Add("TempEnchant2")
@@ -158,7 +158,7 @@ Layout=function(force)
             slot=slot+1
         else entry.slot=nil end
     end
-    container:SetHeight(math.max(1,math.ceil(slot/columns))*rowHeight)
+    K.SetH(container,math.max(1,math.ceil(slot/columns))*rowHeight)
     Hook("BuffFrame_Enchant_OnUpdate",false)
     Hook("BuffButtons_UpdatePositions",true)
     Hook("UIParent_ManageFramePositions",true)

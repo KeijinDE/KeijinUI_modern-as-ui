@@ -114,12 +114,14 @@ local function Start(e,edge,x,y,l,b,r,t)
     local width=math.floor((e.frame:GetWidth() or 0)+.5)
     local _,step=P.Metrics(key,key=="tracker" and 18 or 20)
     drag={entry=e,edge=edge,x=x,y=y,left=l,bottom=b,right=r,top=t,
-        width=width,rows=rows,height=e.frame:GetHeight(),step=step,custom=P.Custom(key),scale=e.frame:GetEffectiveScale(),q=Ratio(e.frame),accepted=P.Config(key),
+        width=width,rows=rows,height=e.frame:GetHeight(),step=step,custom=P.Custom(key),scale=e.frame:GetEffectiveScale(),q=Ratio(e.frame),accepted=Copy(P.Config(key)),
         screenWidth=K.UIWidth(),screenHeight=K.UIHeight()}
     e.sizing=true
     S.Readout(e)
 end
+function S.Busy() return drag or pending or (editor and editor:IsShown() and editor.inputFocused) end
 function S.Begin(key,edge)
+    if K.layoutTap then K.layoutTap.Cancel() end
     local e=L.entries[key]
     if not Allowed(e) or not P.entries[key] or not P.On(key) then return end
     if edge~="LEFT" and edge~="RIGHT" and edge~="TOP" and edge~="BOTTOM" then return end
@@ -200,7 +202,7 @@ function S.Track()
     if f:GetWidth()*d.q>widthRoom+.1 or f:GetHeight()*d.q>heightRoom+.1 then
         K.DB().panelSizing[e.key]=Copy(d.accepted); P.Refresh(e.key)
     else
-        d.accepted=P.Config(e.key)
+        d.accepted=Copy(P.Config(e.key))
         -- Moving the contact edge releases that dock only after a real change.
         if (f:GetWidth()~=oldWidth or f:GetHeight()~=oldHeight) and e.dock
             and ((d.edge=="TOP" and e.dock.edge=="below") or (d.edge=="BOTTOM" and e.dock.edge=="above")) then e.dock=nil end
@@ -234,12 +236,12 @@ local function AddGrip(e,edge)
     grip.key=e.key; grip.edge=edge; grip:SetFrameLevel(190)
     grip:EnableMouse(true); grip:EnableMouseWheel(true)
     local vertical=edge=="LEFT" or edge=="RIGHT"
-    grip:SetWidth(vertical and 14 or 64); grip:SetHeight(vertical and 64 or 14)
-    -- Keep the grip inside the screen; its label is placed below it.
-    grip:SetPoint(edge,e.handle,edge,0,0)
+    grip:SetWidth(vertical and 9 or 64); grip:SetHeight(vertical and 64 or 9)
+    -- Side grips sit below the label band, including on 28 px handles.
+    grip:SetPoint(edge,e.handle,edge,0,vertical and -11 or 0)
     K.Chamfer(grip,3,{.035,.065,.075,.98},{.53,.42,.2,1})
     grip.bar=grip:CreateTexture(nil,"OVERLAY"); grip.bar:SetTexture(K.flat)
-    grip.bar:SetWidth(vertical and 4 or 42); grip.bar:SetHeight(vertical and 42 or 4)
+    grip.bar:SetWidth(vertical and 3 or 42); grip.bar:SetHeight(vertical and 42 or 3)
     grip.bar:SetPoint("CENTER",grip,"CENTER",0,0); grip.bar:SetVertexColor(.83,.64,.27,1)
     grip:SetScript("OnEnter",GripHover); grip:SetScript("OnLeave",GripLeave)
     grip:SetScript("OnMouseDown",function() if arg1=="LeftButton" then S.Begin(this.key,this.edge) end end)
@@ -259,38 +261,134 @@ local function Button(parent,text,width,x,action)
 end
 local function Field(parent,key,label,y,labelWidth)
     local text=K.LText(parent,label,11,"TOPLEFT",14,y-5,labelWidth or 166)
-    if key=="scale" then parent.scaleLabel=text
+    if key=="alpha" then parent.alphaLabel=text
+    elseif key=="scale" then parent.scaleLabel=text
     else parent.sizingLabels=parent.sizingLabels or {}; table.insert(parent.sizingLabels,text) end
     local box=CreateFrame("EditBox",nil,parent)
     box:SetWidth(82); box:SetHeight(26); box:SetPoint("TOPRIGHT",parent,"TOPRIGHT",-14,y)
     K.Chamfer(box,3,{.025,.035,.04,1},{.4,.5,.54,1})
     K.SetFontSize(box,12); table.insert(K.fontStrings,{box,12})
     box:SetAutoFocus(false); box:SetTextInsets(8,6,0,0)
+    box:SetScript("OnEditFocusGained",function() parent.inputFocused=true; if K.layoutTap then K.layoutTap.Cancel() end end)
+    box:SetScript("OnEditFocusLost",function() parent.inputFocused=nil end)
     box:SetScript("OnEnterPressed",function() S.Apply() end)
     box:SetScript("OnEscapePressed",function() S.Close() end)
     parent.fields[key]=box
     if key=="height" then parent.rowsHint=K.Text(parent,"",9,"TOPLEFT",14,y-28); parent.rowsHint:SetTextColor(.7,.75,.78) end
 end
+local function AppearanceClick()
+    if not editor or not L.Active() or not L.CanEdit(editor.key) then S.Close(); return end
+    local field=this.option
+    if field=="headers" then
+        local current=K.WindowConfig(editor.key).headers
+        local nextMode={normal="thin",thin="off",off="default"}
+        local value=current and nextMode[current] or "normal"
+        K.SetWindowOption(editor.key,field,value~="default" and value or nil)
+    else K.SetWindowOption(editor.key,field,not K.WindowShown(editor.key,field)) end
+    -- Keep all draft numbers untouched while immediately committing a switch.
+    S.AppearanceValues(); S.EditorPosition(); RefreshSettings()
+end
+local function AppearanceRow(field,label)
+    local row=CreateFrame("Button",nil,editor)
+    row.option=field; row:SetWidth(264); row:SetHeight(28)
+    K.Chamfer(row,3,{.07,.09,.10,1},{.3,.34,.35,1})
+    row.label=K.LText(row,label,10,"LEFT",6,0,190)
+    row.value=K.Text(row,"",10,"RIGHT",-6,0,60); row.value:SetJustifyH("RIGHT")
+    row:SetScript("OnClick",AppearanceClick)
+    editor.appearance[field]=row
+end
+function S.AppearanceValues()
+    local key=editor.key; local cap=K.WindowCapabilities(key)
+    local sized=P.entries[key] and P.On(key)
+    local y=sized and -224 or -120
+    editor.appearanceTitle:ClearAllPoints(); editor.appearanceTitle:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y)
+    local any=cap.rim or cap.back or cap.strip or cap.alpha or cap.headers
+    if any then editor.appearanceTitle:Show() else editor.appearanceTitle:Hide() end
+    y=y-24
+    for _,field in ipairs({"rim","back","strip","headers"}) do
+        local row=editor.appearance[field]
+        if cap[field] then
+            row:ClearAllPoints(); row:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y); row:Show()
+            local value
+            if field=="headers" then
+                local modes={normal="Normal",thin="Schmal",off="Aus"}
+                local mode=K.WindowConfig(key).headers
+                value=mode and modes[mode] or "Vorgabe"
+            else value=K.WindowShown(key,field) and "An" or "Aus" end
+            row.value:SetText(K.T(value)); y=y-32
+        else row:Hide() end
+    end
+    if cap.alpha then
+        local box=editor.fields.alpha
+        box:ClearAllPoints(); box:SetPoint("TOPRIGHT",editor,"TOPRIGHT",-14,y)
+        editor.alphaLabel:ClearAllPoints(); editor.alphaLabel:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y-5)
+        box:Show(); editor.alphaLabel:Show(); y=y-34
+        editor.appearanceReset:ClearAllPoints(); editor.appearanceReset:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y)
+        editor.appearanceReset:Show(); y=y-34
+    else editor.fields.alpha:Hide(); editor.alphaLabel:Hide(); editor.appearanceReset:Hide() end
+    editor:SetHeight(-y+102)
+end
+function S.ApplyAlpha()
+    if not editor or editor.settingValues or not editor:IsShown() then return end
+    if not L.Active() or not L.CanEdit(editor.key) then S.Close(); return end
+    if not K.WindowCapabilities(editor.key).alpha then return end
+    local value=Number(editor.fields.alpha:GetText())
+    if not value or value<0 or value>100 then editor.error:Show(); return end
+    editor.error:Hide()
+    if value==editor.original.alpha then return end
+    K.SetWindowOption(editor.key,"alpha",value/100)
+    editor.original.alpha=value
+    RefreshSettings()
+end
 local function MakeEditor()
     editor=K.Panel("KeijinUILayoutSizing","Größe & Position",292,220)
+    editor.minBackgroundAlpha=.8
+    K.ApplyBackground()
     S.editor=editor; editor.fields={}; editor:SetFrameStrata("TOOLTIP"); editor:SetFrameLevel(240)
-    Field(editor,"width","Fensterbreite",-38)
-    Field(editor,"height","Höhe",-72,54)
-    Field(editor,"font","Schriftgröße",-124)
-    Field(editor,"scale","Skalierung (%)",-38)
+    editor.windowName=K.Text(editor,"",10,"TOPLEFT",14,-34,264)
+    editor.sizeTitle=K.LText(editor,"Größe",11,"TOPLEFT",14,-54,264)
+    Field(editor,"width","Fensterbreite",-76)
+    Field(editor,"height","Höhe",-110,54)
+    Field(editor,"font","Schriftgröße",-162)
+    Field(editor,"scale","Skalierung (%)",-76)
+    Field(editor,"alpha","Hintergrund (%)",-300)
+    editor.fields.alpha:SetScript("OnTextChanged",function() S.ApplyAlpha() end)
+    editor.appearance={}
+    editor.appearanceTitle=K.LText(editor,"Darstellung",11,"TOPLEFT",14,-224,264)
+    AppearanceRow("rim","Rahmen anzeigen")
+    AppearanceRow("back","Hintergrund anzeigen")
+    AppearanceRow("strip","Headergrafik anzeigen")
+    AppearanceRow("headers","Abschnittstitel")
+    editor.appearanceReset=Button(editor,"Darstellung zurücksetzen",264,14,function()
+        if not L.Active() or not L.CanEdit(editor.key) then S.Close(); return end
+        K.ResetWindowOptions(editor.key)
+        editor.settingValues=true
+        editor.fields.alpha:SetText(tostring(math.floor(K.WindowAlpha(editor.key)*100+.5)))
+        editor.original.alpha=Number(editor.fields.alpha:GetText())
+        editor.settingValues=nil
+        local fields=P.entries[editor.key] and P.On(editor.key) and {"width","height","font"} or {"scale"}
+        local valid=true
+        for _,field in ipairs(fields) do if not Number(editor.fields[field]:GetText()) then valid=false end end
+        if valid then editor.error:Hide() end
+        S.AppearanceValues(); S.EditorPosition(); RefreshSettings()
+    end)
+    editor.saveHint=K.LText(editor,"Darstellung sofort. Größe mit Übernehmen.",10,"BOTTOMLEFT",14,66,264)
+    editor.saveHint:SetHeight(28); editor.saveHint:SetJustifyV("TOP")
     editor.error=K.LText(editor,"Bitte gültige Zahlen eingeben.",10,"BOTTOMLEFT",14,48,264)
     editor.error:SetTextColor(1,.48,.35); editor.error:Hide()
-    editor.apply=Button(editor,"Übernehmen",118,14,function() S.Apply() end)
+    editor.apply=Button(editor,"Übernehmen",118,14,function() if S.Apply() then S.Close() end end)
     editor.reset=Button(editor,"Zurücksetzen",134,144,function() S.Reset() end)
     local close=CreateFrame("Button",nil,editor); close:SetWidth(28); close:SetHeight(28)
     close:SetPoint("TOPRIGHT",editor,"TOPRIGHT",-2,-2); K.Text(close,"X",12,"CENTER",0,0)
     close:SetScript("OnClick",function() S.Close() end); editor.close=close
-    editor:SetScript("OnHide",function() L.EditorEscape(false) end)
+    editor:SetScript("OnHide",function() editor.inputFocused=nil; L.EditorEscape(false) end)
     editor:Hide()
+    if K.layoutTap then K.layoutTap.Watch(editor,true) end
 end
 function S.EditorValues()
+    editor.settingValues=true
     local e=L.entries[editor.key]; local sized=P.entries[editor.key] and P.On(editor.key) and true or false
-    editor:SetHeight(sized and 220 or 150)
+    editor.windowName:SetText(K.T(e.name))
     for key,box in pairs(editor.fields) do
         if (key=="scale")~=sized then box:Show() else box:Hide() end
     end
@@ -306,9 +404,11 @@ function S.EditorValues()
         if r<=1 then hint=hint.." (min.)" end
         editor.rowsHint:SetText(hint)
     else editor.fields.scale:SetText(tostring(math.floor(e.frame:GetScale()/e.baseScale*100+.5))) end
+    S.AppearanceValues()
+    editor.fields.alpha:SetText(tostring(math.floor(K.WindowAlpha(editor.key)*100+.5)))
     editor.original={}
     for key,box in pairs(editor.fields) do editor.original[key]=Number(box:GetText()) end
-    editor.error:Hide()
+    editor.error:Hide(); editor.settingValues=nil
 end
 -- Fit in a free strip next to the window. At tight resolutions shrink the editor,
 -- never cover its target. Both frame coordinates and strip sizes use UIParent units.
@@ -363,6 +463,9 @@ function S.Apply()
     if not editor or not editor:IsShown() then return false end
     local key=editor.key; local e=L.entries[key]
     if not L.Active() or not L.CanEdit(key) then S.Close(); return false end
+    local alpha=Number(editor.fields.alpha:GetText())
+    local hasAlpha=K.WindowCapabilities(key).alpha
+    if hasAlpha and (not alpha or alpha<0 or alpha>100) then editor.error:Show(); return false end
     if P.entries[key] and P.On(key) then
         local w,h,f=Number(editor.fields.width:GetText()),Number(editor.fields.height:GetText()),Number(editor.fields.font:GetText())
         if not w or not h or not f then editor.error:Show(); return false end
@@ -385,6 +488,7 @@ function S.Apply()
         local maximum=e.options.maxScale and e.options.maxScale() or 1.8
         e.frame:SetScale(e.baseScale*Bound(value/100,.5,math.min(1.8,maximum)))
     end
+    S.ApplyAlpha()
     L.Save(key); L.SyncFollowers(); S.EditorValues(); S.EditorPosition(); RefreshSettings(); return true
 end
 function S.Reset()
@@ -400,15 +504,45 @@ function S.Reset()
     end
     L.SyncFollowers(); S.EditorValues(); S.EditorPosition(); RefreshSettings()
 end
+local gripsHidden
 function S.Update()
     S.Track()
+    if not L.Active() then
+        -- Grips only exist in layout mode: hide them once, then the tick has nothing to do.
+        if not gripsHidden then
+            gripsHidden=true
+            for _,e in pairs(L.entries) do
+                for _,grip in ipairs(e.sizeGrips or {}) do K.Shown(grip,false) end
+            end
+        end
+        S.EditorPosition()
+        return
+    end
+    gripsHidden=false
     for key,e in pairs(L.entries) do
         if P.entries[key] and not e.sizeGrips then
             e.sizeGrips={AddGrip(e,"LEFT"),AddGrip(e,"RIGHT"),AddGrip(e,"TOP"),AddGrip(e,"BOTTOM")}
-            e.handle.label:ClearAllPoints(); e.handle.label:SetPoint("TOP",e.handle,"TOP",0,-22)
         end
-        for _,grip in ipairs(e.sizeGrips or {}) do
-            if Allowed(e) and P.On(key) then grip:Show() else grip:Hide() end
+        if e.sizeGrips then
+            local handle=e.handle
+            local hw,hh=handle:GetWidth(),handle:GetHeight()
+            -- Label band and grip sizes only depend on the handle size: write them when it changes.
+            if e.gripWidth~=hw or e.gripHeight~=hh then
+                e.gripWidth,e.gripHeight=hw,hh
+                -- Reserve a 12 px label band, including 11 px fonts and tiny panels.
+                K.Anchor(handle.label,"TOP",handle,"TOP",0,-math.min(10,math.floor((hh-14)/2)+1))
+                K.SetH(handle.label,12)
+                for _,grip in ipairs(e.sizeGrips) do
+                    local vertical=grip.edge=="LEFT" or grip.edge=="RIGHT"
+                    local length=math.max(6,math.min(64,(vertical and hh-24 or hw-22)))
+                    local thickness=vertical and 9 or math.max(6,math.min(9,math.floor((hh-14)/2)))
+                    K.SetW(grip,vertical and thickness or length); K.SetH(grip,vertical and length or thickness)
+                    K.SetW(grip.bar,vertical and 3 or math.max(2,length-22))
+                    K.SetH(grip.bar,vertical and math.max(2,length-22) or 3)
+                end
+            end
+            local show=Allowed(e) and P.On(key) and true or false
+            for _,grip in ipairs(e.sizeGrips) do K.Shown(grip,show) end
         end
     end
     S.EditorPosition()

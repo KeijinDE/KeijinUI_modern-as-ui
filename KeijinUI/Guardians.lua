@@ -89,7 +89,7 @@ local function Row(parent,i)
     end)
     row:SetScript("OnLeave",function() GameTooltip:Hide() end)
     row:SetScript("OnMouseUp",function()
-        if this.lair and K.guardianNav then K.guardianNav.Select(this.lair.index or i) end
+        if this.lair and K.guardianNav then K.guardianNav.Click(this.lair.index or i) end
     end)
     row:EnableMouseWheel(true)
     row:SetScript("OnMouseWheel",function()

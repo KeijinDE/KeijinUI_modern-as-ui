@@ -47,6 +47,7 @@ K.On("PLAYER_LOGOUT",function()
         options=Copy(backup.options); build=Copy(backup.build); achievements=Copy(backup.achievements)
     end
     for key in pairs(keep) do options[key]=db[key] end
+    if pending=="reset" then options.layoutTap="ALT" end
     if type(KeijinUIAchievementsDB)=="table" then achievements.log=KeijinUIAchievementsDB.log end
     options.settingsBackup=backup
     KeijinUIDB,KeijinUIBuildDB,KeijinUIAchievementsDB=options,build,achievements

@@ -49,7 +49,7 @@ K.Update("combatText",function()
         local enabled=f==healing and K.DB().healingText==true or f==taken and K.DB().incomingText==true
         for _,row in ipairs(f.rows) do
             local age=row.at and GetTime()-row.at
-            if enabled and R.Active() and age and age<1.4 then row:SetAlpha(math.min(1,(1.4-age)/.4)); row:Show() else row:Hide() end
+            if enabled and R.Active() and age and age<1.4 then row:SetAlpha(math.min(1,(1.4-age)/.4)); K.Shown(row,true) else K.Shown(row,false) end
         end
     end
 end)

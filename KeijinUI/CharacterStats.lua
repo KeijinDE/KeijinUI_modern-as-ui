@@ -79,7 +79,7 @@ local rows={}
 for i=1,table.getn(S.definitions) do rows[i]=K.ValueRow(frame,i,18) end
 local fresh=type(AZS_STATS)=="table"
 function S.Update()
-    if not S.On() then frame:Hide(); return end
+    if not S.On() then K.Shown(frame,false); return end
     local selected={}
     for _,def in ipairs(S.Ordered()) do if S.Selected(def.key) then table.insert(selected,def) end end
     local total=table.getn(selected)

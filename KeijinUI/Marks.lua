@@ -39,6 +39,7 @@ end
 local pending
 -- Sets (1..8), toggles (same marker again) or removes (0) the marker of the unit. Returns true when the call was made.
 function M.Set(unit,index)
+    if K.layoutTap then K.layoutTap.Cancel() end
     if type(SetRaidTarget)~="function" then return false end
     if not unit or not UnitExists(unit) then K.Say(K.T("Kein Ziel")); return false end
     index=tonumber(index)

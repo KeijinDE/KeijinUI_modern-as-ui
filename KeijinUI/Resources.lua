@@ -43,9 +43,10 @@ local function Attached() return K.DB().resourceFree~=true end
 local function Inactive() return not K.UnitsActive() end
 local function Anchor(f)
     local player=K.units.player
-    f:ClearAllPoints(); f:SetScale(player:GetScale())
+    local scale=player:GetScale()
+    if f:GetScale()~=scale then f:SetScale(scale) end
     -- Centred just below the health bar of the active frame style (the bar ends at the frame's bottom edge).
-    f:SetPoint("TOP",player.bar,"BOTTOM",0,-GAP)
+    K.Anchor(f,"TOP",player.bar,"BOTTOM",0,-GAP)
 end
 local function Detach()
     if not Attached() then return end
@@ -63,10 +64,10 @@ playerEntry.options.bottom=function()
 end
 local function Clear(reason)
     if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(frame) then GameTooltip:Hide() end
-    frame:Hide(); R.kind=nil; R.value=nil; R.raw=nil; R.maximum=nil; R.reason=reason
+    K.Shown(frame,false); R.kind=nil; R.value=nil; R.raw=nil; R.maximum=nil; R.reason=reason
     R.full=false; R.text=nil; glowUntil=0; flash:SetAlpha(0); snap=nil
-    for _,icon in ipairs(icons) do icon:Hide() end
-    rage:Hide(); text:SetText("")
+    for _,icon in ipairs(icons) do K.Shown(icon,false) end
+    K.Shown(rage,false); text:SetText("")
 end
 local function Learned(key)
     if type(AZS_SPELLS)~="table" then return false end

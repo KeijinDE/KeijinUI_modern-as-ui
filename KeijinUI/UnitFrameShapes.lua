@@ -27,6 +27,9 @@ function S.ConnectedFill(parent,name,mirror)
     f.fill=f.parts[1].texture
     function f:SetValue(value)
         self.value=math.max(0,math.min(1,tonumber(value) or 0))
+        -- Same share as already drawn: the pieces keep their size (width is fixed for this bar).
+        if self.drawnValue==self.value then return end
+        self.drawnValue=self.value
         for _,part in ipairs(self.parts) do
             local w=math.min(part.width,math.max(0,width*self.value-part.start))
             if w>0 then
@@ -34,8 +37,8 @@ function S.ConnectedFill(parent,name,mirror)
                 local v=part.u+(part.v-part.u)*w/part.width
                 if mirror then part.texture:SetTexCoord(v,part.u,0,1)
                 else part.texture:SetTexCoord(part.u,v,0,1) end
-                part.texture:Show()
-            else part.texture:Hide() end
+                K.Shown(part.texture,true)
+            else K.Shown(part.texture,false) end
         end
     end
     function f:SetStatusBarColor(r,g,b)
@@ -74,15 +77,18 @@ function S.AddShield(bar,file)
             if x2>x1 then
                 local ul=part.u+(part.v-part.u)*(x1-part.start)/part.width
                 local ur=part.u+(part.v-part.u)*(x2-part.start)/part.width
-                t:ClearAllPoints(); t:SetPoint("LEFT",bar,"LEFT",x1,0)
-                t:SetWidth(x2-x1); t:SetTexCoord(ul,ur,0,1); t:Show()
-            else t:Hide() end
+                K.Anchor(t,"LEFT",bar,"LEFT",x1,0)
+                K.SetW(t,x2-x1); t:SetTexCoord(ul,ur,0,1); K.Shown(t,true)
+            else K.Shown(t,false) end
         end
     end
     -- health and shield as shares of the maximum health (shield may be missing or zero: layers hidden).
     function bar:SetShield(health,shield)
         health=math.max(0,math.min(1,tonumber(health) or 0))
-        if not K.Number(shield) or shield<=0 then
+        local amount=K.Number(shield) and shield>0 and shield or 0
+        if self.shieldHealth==health and self.shieldAmount==amount then return end
+        self.shieldHealth,self.shieldAmount=health,amount
+        if amount==0 then
             self.shield=nil; Band(bands.shield,0,0); Band(bands.edge,0,0); return
         end
         local over=health+shield>1

@@ -32,6 +32,7 @@ local markLayer=CreateFrame("Frame",nil,progressFace)
 markLayer:SetAllPoints(progressFace); markLayer:SetFrameLevel(progressFace:GetFrameLevel()+1)
 local marks={}
 local MARK_COLORS={dead={0.5,1,0.55},up={1,0.5,0.25}}
+local MARK_DEFAULT={0.85,0.82,0.75}
 local function DrawMarks(schedule,count,duration)
     progressFace:Paint()
     local scale=progressFace.pixelsPerUnit or 1
@@ -55,16 +56,16 @@ local function DrawMarks(schedule,count,duration)
                 marks[shown]=mark
             end
             local x=math.floor(math.min(width-margin-markWidth,math.max(margin,width*v.at/duration-markWidth/2))+0.5)
-            mark:SetWidth(markWidth); mark:SetHeight(markHeight)
-            mark:ClearAllPoints(); mark:SetPoint("TOPLEFT",progressFace,"TOPLEFT",x,-pad)
-            local c=MARK_COLORS[v.state] or {0.85,0.82,0.75}
-            mark.outline:ClearAllPoints(); mark.outline:SetPoint("TOPLEFT",mark,"TOPLEFT",-1,1)
-            mark.outline:SetWidth(markWidth+2); mark.outline:SetHeight(markHeight+2); mark.outline:Show()
-            mark:SetVertexColor(c[1],c[2],c[3],1)
-            mark:Show()
+            K.SetW(mark,markWidth); K.SetH(mark,markHeight)
+            K.Anchor(mark,"TOPLEFT",progressFace,"TOPLEFT",x,-pad)
+            local c=MARK_COLORS[v.state] or MARK_DEFAULT
+            K.Anchor(mark.outline,"TOPLEFT",mark,"TOPLEFT",-1,1)
+            K.SetW(mark.outline,markWidth+2); K.SetH(mark.outline,markHeight+2); K.Shown(mark.outline,true)
+            if mark.kuiColor~=c then mark.kuiColor=c; mark:SetVertexColor(c[1],c[2],c[3],1) end
+            K.Shown(mark,true)
         end
     end
-    for i=shown+1,table.getn(marks) do marks[i]:Hide(); marks[i].outline:Hide() end
+    for i=shown+1,table.getn(marks) do K.Shown(marks[i],false); K.Shown(marks[i].outline,false) end
 end
 K.HeaderPoint(zone,tracker,"TOPLEFT",14,-35)
 K.HeaderPoint(time,tracker,"TOPLEFT",14,-55)
@@ -225,16 +226,16 @@ function T.UpdateExtras()
                     cell.detail=cell.detail.."\n"..K.T("Preis eines weiteren Rerolls: %s Gold",string.format("%.0f",price))
                 elseif value==0 then cell.detail=cell.detail.."\n"..K.T("Preis des nächsten Rerolls noch unbekannt.") end
             end
-            cell:ClearAllPoints(); cell:SetPoint("TOPLEFT",extras,"TOPLEFT",count*194,0)
-            cell:Show(); count=count+1
+            K.Anchor(cell,"TOPLEFT",extras,"TOPLEFT",count*194,0)
+            K.Shown(cell,true); count=count+1
         else
             if GameTooltip.GetOwner and GameTooltip:GetOwner()==cell then GameTooltip:Hide() end
-            cell.value:SetText(""); cell.detail=nil; cell:Hide()
+            cell.value:SetText(""); cell.detail=nil; K.Shown(cell,false)
         end
     end
     local height=count>0 and 58 or 34
     if tally:GetHeight()~=height then tally:SetHeight(height) end
-    if count>0 then extras:Show() else extras:Hide() end
+    K.Shown(extras,count>0)
 end
 local xp=K.Panel("KeijinUIXP","",400,28)
 xp.title:Hide(); xp.strip:Hide()
@@ -426,17 +427,17 @@ local function DrawBosses(phase)
         local v=list[i+bossOffset]
         if not bossRows[i] then bossRows[i]=K.Row(bosses,i,height) end
         local row=bossRows[i]
-        row:SetHeight(height)
-        row:ClearAllPoints(); row:SetPoint("TOPLEFT",bosses,"TOPLEFT",10,-top)
+        K.SetH(row,height)
+        K.Anchor(row,"TOPLEFT",bosses,"TOPLEFT",10,-top)
         row.spawnId=v.id
         row.label:SetText(v.name); row.value:SetText(string.format("%.0f%%",100*v.hp/v.hpm))
         row.bar:SetValue(math.min(1,v.hp/v.hpm)); row.bar:SetStatusBarColor(0.62,0.08,0.08,0.85)
         row.tip=v.name; row.detail=K.Short(v.hp).." / "..K.Short(v.hpm)
         K.encounterDebuffs.Draw(row,v)
-        row:Show(); top=top+height+2+v.extra
+        K.Shown(row,true); top=top+height+2+v.extra
     end
     for i=visible+1,table.getn(bossRows) do K.encounterDebuffs.Clear(bossRows[i]); bossRows[i]:Hide() end
-    bosses:SetHeight(top+10); bosses:Show()
+    K.SetH(bosses,top+10); K.Shown(bosses,true)
 end
 local guardianPanel=K.Panel("KeijinUIGuardianOverview","Wächter",K.PANEL_WIDTH,60)
 guardianPanel:Hide()
@@ -556,30 +557,30 @@ local function Update()
     end
     local column=custom and math.max(64,68*q,P.Measure(head14,head14:GetText())+8,P.Measure(head84,head84:GetText())+8) or 64
     local width=custom and P.Width("tracker",math.max(220,250*q,2*column+28+80*q)) or K.PANEL_WIDTH
-    tracker:SetWidth(width); tracker.title:SetWidth(width-26)
+    K.SetW(tracker,width); K.SetW(tracker.title,width-26)
     local headExtra=custom and math.max(0,12*q-14) or 0
-    headBoss:SetWidth(custom and width-40-2*column or 130); headBoss:SetHeight(math.max(14,12*q))
+    K.SetW(headBoss,custom and width-40-2*column or 130); K.SetH(headBoss,math.max(14,12*q))
     if custom then
-        head84:SetWidth(column); head14:SetWidth(column); tracker.sizingHeaders=true
+        K.SetW(head84,column); K.SetW(head14,column); tracker.sizingHeaders=true
     elseif tracker.sizingHeaders then
-        head84:SetWidth(math.max(64,P.Measure(head84,head84:GetText())+16))
-        head14:SetWidth(math.max(64,P.Measure(head14,head14:GetText())+16))
+        K.SetW(head84,math.max(64,P.Measure(head84,head84:GetText())+16))
+        K.SetW(head14,math.max(64,P.Measure(head14,head14:GetText())+16))
     end
-    head84:SetHeight(math.max(14,12*q)); head84:SetJustifyH("RIGHT")
-    head14:SetHeight(math.max(14,12*q)); head14:SetJustifyH("RIGHT")
+    K.SetH(head84,math.max(14,12*q)); head84:SetJustifyH("RIGHT")
+    K.SetH(head14,math.max(14,12*q)); head14:SetJustifyH("RIGHT")
     local zoneHeight=custom and math.max(17,26*q) or 17
     local timeHeight=math.max(27,25*q)
     local extra=custom and math.max(0,math.ceil(zoneHeight+timeHeight-44))+pad or 0
-    tracker.title:SetHeight(math.max(17,15*q)); tracker.strip:SetHeight(math.max(23,18*q))
-    zone:SetWidth(width-28); zone:SetHeight(zoneHeight)
-    time:SetWidth(width-28); time:SetHeight(timeHeight)
-    progress:SetWidth(width-28)
+    K.SetH(tracker.title,K.HeaderTitleHeight(tracker,q)); K.SetH(tracker.strip,K.HeaderStripHeight(tracker,q))
+    K.SetW(zone,width-28); K.SetH(zone,zoneHeight)
+    K.SetW(time,width-28); K.SetH(time,timeHeight)
+    K.SetW(progress,width-28)
     TrackerPoint(zone,"TOPLEFT",14,-35-pad)
     TrackerPoint(time,"TOPLEFT",14,-38-pad-zoneHeight)
-    paceRow:SetWidth(width-28); accountRow:SetWidth(width-28)
-    paceRow:SetHeight(math.max(16,15*q)); accountRow:SetHeight(math.max(16,15*q))
-    paceRow.text:SetWidth(width-28); accountRow.text:SetWidth(width-28)
-    paceRow.text:SetHeight(math.max(16,15*q)); accountRow.text:SetHeight(math.max(16,15*q))
+    K.SetW(paceRow,width-28); K.SetW(accountRow,width-28)
+    K.SetH(paceRow,math.max(16,15*q)); K.SetH(accountRow,math.max(16,15*q))
+    K.SetW(paceRow.text,width-28); K.SetW(accountRow.text,width-28)
+    K.SetH(paceRow.text,math.max(16,15*q)); K.SetH(accountRow.text,math.max(16,15*q))
     paceExtra=K.pace.On() and (K.pace.AccountOn() and 36 or 18) or 0
     if custom then paceExtra=paceExtra*math.max(1,q) end
     TrackerPoint(progress,"TOPLEFT",14,-85-paceExtra-extra)
@@ -595,17 +596,17 @@ local function Update()
         -- vertical duplication without reducing the configured font size.
         local clockWidth=P.Measure(time,"99:59 / 99:59")+8
         width=P.Width("tracker",math.max(width,clockWidth+80*q+28))
-        tracker:SetWidth(width); tracker.title:SetWidth(width-26)
-        zone:SetWidth(math.max(30,width-36-clockWidth)); time:SetWidth(clockWidth)
+        K.SetW(tracker,width); K.SetW(tracker.title,width-26)
+        K.SetW(zone,math.max(30,width-36-clockWidth)); K.SetW(time,clockWidth)
         TrackerPoint(time,"TOPRIGHT",-14,-35-pad)
         local paceTop=35+pad+math.max(zoneHeight,timeHeight)+4
         local half=(width-36)/2
-        paceRow:SetWidth(half); accountRow:SetWidth(half)
-        paceRow.text:SetWidth(half); accountRow.text:SetWidth(half)
+        K.SetW(paceRow,half); K.SetW(accountRow,half)
+        K.SetW(paceRow.text,half); K.SetW(accountRow.text,half)
         TrackerPoint(paceRow,"TOPLEFT",14,-paceTop)
         TrackerPoint(accountRow,"TOPRIGHT",-14,-paceTop)
         local barTop=paceTop+(K.pace.On() and math.max(18,18*q) or 0)+4
-        progress:SetWidth(width-28); TrackerPoint(progress,"TOPLEFT",14,-barTop)
+        K.SetW(progress,width-28); TrackerPoint(progress,"TOPLEFT",14,-barTop)
         local headingTop=barTop+math.max(10,10*q)
         TrackerPoint(headBoss,"TOPLEFT",14,-headingTop)
         TrackerPoint(head84,"TOPRIGHT",-20-column,-headingTop)
@@ -613,7 +614,6 @@ local function Update()
         scheduleTop=headingTop+math.max(14,12*q)+4
         trackerFixed=scheduleTop+9
     end
-    accountRow:Hide()
     local r=AZS_RUN
     local phase=AZS_GetPhase and AZS_GetPhase()
     local seconds=AZS_GetRunTime and AZS_GetRunTime()
@@ -624,13 +624,13 @@ local function Update()
         if K.pace.On() then
             local d=K.pace.Details()
             paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%"..(d.mode=="kills" and (" · "..K.T("nur Gegner")) or "")) or ""))
-            paceRow.text:SetTextColor(K.pace.Color(d.status)); paceRow:Show()
-        else paceRow:Hide() end
+            paceRow.text:SetTextColor(K.pace.Color(d.status)); K.Shown(paceRow,true)
+        else K.Shown(paceRow,false) end
         if K.pace.AccountOn() then
             local d=K.pace.Details(true)
             accountRow.text:SetText(K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
-            accountRow.text:SetTextColor(K.pace.Color(d.status)); accountRow:Show()
-        end
+            accountRow.text:SetTextColor(K.pace.Color(d.status)); K.Shown(accountRow,true)
+        else K.Shown(accountRow,false) end
         zone:SetText((AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
         time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
         if r.endl==1 then time:SetText(K.Clock(seconds).." · "..K.T("Endlos")) end
@@ -655,8 +655,8 @@ local function Update()
         end
         local scheduleOffset=P.Range("tracker",total,math.max(1,count))
         if not custom then scheduleOffset=0 end
-        scheduleScroll:ClearAllPoints(); scheduleScroll:SetPoint("TOPLEFT",tracker,"TOPLEFT",14,-scheduleTop+K.HeaderOffset(tracker))
-        scheduleScroll:SetWidth(width-28); scheduleScroll:SetHeight(math.max(1,count*step)); scheduleScroll:Show()
+        K.Anchor(scheduleScroll,"TOPLEFT",tracker,"TOPLEFT",14,-scheduleTop+K.HeaderOffset(tracker))
+        K.SetW(scheduleScroll,width-28); K.SetH(scheduleScroll,math.max(1,count*step)); K.Shown(scheduleScroll,true)
         for i=1,math.min(count,total) do
             local v=schedule[i+scheduleOffset]; local row=ScheduleRow(i)
             if endless then
@@ -665,13 +665,13 @@ local function Update()
                 v={name=K.T("Nächster Endlosboss"),at=left and seconds+left}
             end
             TrackerPoint(row,"TOPLEFT",14,-scheduleTop-(i-1)*step)
-            row:SetWidth(width-28); row:SetHeight(step-1)
+            K.SetW(row,width-28); K.SetH(row,step-1)
             local timeWidth=column
-            row.name:SetWidth(custom and width-28-2*timeWidth-10 or 130); row.name:SetHeight(custom and step-2 or 15)
-            row.boss:SetWidth(custom and timeWidth-4 or 62); row.boss:SetHeight(custom and step-2 or 15)
-            row.run:SetWidth(timeWidth); row.run:SetHeight(custom and step-2 or 15)
-            row.boss:ClearAllPoints(); row.boss:SetPoint("RIGHT",row,"RIGHT",-timeWidth-6,0)
-            row.tint:Hide()
+            K.SetW(row.name,custom and width-28-2*timeWidth-10 or 130); K.SetH(row.name,custom and step-2 or 15)
+            K.SetW(row.boss,custom and timeWidth-4 or 62); K.SetH(row.boss,custom and step-2 or 15)
+            K.SetW(row.run,timeWidth); K.SetH(row.run,custom and step-2 or 15)
+            K.Anchor(row.boss,"RIGHT",row,"RIGHT",-timeWidth-6,0)
+            local tint=false
             row.name:SetText(v.name or "?")
             row.bossName=v.name
             local timing=K.BossTimes.Get(v)
@@ -682,7 +682,7 @@ local function Update()
                 local grade=K.pace.BossGrade(timing and timing.duration,v.final==1)
                 local cr,cg,cb=K.pace.Color(grade)
                 row.boss:SetTextColor(cr,cg,cb); row.run:SetTextColor(cr,cg,cb)
-                if grade then row.tint:SetVertexColor(cr,cg,cb,.16); row.tint:Show() end
+                if grade then row.tint:SetVertexColor(cr,cg,cb,.16); tint=true end
                 if timing and K.Number(timing.duration) then
                     row.detail=K.T("Runzeit beim Sieg: %s\nBosszeit: %s\nErschienen bei: %s\nAktive Runzeit ohne Pausen. Erfasst beim Zustandswechsel des Spiels.",K.Clock(timing.killedAt),K.Clock(timing.duration),K.Clock(v.at))
                 else row.detail=K.T("Bereits besiegt. Der Todeszeitpunkt wurde nicht erfasst.\nDie Spielschnittstelle liefert keine vergangenen Todeszeitpunkte.") end
@@ -698,30 +698,31 @@ local function Update()
                 row.boss:SetTextColor(0.85,0.82,0.75); row.run:SetTextColor(0.85,0.82,0.75)
                 row.detail=K.T("Erscheint bei: %s Runzeit.",K.Clock(v.at))
             end
-            row:Show()
+            K.Shown(row.tint,tint)
+            K.Shown(row,true)
         end
-        for i=math.min(count,total)+1,table.getn(schedules) do schedules[i]:Hide() end
+        for i=math.min(count,total)+1,table.getn(schedules) do K.Shown(schedules[i],false) end
         DrawMarks(schedule,endless and 0 or total,duration)
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
         local guardians=K.guardians.Draw(guardianContent,-scheduleTop-4-count*step+K.HeaderOffset(tracker),guardianSizing)
-        tracker:SetHeight(trackerFixed+count*step+guardians)
+        K.SetH(tracker,trackerFixed+count*step+guardians)
         level:SetText("")
-        tracker:Show(); H.Native("clock",true)
+        K.Shown(tracker,true); H.Native("clock",true)
     else
-        paceRow:Hide()
+        K.Shown(paceRow,false); K.Shown(accountRow,false)
         H.NativeFollow("clock",not K.DB().hidden.tracker)
-        if K.DB().hidden.tracker then tracker:Hide()
+        if K.DB().hidden.tracker then K.Shown(tracker,false)
         else
             zone:SetText((GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
             time:SetText(K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
-            level:SetWidth(width-28); level:SetHeight(math.max(16,14*q))
+            K.SetW(level,width-28); K.SetH(level,math.max(16,14*q))
             level:SetText(K.T("Warte auf Spieldaten"))
             if custom then
                 local count=math.max(1,math.min(P.Rows("tracker",1),math.floor((P.AvailableHeight("tracker")-154-extra)/step)))
-                P.Range("tracker",0,count); tracker:SetHeight(154+extra+count*step)
-            else tracker:SetHeight(154+extra) end
-            tracker:Show()
-            scheduleScroll:Hide()
+                P.Range("tracker",0,count); K.SetH(tracker,154+extra+count*step)
+            else K.SetH(tracker,154+extra) end
+            K.Shown(tracker,true)
+            K.Shown(scheduleScroll,false)
             for _,row in ipairs(schedules) do row:Hide() end
             DrawMarks({},0,0)
             K.guardians.Hide()
@@ -749,14 +750,14 @@ local function Update()
         tallyCells[4].detail=K.T("Geöffnete Caches in diesem Run")
         tallyCells[5].tip=string.format("%.0f",missing)
         tallyCells[5].detail=K.T("Fehlendes Gold bis zum nächsten Cache. Grün: bezahlbar, Gelb: höchstens ein Viertel des Preises fehlt, Rot: mehr.")
-        tally:Show(); H.Native("tally",true)
+        K.Shown(tally,true); H.Native("tally",true)
     else
         H.NativeFollow("tally",not K.DB().hidden.tally)
-        if K.DB().hidden.tally then tally:Hide() else for _,value in ipairs(tallyValues) do value:SetText("?") end; tally:Show() end
+        if K.DB().hidden.tally then K.Shown(tally,false) else for _,value in ipairs(tallyValues) do value:SetText("?") end; K.Shown(tally,true) end
     end
     if Active(phase) and type(r)=="table" and K.Number(r.xp) and K.Number(r.xpn) and r.xpn>0 and not K.DB().hidden.xp then
-        xpBar:SetValue(math.min(1,r.xp/r.xpn)); xp:Show()
-    else xpBar:SetValue(0); if K.DB().hidden.xp then xp:Hide() else xp:Show() end end
+        xpBar:SetValue(math.min(1,r.xp/r.xpn)); K.Shown(xp,true)
+    else xpBar:SetValue(0); if K.DB().hidden.xp then K.Shown(xp,false) else K.Shown(xp,true) end end
 end
 P.Register("tracker",tracker,"Runübersicht",Update)
 K.Update("basisHud",Update)
@@ -777,7 +778,7 @@ local function MoveStock()
             end
             f:SetScript("OnShow",saved.hook)
         end
-        MainMenuExpBar:Hide()
+        K.Shown(MainMenuExpBar,false)
     elseif H.xpOriginal and MainMenuExpBar then
         local f,saved=MainMenuExpBar,H.xpOriginal
         saved.active=false

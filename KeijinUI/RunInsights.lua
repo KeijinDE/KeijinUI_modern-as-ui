@@ -53,5 +53,5 @@ local label=K.xpDisplay.rateLabel; X.label=label
 K.Update("analysis",function()
     local phase=AZS_GetPhase and AZS_GetPhase()
     local active=phase=="playing" or phase=="paused" or phase=="choosing"
-    if K.DB().xpRate==true and active and not K.DB().hidden.xp then label:SetText(XPText()); label:Show() else label:Hide() end
+    if K.DB().xpRate==true and active and not K.DB().hidden.xp then label:SetText(XPText()); K.Shown(label,true) else K.Shown(label,false) end
 end)

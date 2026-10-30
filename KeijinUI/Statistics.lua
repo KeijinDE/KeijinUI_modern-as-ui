@@ -3,7 +3,7 @@ local P=K.panelSizing
 local function Inactive() return not K.basisHud.On() end
 local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end,{inactive=Inactive})
-stats:Hide()
+K.Shown(stats,false)
 -- Level and experience of the current level only: the game hands out no run total of experience.
 local definitions={
     {"lvl","Level"},{"xp","Erfahrung"},
@@ -18,7 +18,7 @@ for i,v in ipairs(definitions) do local text=v[2]; rows[i]=K.ValueRow(stats,i,19
 rows[table.getn(rows)].line:Hide()
 local meter=K.Panel("KeijinUIDamage","Schaden",K.PANEL_WIDTH,235)
 K.layout.Register("meter",meter,"Schadensanzeige",function(f) f:ClearAllPoints(); f:SetPoint("TOPRIGHT",stats,"BOTTOMRIGHT",0,-10) end,{inactive=Inactive})
-meter:Hide()
+K.Shown(meter,false)
 local summary=K.Text(meter,"",10,"BOTTOMLEFT",13,10,K.PANEL_WIDTH-26)
 local summaryHover=CreateFrame("Frame",nil,meter)
 summaryHover:SetAllPoints(summary); summaryHover:EnableMouse(true)
@@ -37,12 +37,14 @@ function K.MeterMaxHeight() return 56+math.max(3,math.min(MAX_ROWS,math.floor((K
 local function AddSpellIcon(row,size)
     row.iconSize=size; row.labelWidth=row.label:GetWidth()
     row.icon=row.label:GetParent():CreateTexture(nil,"ARTWORK")
-    row.icon:SetWidth(size); row.icon:SetHeight(size)
+    K.SetW(row.icon,size); K.SetH(row.icon,size)
     row.icon:SetPoint("LEFT",row,"LEFT",5,0)
-    row.icon:SetTexCoord(.08,.92,.08,.92); row.icon:Hide()
+    row.icon:SetTexCoord(.08,.92,.08,.92); K.Shown(row.icon,false)
 end
 -- Party rows colour name and rim; every other view starts from the plain look again.
 local function PlainRow(row)
+    if row.kuiPlain then return end
+    row.kuiPlain=true
     row.label:SetTextColor(0.94,0.91,0.82)
     if row.rim then for _,t in ipairs(row.rim) do t:SetVertexColor(0.62,0.57,0.43,0.95) end end
 end
@@ -50,19 +52,20 @@ local function UpdateSpellIcon(row,name)
     PlainRow(row)
     local enabled=K.DB().meterIcons==true
     local inset=enabled and row.iconSize+3 or 0
-    row.label:ClearAllPoints(); row.label:SetPoint("LEFT",row.label:GetParent(),"LEFT",5+inset,0)
-    row.label:SetWidth(row.labelWidth-inset)
+    K.Anchor(row.label,"LEFT",row.label:GetParent(),"LEFT",5+inset,0)
+    row.labelInset=inset
+    K.SetW(row.label,row.labelWidth-inset)
     local texture=enabled and K.SpellIcon(name)
-    if texture then row.icon:SetTexture(texture); row.icon:Show() else row.icon:Hide() end
+    if texture then row.icon:SetTexture(texture); K.Shown(row.icon,true) else K.Shown(row.icon,false) end
 end
 for i=1,MAX_ROWS do
     local row=K.ListBarRow(meter,i,20)
     -- Separate, bounded columns: ability | total damage | damage per second.
     -- Use the existing text layer so all three stay above the bar artwork.
-    row.label:SetWidth(meter:GetWidth()-156)
+    K.SetW(row.label,meter:GetWidth()-156)
     AddSpellIcon(row,16)
     row.value:ClearAllPoints(); row.value:SetPoint("RIGHT",row,"RIGHT",-73,0)
-    row.value:SetWidth(53); row.value:SetHeight(16); row.value:SetJustifyH("RIGHT")
+    K.SetW(row.value,53); K.SetH(row.value,16); row.value:SetJustifyH("RIGHT")
     row.dps=K.Text(row.value:GetParent(),"",10,"RIGHT",-6,0,62)
     row.dps:SetJustifyH("RIGHT"); row.dps:SetTextColor(0.84,0.82,0.75)
     meterRows[i]=row
@@ -78,7 +81,7 @@ local tabRun=CreateFrame("Button","KeijinUIMeterTabRun",meter)
 local tabBoss=CreateFrame("Button","KeijinUIMeterTabBoss",meter)
 local tabHeal=CreateFrame("Button","KeijinUIMeterTabHeal",meter)
 local tabParty=CreateFrame("Button","KeijinUIMeterTabParty",meter)
-tabParty:SetWidth(38); tabParty:SetHeight(20); tabParty.text=K.LText(tabParty,"Party",9,"CENTER",0,0); tabParty:Hide()
+tabParty:SetWidth(38); tabParty:SetHeight(20); tabParty.text=K.LText(tabParty,"Party",9,"CENTER",0,0); K.Shown(tabParty,false)
 for _,tab in ipairs({tabRun,tabBoss}) do tab:SetWidth(34); tab:SetHeight(20) end
 tabRun.text=K.LText(tabRun,"Run",9,"CENTER",0,0)
 tabBoss.text=K.LText(tabBoss,"Boss",9,"CENTER",0,0)
@@ -135,14 +138,14 @@ tabHeal:SetScript("OnClick",function() K.SetMeterView("healing") end)
 tabParty:SetScript("OnClick",function() K.SetMeterView("party") end)
 local headerMode="normal"
 local function LayoutSummary()
-    if headerMode=="off" then summary:SetWidth(meter:GetWidth()-160-(tabParty:IsShown() and 40 or 0))
-    else summary:SetWidth(meter:GetWidth()-26) end
+    if headerMode=="off" then K.SetW(summary,meter:GetWidth()-160-(tabParty:IsShown() and 40 or 0))
+    else K.SetW(summary,meter:GetWidth()-26) end
 end
 meter.headerExtra=function(mode)
-    reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 16 or 20)
+    reset:ClearAllPoints(); reset:SetHeight(mode=="thin" and 14 or 20)
     tabRun:ClearAllPoints(); tabBoss:ClearAllPoints(); tabHeal:ClearAllPoints(); tabParty:ClearAllPoints()
-    tabRun:SetHeight(mode=="thin" and 16 or 20); tabBoss:SetHeight(mode=="thin" and 16 or 20); tabHeal:SetHeight(mode=="thin" and 16 or 20)
-    tabParty:SetHeight(mode=="thin" and 16 or 20); tabParty:SetWidth(38)
+    tabRun:SetHeight(mode=="thin" and 14 or 20); tabBoss:SetHeight(mode=="thin" and 14 or 20); tabHeal:SetHeight(mode=="thin" and 14 or 20)
+    tabParty:SetHeight(mode=="thin" and 14 or 20); tabParty:SetWidth(38)
     tabRun:SetWidth(mode=="off" and 24 or 34); tabBoss:SetWidth(mode=="off" and 28 or 34); tabHeal:SetWidth(mode=="off" and 38 or 44)
     reset:SetWidth(mode=="off" and 28 or 44); K.SetFontSize(reset.text,mode=="off" and 8 or 9)
     K.SetFontSize(summary,mode=="off" and 9 or 10)
@@ -165,7 +168,7 @@ meter.headerExtra=function(mode)
     PaintTabs()
 end
 local function Summary(full,total,rate)
-    summary:SetText(K.headers.Mode()=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
+    summary:SetText(K.headers.Mode(meter)=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
 end
 local function ResetMeter()
     K.liveDPS.Reset()
@@ -178,7 +181,7 @@ local crit=K.Panel("KeijinUICrits","Größte kritische Treffer",K.PANEL_WIDTH,22
 K.layout.Register("crits",crit,"Kritische Treffer",function(f)
     f:ClearAllPoints(); f:SetPoint("TOPLEFT",meter,"BOTTOMLEFT",0,-10)
 end,{inactive=Inactive})
-crit:Hide()
+K.Shown(crit,false)
 crit:EnableMouseWheel(true)
 crit:SetScript("OnMouseWheel",function() P.Scroll("crits",arg1) end)
 local critRows,critData={},{}
@@ -261,13 +264,14 @@ local function UpdateBoss()
         end
     end
     if table.getn(sorted)==0 then
-        for _,row in ipairs(meterRows) do row:Hide() end
-        meter:SetHeight(100); if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end; summary:SetText(K.T("Noch kein Bosskampf")); meter:Show()
+        for _,row in ipairs(meterRows) do K.Shown(row,false) end
+        -- Sized panels get their height from P.List below; writing the standard height first would flip it every update.
+        if not P.Custom("meter") then K.SetH(meter,100) end; if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end; summary:SetText(K.T("Noch kein Bosskampf")); K.Shown(meter,true)
         return
     end
     table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
     if not K.Number(total) then total=sum end
-    meter:SetHeight(K.MeterMaxHeight())
+    if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
     local visible
     if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
     else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
@@ -284,12 +288,12 @@ local function UpdateBoss()
             row.tip=K.DisplayName(v.name)
             row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
                 K.Short(rate),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
-            row:Show()
-        else row:Hide() end
+            K.Shown(row,true)
+        else K.Shown(row,false) end
     end
     Summary(K.T(BossAlive() and "Bosskampf: %s gesamt   ·   %s / s   (läuft)" or "Bosskampf: %s gesamt   ·   %s / s",
         K.Short(total),K.Short(K.Number(dps) and dps or 0)),total,K.Number(dps) and dps or 0)
-    meter:Show()
+    K.Shown(meter,true)
 end
 -- Native effective healing by source. Reset and boss automation never replace a manual healing choice.
 K.On("CHAT_MSG_ADDON",function(_,prefix)
@@ -298,12 +302,12 @@ end)
 local function UpdateHealing(lines,total,hps,supported)
     local sorted=lines or {}; total=total or 0; hps=hps or 0
     if table.getn(sorted)==0 then
-        for _,row in ipairs(meterRows) do row:Hide() end
-        meter:SetHeight(100)
+        for _,row in ipairs(meterRows) do K.Shown(row,false) end
+        if not P.Custom("meter") then K.SetH(meter,100) end
         if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
-        summary:SetText(K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); meter:Show(); return
+        summary:SetText(K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); K.Shown(meter,true); return
     end
-    meter:SetHeight(K.MeterMaxHeight())
+    if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
     local visible
     if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
     else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
@@ -318,15 +322,15 @@ local function UpdateHealing(lines,total,hps,supported)
             row.tip=K.DisplayName(value.name)
             row.detail=K.T("%.0f Heilung\n%s HPS\n%.1f%% Anteil\nNative Heilungsdaten, ohne Überheilung.",value.dmg,
                 K.Short(K.Number(value.dps) and value.dps or 0),total>0 and value.dmg/total*100 or 0)
-            row:Show()
-        else row:Hide() end
+            K.Shown(row,true)
+        else K.Shown(row,false) end
     end
     Summary(K.T("Heilung: %s gesamt   ·   %s HPS",K.Short(total),K.Short(hps)),total,hps)
-    meter:Show()
+    K.Shown(meter,true)
 end
 -- Co-op: damage of all heroes of the party (AZS_GetPartyMeter), class coloured, own hero framed in gold.
 local function UpdateParty(sorted,total,rate)
-    meter:SetHeight(K.MeterMaxHeight())
+    if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
     local visible
     if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
     else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
@@ -338,8 +342,9 @@ local function UpdateParty(sorted,total,rate)
             local own=me~=nil and v.name==me
             local red,green,blue=K.PartyClassColor(v.class)
             -- No spell icon in this view: the label returns to the left edge.
-            row.label:ClearAllPoints(); row.label:SetPoint("LEFT",row.label:GetParent(),"LEFT",5,0)
-            if row.icon then row.label:SetWidth(row.labelWidth); row.icon:Hide() end
+            K.Anchor(row.label,"LEFT",row.label:GetParent(),"LEFT",5,0)
+            if row.icon then row.labelInset=0; K.SetW(row.label,row.labelWidth); K.Shown(row.icon,false) end
+            row.kuiPlain=nil
             row.label:SetText(v.name); row.label:SetTextColor(red,green,blue)
             row.value:SetText(K.Short(v.dmg)); row.dps:SetText(K.Short(dps).." DPS")
             row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
@@ -350,16 +355,16 @@ local function UpdateParty(sorted,total,rate)
             if type(v.top)=="string" and v.top~="" then
                 row.detail=row.detail.."\n"..K.T("Stärkster Zauber: %s (%s DPS)",K.DisplayName(v.top),K.Short(K.Number(v.topdps) and v.topdps or 0))
             end
-            row:Show()
-        else row:Hide() end
+            K.Shown(row,true)
+        else K.Shown(row,false) end
     end
     Summary(K.T("Party: %s gesamt · %s DPS",K.Short(total),K.Short(rate)),total,rate)
-    meter:Show()
+    K.Shown(meter,true)
 end
 local previousReported
 local sizedMeter
 local function Release()
-    stats:Hide(); meter:Hide(); crit:Hide()
+    K.Shown(stats,false); K.Shown(meter,false); K.Shown(crit,false)
     for _,key in ipairs({"statistics","meter","crits"}) do
         local e=K.layout.entries[key]
         if e and e.handle then e.handle:Hide() end
@@ -371,14 +376,14 @@ end
 local function UpdateTabs(party)
     if (party~=nil)~=partyReady then
         partyReady=party~=nil
-        if partyReady then tabParty:Show() else tabParty:Hide() end
+        if partyReady then K.Shown(tabParty,true) else K.Shown(tabParty,false) end
         LayoutSummary()
     end
     AutoSwitch(); PaintTabs()
     if not P.Custom("meter") and sizedMeter then
         P.Restore("meter"); meter.sizingMinimum=nil
         summary:ClearAllPoints(); summary:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",13,10)
-        summary:SetHeight(15); meter.headerExtra(K.headers.Mode()); sizedMeter=nil
+        summary:SetHeight(15); meter.headerExtra(K.headers.Mode(meter)); sizedMeter=nil
     end
     if P.Custom("meter") then
         sizedMeter=true
@@ -387,16 +392,16 @@ local function UpdateTabs(party)
         local tabs={tabRun,tabBoss,tabHeal,tabParty,reset}
         local x=13
         for _,tab in ipairs(tabs) do
-            tab:SetWidth(math.max(30,P.Measure(tab.text,tab.text:GetText() or "")+12))
-            tab:SetHeight(math.max(20,16*q)); tab:ClearAllPoints()
-            tab:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",x,8+math.max(30,26*q))
+            K.SetW(tab,math.max(30,P.Measure(tab.text,tab.text:GetText() or "")+12))
+            K.SetH(tab,math.max(20,16*q))
+            K.Anchor(tab,"BOTTOMLEFT",meter,"BOTTOMLEFT",x,8+math.max(30,26*q))
             if tab:IsShown() then x=x+tab:GetWidth()+3 end
         end
         meter.sizingMinimum=x+13
         P.Width("meter",x+13)
-        summary:ClearAllPoints(); summary:SetPoint("BOTTOMLEFT",meter,"BOTTOMLEFT",13,7)
-        summary:SetWidth(meter:GetWidth()-26); summary:SetHeight(math.max(30,26*q))
-        meter.title:SetHeight(math.max(17,15*q)); meter.strip:SetHeight(math.max(23,18*q))
+        K.Anchor(summary,"BOTTOMLEFT",meter,"BOTTOMLEFT",13,7)
+        K.SetW(summary,meter:GetWidth()-26); K.SetH(summary,math.max(30,26*q))
+        K.SetH(meter.title,K.HeaderTitleHeight(meter,q)); K.SetH(meter.strip,K.HeaderStripHeight(meter,q))
     end
 end
 -- Critical hit list; split out of Update for the same reason.
@@ -408,7 +413,7 @@ local function UpdateCrits(valid)
         local available=(meter:GetBottom() or 220)-190
         local visible=math.max(1,math.min(8,math.floor((available-42)/21)))
         if P.Custom("crits") then visible,critOffset=P.List("crits",critRows,table.getn(crits),8,21)
-        else critOffset=P.Range("crits",table.getn(crits),visible) end
+        else P.Restore("crits"); critOffset=P.Range("crits",table.getn(crits),visible) end
         for i,row in ipairs(critRows) do
             local v=crits[i+critOffset]
             if v and i<=visible then
@@ -418,16 +423,17 @@ local function UpdateCrits(valid)
                 local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=v.name
                 row.detail=string.format(K.T("Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"),v.best,v.last,v.sum/v.count,v.min,v.count)
-                row:Show()
-            else row:Hide() end
+                K.Shown(row,true)
+            else K.Shown(row,false) end
         end
-        if not P.Custom("crits") then crit:SetHeight(42+math.min(visible,table.getn(crits))*21) end; crit:Show()
+        if not P.Custom("crits") then K.SetH(crit,42+math.min(visible,table.getn(crits))*21) end; K.Shown(crit,true)
     else
-        for _,row in ipairs(critRows) do row:Hide() end
-        if K.DB().hidden.crits then crit:Hide() else
-            crit:SetHeight(63)
+        for _,row in ipairs(critRows) do K.Shown(row,false) end
+        if not P.Custom("crits") then P.Restore("crits") end
+        if K.DB().hidden.crits then K.Shown(crit,false) else
+            if not P.Custom("crits") then K.SetH(crit,63) end
             if P.Custom("crits") then P.List("crits",critRows,0,8,21) end
-            crit:Show()
+            K.Shown(crit,true)
         end
     end
 end
@@ -444,11 +450,11 @@ local function Update()
     if not K.DB().hidden.statistics then
         r=valid and r or {}
         local visible,statOffset=P.List("statistics",rows,7,7,21)
-        if not P.Custom("statistics") then stats:SetHeight(185) end
+        if not P.Custom("statistics") then K.SetH(stats,185) end
         for i,row in ipairs(rows) do
             local def=definitions[i+statOffset]
             if def and i<=visible then
-                row:Show(); row.line:Show()
+                K.Shown(row,true)
                 local key=def[1]; local value=r[key]
                 row.tip=K.T(def[2]); row.label:SetText(K.T(def[2]))
                 if key=="xp" then
@@ -464,11 +470,11 @@ local function Update()
                     if key=="taken" then row.detail=K.combatDetails.Taken()
                     else row.detail=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten") end
                 end
-            if i==visible then row.line:Hide() end
-            else row:Hide() end
+            K.Shown(row.line,i~=visible)
+            else K.Shown(row,false) end
         end
-        stats:Show()
-    else stats:Hide() end
+        K.Shown(stats,true)
+    else K.Shown(stats,false) end
     local party,partyTotal,partyRate=K.PartyMeter()
     UpdateTabs(party)
     local lines=AZS_GetMeter and AZS_GetMeter()
@@ -476,7 +482,7 @@ local function Update()
     local bossView=K.MeterView()=="boss"
     local healingView=K.MeterView()=="healing"
     local partyView=K.MeterView()=="party"
-    if bossView or healingView or partyView then reset:Hide() else reset:Show() end
+    if bossView or healingView or partyView then K.Shown(reset,false) else K.Shown(reset,true) end
     local sorted,total={},0
     if meterValid and not bossView and not healingView and not partyView then
         for _,v in ipairs(lines) do
@@ -493,7 +499,7 @@ local function Update()
         UpdateParty(party,partyTotal,partyRate); K.basisHud.Native("meter",true)
     elseif meterValid then
         table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
-        meter:SetHeight(K.MeterMaxHeight())
+        if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
         local visible
         if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
         else visible=(meter.headerHeight-56)/22; offset=P.Range("meter",table.getn(sorted),visible) end
@@ -518,23 +524,23 @@ local function Update()
                     K.Short(average),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
                 row.detail=row.detail.."\n"..K.T("DPS (10 s): %s\nDPS oben: letzte 10 Spielsekunden. Durchschnitt: seit Runbeginn oder Reset.",K.Short(dps))
                 row.detail=row.detail..K.combatDetails.Detail(v.name)
-                row:Show()
-            else row:Hide() end
+                K.Shown(row,true)
+            else K.Shown(row,false) end
         end
         meter.runAverage=duration>0 and total/duration or 0
         local ready=sorted[1] and K.liveDPS.Rate(sorted[1].name)~=nil
         Summary(K.T("%s gesamt · %s DPS",K.Short(total),ready and K.Short(liveTotal) or "?"),total,ready and liveTotal or nil)
-        meter:Show(); K.basisHud.Native("meter",true)
+        K.Shown(meter,true); K.basisHud.Native("meter",true)
     else
         K.basisHud.NativeFollow("meter",not K.DB().hidden.meter)
-        if K.DB().hidden.meter then meter:Hide()
+        if K.DB().hidden.meter then K.Shown(meter,false)
         else
-            for _,row in ipairs(meterRows) do row:Hide() end
-            meter:SetHeight(100); summary:SetText(K.T("Noch kein Schaden")); meter:Show()
+            for _,row in ipairs(meterRows) do K.Shown(row,false) end
+            if not P.Custom("meter") then K.SetH(meter,100) end; summary:SetText(K.T("Noch kein Schaden")); K.Shown(meter,true)
         end
     end
     if P.Custom("meter") and not meterValid and not bossView and not healingView and not partyView then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
-    if P.Custom("meter") then summary:SetWidth(meter:GetWidth()-26) end
+    if P.Custom("meter") then K.SetW(summary,meter:GetWidth()-26) end
     UpdateCrits(valid)
 end
 -- /kui heal debug: 60 seconds of buff chat events (all names are in the 1.12 event catalog).

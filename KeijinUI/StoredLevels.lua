@@ -52,7 +52,7 @@ function S.Update()
     if hud and supported and not S.On() then K.NativeFollow("levels",false)
     else K.Native("levels",hud and supported and S.On() and active and true or false) end
     S.count=count
-    if not supported or not S.On() or count<=0 then frame:Hide(); return end
+    if not supported or not S.On() or count<=0 then K.Shown(frame,false); return end
     local canOpen=phase=="playing"
     label:SetText(K.T("Levelaufstieg (%d)",count))
     label:SetTextColor(1,.82,.28); frame:SetAlpha(canOpen and 1 or .65); frame:Show()

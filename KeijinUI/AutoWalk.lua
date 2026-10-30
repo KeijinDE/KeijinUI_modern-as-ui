@@ -106,6 +106,7 @@ capture:SetScript("OnMouseUp",function() Input(arg1,true) end)
 capture:SetScript("OnMouseWheel",function() Input(arg1>0 and "MOUSEWHEELUP" or "MOUSEWHEELDOWN",true) end)
 capture:SetScript("OnHide",function() pending=nil; capture:EnableKeyboard(false) end)
 function A.Capture()
+    if K.layoutTap then K.layoutTap.Cancel() end
     if not A.On() then return end
     if not A.Available() then K.Say(K.T("Nicht verfügbar")); return end
     pending=nil

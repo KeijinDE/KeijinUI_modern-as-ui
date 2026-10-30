@@ -68,7 +68,7 @@ function S.Refresh()
             slots[i].group=nil; slots[i]:Hide()
         end
     end
-    if n==0 then frame:Hide(); frame:SetWidth(SIZE); return end
+    if n==0 then K.Shown(frame,false); K.SetW(frame,SIZE); return end
     for i=1,n do
         local g=groups[i]
         local b=Slot(i)

@@ -34,9 +34,10 @@ shield:SetAllPoints(UIParent); shield:SetFrameStrata("FULLSCREEN_DIALOG"); shiel
 O.shield=shield
 function O.CloseChoice() shield:Hide() end
 shield:SetScript("OnMouseDown",O.CloseChoice)
-panel:SetScript("OnDragStart",function() O.CloseChoice(); panel:StartMoving() end)
+panel:SetScript("OnDragStart",function() O.CloseChoice(); O.moving=true; panel:StartMoving() end)
 panel:SetScript("OnDragStop",function()
     panel:StopMovingOrSizing()
+    O.moving=nil
     local point,_,relative,x,y=panel:GetPoint()
     K.DB().options={point=point,relative=relative,x=x,y=y}
 end)
@@ -74,6 +75,55 @@ end
 function O.SetMenuScale(value)
     if not K.Number(value) or value<=0 then return end
     K.DB().optionsScale=math.max(.7,math.min(1,value)); O.Fit()
+end
+-- Proportional resize with the same corner artwork as the chat window.
+do
+    local grip=CreateFrame("Button","KeijinUISettingsResizeGrip",panel)
+    O.resizeGrip=grip
+    grip:SetWidth(18); grip:SetHeight(18)
+    grip:SetPoint("BOTTOMRIGHT",panel,"BOTTOMRIGHT",-2,2)
+    grip:SetFrameLevel(panel:GetFrameLevel()+5); grip:EnableMouse(true)
+    local mark=grip:CreateTexture(nil,"OVERLAY")
+    mark:SetTexture("Interface\\AddOns\\KeijinUI\\media\\chamfer\\ChatResizeGrip.tga")
+    mark:SetWidth(12); mark:SetHeight(12); mark:SetPoint("BOTTOMRIGHT",grip,"BOTTOMRIGHT",-1,1)
+    mark:SetVertexColor(.62,.57,.43,1)
+    grip:SetScript("OnEnter",function() mark:SetVertexColor(1,.9,.6,1) end)
+    grip:SetScript("OnLeave",function() mark:SetVertexColor(.62,.57,.43,1) end)
+    local startX,startY,startScale,left,top,uiScale
+    local function Finite(value) return type(value)=="number" and value==value and math.abs(value)<1e15 end
+    local function UpdateSize()
+        if not O.resizing then return end
+        local x,y=GetCursorPosition()
+        if not Finite(x) or not Finite(y) then return end
+        -- Project both cursor axes onto the fixed 760:570 aspect ratio.
+        local delta=(760*(x-startX)-570*(y-startY))/(902500*uiScale)
+        O.SetMenuScale(math.max(.7,math.min(1,startScale+delta)))
+        local ratio=panel:GetEffectiveScale()/UIParent:GetEffectiveScale()
+        panel:ClearAllPoints(); panel:SetPoint("TOPLEFT",UIParent,"BOTTOMLEFT",left/ratio,top/ratio)
+        O.Fit()
+    end
+    local function FinishSize()
+        if not O.resizing then return end
+        UpdateSize(); O.resizing=nil
+        local point,_,relative,x,y=panel:GetPoint()
+        K.DB().options={point=point,relative=relative,x=x,y=y}
+    end
+    O.FinishMenuResize=FinishSize
+    grip:SetScript("OnMouseDown",function()
+        if arg1~="LeftButton" then return end
+        local x,y=GetCursorPosition()
+        local l,t=panel:GetLeft(),panel:GetTop()
+        if not Finite(x) or not Finite(y) or not Finite(l) or not Finite(t) then return end
+        K.layoutTap.Cancel(); O.CloseChoice()
+        uiScale=UIParent:GetEffectiveScale()
+        local ratio=panel:GetEffectiveScale()/uiScale
+        -- Start from the saved wish, not from the screen-capped scale: a click without dragging keeps the saved value.
+        startX,startY,startScale,left,top=x,y,O.MenuScale(),l*ratio,t*ratio
+        O.resizing=true
+    end)
+    grip:SetScript("OnUpdate",UpdateSize)
+    grip:SetScript("OnMouseUp",function() if arg1=="LeftButton" then FinishSize() end end)
+    grip:SetScript("OnHide",FinishSize)
 end
 function O.SetUIScale(value)
     if not O.UIScaleSupported() or not K.Number(value) or value<=0 then return end
@@ -115,15 +165,15 @@ function O.Button(parent,text,x,y,width,fn)
     local b=CreateFrame("Button",nil,parent); b:SetWidth(width); b:SetHeight(28)
     b:SetPoint("TOPLEFT",parent,"TOPLEFT",x,y); Skin(b)
     b.text=K.LText(b,text,11,"CENTER",0,0)
-    b:SetScript("OnClick",function() O.CloseChoice(); fn(); O.Refresh() end)
+    b:SetScript("OnClick",function() K.layoutTap.Cancel(); O.CloseChoice(); fn(); O.Refresh() end)
     b:SetScript("OnEnter",function() b:SetBackdropBorderColor(.94,.74,.37,1) end)
     b:SetScript("OnLeave",function() b:SetBackdropBorderColor(.67,.57,.36,1) end)
     O.SearchEntry(b,parent,text)
     if parent.items then O.Track(parent,b,x,y) end
     return b
 end
-O.Button(panel,"Schließen",644,-529,100,function() panel:Hide() end)
-O.Button(panel,"Layout bearbeiten",16,-529,164,function() K.layout.Toggle(); panel:Hide() end)
+O.Button(panel,"Schließen",634,-529,100,function() panel:Hide() end)
+O.Button(panel,"Layout bearbeiten",16,-529,164,function() K.layout.Toggle() end)
 -- Same plain x as the search field: no frame of its own, brighter on hover.
 local close=CreateFrame("Button","KeijinUISettingsClose",panel)
 close:SetWidth(16); close:SetHeight(16); close:SetPoint("CENTER",panel,"TOPLEFT",731,-20)
@@ -183,7 +233,7 @@ function O.ShowPage(key)
     if not O.PageVisible(page) and O.pages.modules then page=O.pages.modules end
     O.CloseChoice()
     for _,p in pairs(O.pages) do p:Hide() end
-    O.current=page; K.DB().optionsTab=page.key
+    O.current=page
     if O.categoryPage and page.key~="search" then O.categoryPage[page.parentKey]=page.key end
     viewport:SetScrollChild(page); page:Show()
     title:SetText(K.T(page.caption)); subtitle:SetText(K.T(page.description))
@@ -400,8 +450,47 @@ function O.Row(page,key,label,height)
     row:SetBackdrop({bgFile=K.flat}); row:SetBackdropColor(0,0,0,0)
     row:SetScript("OnEnter",function() row:SetBackdropColor(.25,.2,.1,.2) end)
     row:SetScript("OnLeave",function() row:SetBackdropColor(0,0,0,0) end)
+    row:SetScript("OnMouseDown",function() K.layoutTap.Cancel() end)
     O.Wheel(row); O.controls[key]=row; O.Track(page,row,0,page.y); page.y=page.y-(height or 31)
     O.SearchEntry(row,page,label,key)
+    return row
+end
+-- Function arguments give every callback its own action in Lua 5.0.
+function O.ShortcutRow(page,action,label)
+    local api=action=="TOGGLEAUTORUN" and K.autoWalk or K.shortcuts
+    local row=O.Row(page,"shortcut_"..action,label,26)
+    row.name:SetWidth(150); row.name:SetHeight(16)
+    row.value=K.Text(row,"",10,"LEFT",156,0,100); row.value:SetHeight(16)
+    row.assign=O.Button(row,"Taste zuweisen",264,-1,140,function() api.Capture(action) end)
+    row.clear=O.Button(row,"Entfernen",410,-1,102,function() api.Clear(action) end)
+    row.assign:SetHeight(24); row.clear:SetHeight(24)
+    row.assign.text:SetWidth(132); row.assign.text:SetHeight(16)
+    row.clear.text:SetWidth(94); row.clear.text:SetHeight(16)
+    O.Wheel(row.assign); O.Wheel(row.clear)
+    -- Keep all controls inside their columns, including translated labels.
+    O.Watch(function()
+        row.binding=api.Label(action)
+        row.value:SetText(row.binding)
+        FitLabel({text=row.name},11,150)
+        FitLabel({text=row.value},10,100)
+        -- Native binding tokens are ASCII. Keep long chords in their column;
+        -- the complete chord remains available on hover.
+        if not string.find(row.binding,"[\128-\255]") and row.value:GetStringWidth()>100 then
+            local short=row.binding
+            repeat
+                short=string.sub(short,1,string.len(short)-1)
+                row.value:SetText(short.."...")
+            until string.len(short)==0 or row.value:GetStringWidth()<=100
+        end
+        FitLabel(row.assign,11,132); FitLabel(row.clear,11,94)
+    end)
+    row:SetScript("OnEnter",function()
+        row:SetBackdropColor(.25,.2,.1,.2)
+        GameTooltip:SetOwner(row,"ANCHOR_RIGHT")
+        GameTooltip:AddLine(K.T(label)); GameTooltip:AddLine(row.binding or "",1,1,1)
+        GameTooltip:Show()
+    end)
+    row:SetScript("OnLeave",function() row:SetBackdropColor(0,0,0,0); GameTooltip:Hide() end)
     return row
 end
 function O.Toggle(page,key,label,get,set)
@@ -567,6 +656,37 @@ function O.Pair(page,left,fn,right,other)
     local b=right and O.Button(page,right,264,page.y,248,other)
     O.Wheel(a); if b then O.Wheel(b) end; page.y=page.y-36; return a,b
 end
-panel:SetScript("OnShow",function() O.Fit(); O.ShowPage(O.defaultPage or "general"); O.Scroll(0) end)
-panel:SetScript("OnHide",O.CloseChoice)
+-- Only frame position and size persist. Navigation belongs to the current run.
+local sessionStamp=AZS_ZONE_UPDATED
+function O.ResetSession()
+    sessionStamp=AZS_ZONE_UPDATED
+    if O.SetSearch then O.SetSearch("") end
+    O.categoryPage={}
+    for _,page in pairs(O.pages) do page.offset=0; page.sectionIndex=nil end
+    O.ShowPage(O.defaultPage or "general"); O.Scroll(0)
+end
+function O.CheckSession()
+    if sessionStamp~=AZS_ZONE_UPDATED then O.ResetSession() end
+    if O.layoutRestorePending and not K.layout.Active() then O.RestoreAfterLayout() end
+end
+function O.MinimizeForLayout()
+    if panel:IsShown() then O.layoutRestore=true; panel:Hide() end
+end
+function O.RestoreAfterLayout(discard,defer)
+    -- Escape hides every special frame in one pass. Show settings on the next
+    -- update, after that pass, or its later slot would immediately hide it again.
+    if defer and O.layoutRestore then O.layoutRestorePending=true; return end
+    local restore=O.layoutRestore; O.layoutRestore=nil; O.layoutRestorePending=nil
+    if restore and not discard then panel:Show() end
+end
+table.insert(K.updates,O.CheckSession)
+K.On("PLAYER_ENTERING_WORLD",O.ResetSession)
+panel:SetScript("OnShow",function()
+    O.CheckSession()
+    if K.layout.Active() then O.MinimizeForLayout(); return end
+    O.Fit()
+    if O.current and O.current.key=="search" then O.Refresh(); O.Scroll(O.current.offset or 0)
+    else O.ShowPage(O.current and O.current.key or O.defaultPage or "general") end
+end)
+panel:SetScript("OnHide",function() O.FinishMenuResize(); O.moving=nil; O.CloseChoice() end)
 K.OnLang(function() if O.current then title:SetText(K.T(O.current.caption)); subtitle:SetText(K.T(O.current.description)) end; O.Refresh() end)

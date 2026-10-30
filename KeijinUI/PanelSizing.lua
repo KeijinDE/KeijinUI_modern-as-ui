@@ -9,11 +9,22 @@ local function Bound(v,low,high,fallback)
     if not Finite(v) then return fallback end
     return math.max(low,math.min(high,v))
 end
+-- The result is read-only and reused while the saved values stay the same (called several times per tick).
+local configs={}
+local EMPTY={}
 function P.Config(key)
     local all=K.DB().panelSizing
     local c=type(all)=="table" and all[key]
-    if type(c)~="table" then return {} end
-    return {width=Bound(c.width,180,1200,nil),rows=Bound(c.rows,1,P.Maximum(key),nil),font=Bound(c.font,8,20,nil)}
+    if type(c)~="table" then return EMPTY end
+    local memo=configs[key]
+    if not memo then memo={result={}}; configs[key]=memo end
+    local w,r,f=c.width,c.rows,c.font
+    if memo.w~=w or memo.r~=r or memo.f~=f or memo.valid==nil then
+        memo.w,memo.r,memo.f,memo.valid=w,r,f,true
+        local result=memo.result
+        result.width=Bound(w,180,1200,nil); result.rows=Bound(r,1,P.Maximum(key),nil); result.font=Bound(f,8,20,nil)
+    end
+    return memo.result
 end
 function P.Maximum(key)
     for _,v in ipairs(P.order) do if v[1]==key then return v[3] end end
@@ -80,11 +91,19 @@ end
 -- eight glyphs and two lines; numeric columns never borrow the label's space.
 local measure=UIParent:CreateFontString(nil,"OVERLAY")
 measure:Hide()
+local measured={}
 function P.Measure(fs,text)
     local path,size,flags=fs:GetFont()
+    -- Same font and text as the last measurement of this label: the width is the same, nothing is written.
+    local m=measured[fs]
+    text=text or ""
+    if m and m.path==path and m.size==size and m.flags==flags and m.text==text then return m.width end
     measure:SetFont(path or K.font,size or 11,flags or "OUTLINE")
-    measure:SetText(text or "")
-    return measure:GetStringWidth()
+    measure:SetText(text)
+    local width=measure:GetStringWidth()
+    if not m then m={}; measured[fs]=m end
+    m.path,m.size,m.flags,m.text,m.width=path,size,flags,text,width
+    return width
 end
 function P.Width(key,minimum)
     local f=P.entries[key].frame
@@ -93,7 +112,7 @@ function P.Width(key,minimum)
     local title=P.Measure(f.title,K.T(P.entries[key].name))
     minimum=math.max(minimum or 180,f.sizingMinimum or 0,math.min(title,420*P.Factor(key))+26)
     local width=math.max(minimum,c.width or K.PANEL_WIDTH)
-    f:SetWidth(width); f.title:SetWidth(width-26)
+    K.SetW(f,width); K.SetW(f.title,width-26)
     return width
 end
 function P.AvailableHeight(key)
@@ -155,7 +174,7 @@ function P.Restore(key)
             if parent and parent.headerPoints then parent.headerPoints[obj]=g.header end
         end
     end
-    for _,row in ipairs(e.rows or {}) do if row.ResizeArtwork then row:ResizeArtwork() end end
+    for _,row in ipairs(e.rows or {}) do if row.ResizeArtwork then row.kuiArtW=nil; row:ResizeArtwork() end end
     e.frame:SetWidth(e.baseWidth); e.frame.title:SetWidth(e.baseWidth-26)
     e.original=nil; e.frame.sizingMinimum=nil
     if K.headers.Apply then K.headers.Apply(e.frame) end
@@ -185,23 +204,26 @@ function P.List(key,rows,total,fallback,baseStep,footer)
     local labelMin=P.Measure(sample.label,"MMMMMMMM")+10
     local icon=sample.icon and sample.iconSize+3 or 0
     local width=P.Width(key,30+value+dps+labelMin+icon)
-    f.title:SetHeight(math.max(17,15*q)); f.strip:SetHeight(math.max(23,18*q))
+    K.SetH(f.title,K.HeaderTitleHeight(f,q)); K.SetH(f.strip,K.HeaderStripHeight(f,q))
     for i,row in ipairs(rows) do
         K.HeaderPoint(row,f,"TOPLEFT",10,-33-pad-(i-1)*step)
-        row:SetWidth(width-20); row:SetHeight(step-2)
-        row.value:ClearAllPoints(); row.value:SetPoint("RIGHT",row,"RIGHT",-5-dps,0)
-        row.value:SetWidth(value); row.value:SetHeight(step-4); row.value:SetJustifyH("RIGHT")
+        K.SetW(row,width-20); K.SetH(row,step-2)
+        K.Anchor(row.value,"RIGHT",row,"RIGHT",-5-dps,0)
+        K.SetW(row.value,value); K.SetH(row.value,step-4)
+        row.value:SetJustifyH("RIGHT")
         row.labelWidth=width-35-value-dps
-        row.label:SetWidth(row.labelWidth-icon); row.label:SetHeight(step-4)
+        K.SetW(row.label,row.labelWidth-(row.labelInset or icon)); K.SetH(row.label,step-4)
         row:EnableMouseWheel(true)
         if not row.sizingWheel then
             row.sizingWheel=key
             row:SetScript("OnMouseWheel",function() P.Scroll(this.sizingWheel,arg1) end)
         end
-        if row.dps then row.dps:SetWidth(dps-6); row.dps:SetHeight(step-4) end
-        if row.ResizeArtwork then row:ResizeArtwork() end
+        if row.dps then K.SetW(row.dps,dps-6); K.SetH(row.dps,step-4) end
+        if row.ResizeArtwork and (row.kuiArtW~=row.kuiW or row.kuiArtH~=row.kuiH) then
+            row.kuiArtW,row.kuiArtH=row.kuiW,row.kuiH; row:ResizeArtwork()
+        end
     end
-    f:SetHeight(42+pad+visible*step+(footer or 0))
+    K.SetH(f,42+pad+visible*step+(footer or 0))
     return visible,offset,step
 end
 local refreshing

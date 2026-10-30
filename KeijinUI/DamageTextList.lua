@@ -38,7 +38,7 @@ local OWN={compact=true,scroll=true,rise=true}
 function L.Enabled() return K.DB().combatTextList==true end
 function L.SetEnabled(on)
     K.DB().combatTextList=on and true or nil
-    if not L.On() then L.Clear() end
+    if not L.On() then L.Clear() else K.layout.Activated("combattextlist") end
 end
 -- True while hits go to the list instead of the floating numbers.
 function L.On() return L.Enabled() and K.ModuleOn("combatText") and OWN[K.CombatTextMode()] and true or false end

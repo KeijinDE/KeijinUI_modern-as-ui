@@ -2,28 +2,11 @@ local K=KeijinUI
 K.layout={entries={}}
 local L=K.layout
 local editing,active,lastWidth,lastHeight,directMove
-function L.Modifier()
-    local key=K.DB().layoutModifier
-    if key=="ctrl" or key=="shift" or key=="none" then return key end
-    return "alt"
-end
-function L.ModifierDown()
-    local key=L.Modifier()
-    if key=="alt" then return IsAltKeyDown and IsAltKeyDown() or false end
-    if key=="ctrl" then return IsControlKeyDown and IsControlKeyDown() or false end
-    if key=="shift" then return IsShiftKeyDown and IsShiftKeyDown() or false end
-    return false
-end
-function L.Active() return editing or L.ModifierDown() end
-function L.SetModifier(key)
-    if key~="alt" and key~="ctrl" and key~="shift" and key~="none" then return end
-    -- End a drag using the old modifier before changing its meaning.
-    if active then L.EndMove(active.key) end
-    if K.layoutSizing then K.layoutSizing.Close() end
-    K.DB().layoutModifier=key
-    L.Update()
-end
+function L.Active() return editing end
 local function Scale(f) return f:GetEffectiveScale() end
+-- UIParent's scale is read once per update pass and handed to every entry (it cannot change inside a pass).
+local parentScale
+local function ParentScale() return parentScale or UIParent:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
 local defaultAnchors={}
@@ -96,16 +79,24 @@ local function CanDock(entry,target)
     end
     return true
 end
+local Apply
 local function Dock(entry)
     local d=entry.dock
     local target=d and L.entries[d.target]
-    if not target or entry==active or entry.sizing or not CanDock(entry,target) then return end
+    if not target or entry==active or entry.sizing or Off(entry) then return end
+    -- Leader off (frame handed back to the game): the follower must not hang on it. Once, put it back at its own
+    -- saved or standard place (Apply returns here with dockedTo cleared); it docks again when the leader is on.
+    if Off(target) then
+        if entry.dockedTo then entry.dockedTo=nil; Apply(entry) end
+        return
+    end
+    if not CanDock(entry,target) then return end
     local f=entry.frame
-    local ratio=Scale(f)/Scale(UIParent)
-    f:ClearAllPoints()
+    entry.dockedTo=target
+    local ratio=Scale(f)/ParentScale()
     -- A dock with ref="bar" holds the distance of the options.edge bar edge, not of the frame's left edge.
     local ox=d.ref=="bar" and entry.options.edge and (entry.options.edge()) or 0
-    f:SetPoint(d.edge=="above" and "BOTTOMLEFT" or "TOPLEFT",target.frame,
+    K.Anchor(f,d.edge=="above" and "BOTTOMLEFT" or "TOPLEFT",target.frame,
         d.edge=="above" and "TOPLEFT" or "BOTTOMLEFT",d.x/ratio-ox,0)
 end
 local function Detach(entry)
@@ -122,14 +113,14 @@ local function Clamp(entry)
     local f=entry.frame
     local w,h=K.UIWidth(),K.UIHeight()
     if not w or not h or w<40 or h<40 then return end
-    local ratio=Scale(f)/Scale(UIParent)
+    local ratio=Scale(f)/ParentScale()
     if entry.options.follow and entry.options.follow() then return end
     local extra=entry.options.bottom and entry.options.bottom() or 0
     local right=entry.options.right and entry.options.right() or 0
     local width,height=(f:GetWidth()+right)*ratio,(f:GetHeight()+extra)*ratio
     if width>w-16 or height>h-16 then
         f:SetScale(f:GetScale()*math.min((w-16)/width,(h-16)/height))
-        ratio=Scale(f)/Scale(UIParent); width,height=(f:GetWidth()+right)*ratio,(f:GetHeight()+extra)*ratio
+        ratio=Scale(f)/ParentScale(); width,height=(f:GetWidth()+right)*ratio,(f:GetHeight()+extra)*ratio
     end
     local x,y=f:GetLeft(),f:GetBottom()
     if not Finite(x) or not Finite(y) then return end
@@ -147,7 +138,7 @@ end
 local function Save(entry)
     if Off(entry) then return end
     Clamp(entry)
-    local f,ratio=entry.frame,Scale(entry.frame)/Scale(UIParent)
+    local f,ratio=entry.frame,Scale(entry.frame)/ParentScale()
     local up=Up(entry)
     local x,y=f:GetLeft(),up and f:GetBottom() or f:GetTop()
     if not Finite(x) or not Finite(y) then return end
@@ -184,10 +175,10 @@ local function LimitScale(entry,value)
     local maximum=entry.options.maxScale and entry.options.maxScale() or 1.8
     return math.max(0.5,math.min(1.8,maximum,value))
 end
-local function Apply(entry)
+function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
     if Off(entry) then
-        entry.dock=nil
+        entry.dock=nil; entry.dockedTo=nil
         if entry.options.release then entry.options.release(f) end
         return
     end
@@ -200,7 +191,7 @@ local function Apply(entry)
     if not saved then p=L.defaults and L.defaults[entry.key] end
     if Valid(p) then
         f:SetScale(entry.baseScale*LimitScale(entry,p.scale))
-        local ratio=Scale(UIParent)/Scale(f)
+        local ratio=ParentScale()/Scale(f)
         local ox,oy=0,0
         if entry.options.edge then ox,oy=entry.options.edge() end
         local up=Up(entry)
@@ -301,7 +292,9 @@ local function Stop()
     if L.SyncFollowers then L.SyncFollowers() end
 end
 -- Both the layout handle and a panel's own drag regions use this lifecycle.
+function L.AnyMoving() return active~=nil end
 function L.BeginMove(key,fromTitle)
+    if K.layoutTap then K.layoutTap.Cancel() end
     local e=L.entries[key]
     local direct=e and fromTitle and e.options.titleDrag
     if not e or Off(e) or (not direct and not L.Active()) then return end
@@ -352,13 +345,14 @@ local function RefreshGrid(enabled)
     local w,h=K.UIWidth(),K.UIHeight()
     if enabled and K.DB().snap~=false and w and h and w>=40 and h>=40 then
         if w~=gridW or h~=gridH then BuildGrid(w,h) end
-        grid:Show()
-    else grid:Hide() end
+        K.Shown(grid,true)
+    else K.Shown(grid,false) end
 end
 function L.Register(key,frame,name,anchor,options)
     if not frame or L.entries[key] then return L.entries[key] end
     local e={key=key,frame=frame,anchor=anchor,name=name,baseScale=frame:GetScale(),options=options or {}}
-    L.entries[key]=e
+    L.entries[key]=e; frame.layoutKey=key
+    K.ApplyWindow(frame)
     frame:SetMovable(true); frame:SetClampedToScreen(true)
     if frame.SetUserPlaced then frame:SetUserPlaced(false) end
     local handle=CreateFrame("Frame",nil,UIParent); e.handle=handle
@@ -383,6 +377,7 @@ function L.Register(key,frame,name,anchor,options)
         if not handle.dragged and arg1=="LeftButton" and K.layoutSizing then K.layoutSizing.Open(key) end
     end)
     handle:SetScript("OnMouseWheel",function()
+        if not L.Active() or Off(e) then return end
         if K.layoutSizing then K.layoutSizing.Finish() end
         if e.options.locked and e.options.locked() then return end
         if e.options.beforeMove then e.options.beforeMove() end
@@ -394,7 +389,7 @@ function L.Register(key,frame,name,anchor,options)
         -- Open settings show the new size at once (the combat text slider).
         if K.settings and K.settings.panel and K.settings.panel:IsShown() then K.settings.Refresh() end
     end)
-    handle:Hide(); Apply(e)
+    handle:Hide(); Apply(e); e.off=Off(e)
     for _,other in pairs(L.entries) do Dock(other) end
     return e
 end
@@ -405,13 +400,25 @@ function L.SyncFollowers()
     for _,e in pairs(L.entries) do if e.options.follow and e.options.follow() then e.anchor(e.frame) end end
 end
 function L.Place(key) local e=L.entries[key]; if e and e~=active and not e.sizing then Apply(e) end end
-local hint=K.Panel("KeijinUILayoutHint","Layoutmodus aktiv",470,92)
+local hint=K.Panel("KeijinUILayoutHint","Layoutmodus aktiv",548,360)
 hint:SetFrameStrata("TOOLTIP"); hint:SetFrameLevel(220); hint:SetScale(.85)
-hint:SetPoint("TOP",UIParent,"TOP",0,-72); hint:SetBackdropColor(.04,.04,.05,1)
-K.LText(hint,"Ziehen: verschieben · Mausrad: Größe ändern",11,"TOPLEFT",14,-35,335)
-K.LText(hint,"Escape oder Fertig zum Beenden",11,"TOPLEFT",14,-59,335):SetTextColor(1,.82,.28)
+hint:SetPoint("TOP",UIParent,"TOP",0,-72); hint.minBackgroundAlpha=.8
+K.ApplyBackground()
+K.LText(hint,"Ziehen: verschieben · Mausrad: Größe ändern",11,"TOPLEFT",14,-35,520):SetHeight(32)
+local exitHint=K.Text(hint,"",11,"BOTTOMLEFT",14,12,414)
+exitHint:SetHeight(32)
+exitHint:SetTextColor(1,.82,.28)
+local function ExitText()
+    local key=K.shortcuts and K.shortcuts.Label("KEIJINUI_LAYOUT")
+    if key and key~=K.T("Nicht belegt") and key~=K.T("Nicht verfügbar") then
+        return K.T("Escape, %s oder Fertig zum Beenden",key)
+    end
+    return K.T("Escape oder Fertig zum Beenden")
+end
+K.Live(exitHint,ExitText)
+L.exitHint=exitHint
 local done=CreateFrame("Button",nil,hint); done:SetWidth(92); done:SetHeight(30)
-done:SetPoint("RIGHT",hint,"RIGHT",-14,-10)
+done:SetPoint("BOTTOMRIGHT",hint,"BOTTOMRIGHT",-14,14)
 K.Chamfer(done,4,{.18,.14,.07,1},{.67,.57,.36,1}); K.LText(done,"Fertig",12,"CENTER",0,0)
 L.hint,L.done=hint,done; hint:Hide()
 table.insert(UISpecialFrames,"KeijinUILayoutHint")
@@ -426,15 +433,21 @@ function L.EditorEscape(open)
     end
 end
 function L.IsEditing() return editing end
-function L.SetEditing(on)
+function L.SetEditing(on,deferRestore)
     editing=on and true or false
-    if editing then hint:Show() else Stop(); if K.layoutSizing then K.layoutSizing.Close() end; hint:Hide() end
+    if editing then
+        if K.settings then K.settings.MinimizeForLayout(); K.settings.Refresh() end
+        exitHint:SetText(ExitText()); hint:Show()
+    else
+        Stop(); if K.layoutSizing then K.layoutSizing.Close() end; hint:Hide()
+        if K.settings then K.settings.RestoreAfterLayout(false,deferRestore) end
+    end
     RefreshGrid(L.Active())
     L.Update()
 end
-function L.Toggle() L.SetEditing(not editing) end
+function L.Toggle() if K.layoutTap then K.layoutTap.Cancel() end; L.SetEditing(not editing) end
 done:SetScript("OnClick",function() L.SetEditing(false) end)
-hint:SetScript("OnHide",function() if editing then L.SetEditing(false) end end)
+hint:SetScript("OnHide",function() if editing then L.SetEditing(false,true) end end)
 -- /kui grid debug: reported sizes and centres, to compare the grid with the real screen.
 function L.GridDebug()
     local function N(v) return v and string.format("%.1f",v) or "nil" end
@@ -474,12 +487,17 @@ function L.Reset()
     for _,e in pairs(L.entries) do Apply(e) end
 end
 function L.ClampAll()
+    parentScale=UIParent:GetEffectiveScale()
     for _,e in pairs(L.entries) do
         if e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
     end
+    parentScale=nil
 end
-function L.Update()
+-- onDriver: the shared driver runs ClampAll right after all updates, so the per-entry clamp is left to it there.
+function L.Update(onDriver)
+    parentScale=UIParent:GetEffectiveScale()
     L.SyncFollowers()
+    if editing then exitHint:SetText(ExitText()) end
     local w,h=K.UIWidth(),K.UIHeight()
     if lastWidth and (w~=lastWidth or h~=lastHeight) then
         if K.layoutSizing then K.layoutSizing.Finish() end
@@ -491,16 +509,32 @@ function L.Update()
     if active and (Off(active) or (not enabled and not directMove)) then Stop() end
     RefreshGrid(enabled)
     for _,e in pairs(L.entries) do
-        if e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
-        local show=enabled and not Off(e) and not (e.options.locked and e.options.locked()) and (e.frame:IsShown() or e.options.hidden)
+        -- An element that was off is skipped by Apply (frames handed back to the game stay untouched), so a
+        -- reset, a resolution change or a first switch-on while off only takes effect now, with the saved or standard place.
+        local off=Off(e)
+        if e.off and not off and e~=active and not e.sizing then Apply(e) end
+        e.off=off
+        if onDriver~=true and e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
+        local handle=e.handle
+        local show=enabled and not off and not (e.options.locked and e.options.locked()) and (e.frame:IsShown() or e.options.hidden)
         if show then
             local region=e.options.region or e.frame
-            local ratio=Scale(region)/Scale(UIParent)
-            e.handle:ClearAllPoints(); e.handle:SetPoint("TOPLEFT",region,"TOPLEFT",0,0)
-            e.handle:SetWidth(math.max(30,region:GetWidth()*ratio))
-            e.handle:SetHeight(math.max(28,region:GetHeight()*ratio)); e.handle:Show()
-        else e.handle:Hide() end
+            local ratio=Scale(region)/parentScale
+            K.Anchor(handle,"TOPLEFT",region,"TOPLEFT",0,0)
+            K.SetW(handle,math.max(30,region:GetWidth()*ratio))
+            K.SetH(handle,math.max(28,region:GetHeight()*ratio)); K.Shown(handle,true)
+        else K.Shown(handle,false) end
     end
+    parentScale=nil
+end
+-- Call after switching an element on by an option (module switches go through Update already). Update does the
+-- same within 0.1 s; this places it at once, also when it was switched off and on again between two updates.
+function L.Activated(key)
+    local e=L.entries[key]
+    if not e then return end
+    if not Off(e) and e~=active and not e.sizing then Apply(e) end
+    e.off=Off(e)
+    L.Update()
 end
 -- 0.7.4: the statistics grew by two rows (166 -> 204). A saved damage meter in the same column below
 -- them moves down only as far as needed to stay clear of the taller panel (GAP units apart); critical
@@ -535,5 +569,5 @@ function L.MigrateStatistics()
     L.Place("meter"); L.Place("crits")
 end
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then L.MigrateStatistics() end end)
-table.insert(K.updates,L.Update)
-K.On("PLAYER_LEAVING_WORLD",function() editing=false; Stop(); hint:Hide(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)
+table.insert(K.updates,function() L.Update(true) end)
+K.On("PLAYER_LEAVING_WORLD",function() if K.settings then K.settings.RestoreAfterLayout(true) end; editing=false; Stop(); hint:Hide(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)

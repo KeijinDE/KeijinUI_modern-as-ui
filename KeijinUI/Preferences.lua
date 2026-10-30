@@ -2,29 +2,90 @@
 local K=KeijinUI
 local H={panels={},eligible={KeijinUITracker=true,KeijinUIStatistics=true,KeijinUIDamage=true,KeijinUICrits=true,KeijinUILoot=true,KeijinUICharacterStats=true,KeijinUIParty=true}}
 K.headers=H
-function H.Mode()
-    local mode=K.DB().panelHeaders
+function H.Mode(frame)
+    local mode=frame and K.WindowConfig(K.WindowKey(frame)).headers
+    if mode==nil then mode=K.DB().panelHeaders end
     return (mode=="thin" or mode=="off") and mode or "normal"
 end
 function K.HeaderOffset(panel)
     if not panel or not panel.compactHeader then return 0 end
-    local mode=H.Mode()
-    return mode=="thin" and 12 or (mode=="off" and 25 or 0)
+    local mode=H.Mode(panel)
+    return mode=="thin" and 10 or (mode=="off" and 25 or 0)
+end
+-- Title and strip height of a sized panel: grows with the font factor like the row pad, but a thin header
+-- stays 9 smaller than the normal one, otherwise the strip would reach into the first row (rows sit 12 higher).
+function K.HeaderStripHeight(panel,q)
+    return H.Mode(panel)=="thin" and math.max(14,18*q-9) or math.max(23,18*q)
+end
+function K.HeaderTitleHeight(panel,q)
+    return H.Mode(panel)=="thin" and math.max(14,15*q-3) or math.max(17,15*q)
 end
 -- Children anchored at the bottom (panel.growUp, the loot list growing upwards) move the opposite way,
 -- because the header strip sits at the bottom edge there.
 local function Sign(point) return string.find(point,"^BOTTOM") and -1 or 1 end
-function K.HeaderPoint(child,panel,point,x,y,relative)
-    child:ClearAllPoints()
-    child:SetPoint(point,panel,relative or point,x,y+K.HeaderOffset(panel)*Sign(point))
-    if panel.compactHeader then panel.headerPoints[child]={point,x,y,relative or point} end
+-- Write caches for the 0.1 s update path: every layout write invalidates the engine's layout, so an unchanged
+-- size or anchor is not written again. The instance methods are wrapped once per object and record what anyone
+-- sets (width, height) or forget the anchor (ClearAllPoints, SetAllPoints), so outside writes never go stale.
+function K.SetW(f,v)
+    if f.kuiW==v then return end
+    if not f.kuiTracked then K.TrackLayout(f) end
+    f:SetWidth(v)
 end
--- The title strip is a background piece: hidden with the header off and with "Background and border" off.
+function K.SetH(f,v)
+    if f.kuiH==v then return end
+    if not f.kuiTracked then K.TrackLayout(f) end
+    f:SetHeight(v)
+end
+function K.TrackLayout(f)
+    if f.kuiTracked then return end
+    f.kuiTracked=true
+    local width,height,clear,all=f.SetWidth,f.SetHeight,f.ClearAllPoints,f.SetAllPoints
+    f.SetWidth=function(self,v) self.kuiW=v; return width(self,v) end
+    f.SetHeight=function(self,v) self.kuiH=v; return height(self,v) end
+    f.ClearAllPoints=function(self) self.kuiAnchored=nil; return clear(self) end
+    f.SetAllPoints=function(self,other) self.kuiAnchored=nil; if other==nil then return all(self) end return all(self,other) end
+end
+-- Single anchor, written only when it differs from the last one set through here.
+function K.Anchor(child,point,relativeTo,relativePoint,x,y)
+    if child.kuiAnchored and child.kuiAP==point and child.kuiAR==relativeTo and child.kuiARP==relativePoint
+        and child.kuiAX==x and child.kuiAY==y then return end
+    if not child.kuiTracked then K.TrackLayout(child) end
+    child:ClearAllPoints()
+    child:SetPoint(point,relativeTo,relativePoint,x,y)
+    child.kuiAnchored=true
+    child.kuiAP,child.kuiAR,child.kuiARP,child.kuiAX,child.kuiAY=point,relativeTo,relativePoint,x,y
+end
+-- Show/Hide only on a change of state. The state is recorded by wrapping the instance's Show and Hide once,
+-- because IsShown() can report the parent chain (hidden parent) instead of the frame's own flag.
+function K.Shown(f,on)
+    if not f.kuiShowTracked then
+        f.kuiShowTracked=true
+        local show,hide=f.Show,f.Hide
+        f.Show=function(self) self.kuiShown=true; return show(self) end
+        f.Hide=function(self) self.kuiShown=false; return hide(self) end
+    end
+    if on then
+        if f.kuiShown==true and f:IsShown() then return end
+        f:Show()
+    else
+        if f.kuiShown==false then return end
+        f:Hide()
+    end
+end
+function K.HeaderPoint(child,panel,point,x,y,relative)
+    K.Anchor(child,point,panel,relative or point,x,y+K.HeaderOffset(panel)*Sign(point))
+    if panel.compactHeader then
+        local p=panel.headerPoints[child]
+        if p then p[1],p[2],p[3],p[4]=point,x,y,relative or point
+        else panel.headerPoints[child]={point,x,y,relative or point} end
+    end
+end
+-- Header artwork is independent of rim and background; an off title mode still hides it.
 function H.Strip(f)
-    if H.Mode()~="off" and K.FrameFramed(f) then f.strip:Show() else f.strip:Hide() end
+    K.Shown(f.strip,H.Mode(f)~="off" and K.WindowShown(K.WindowKey(f),"strip") and true or false)
 end
 local function Apply(f)
-    local mode=H.Mode()
+    local mode=H.Mode(f)
     f.headerNativeHeight(f,f.headerHeight-K.HeaderOffset(f))
     if mode=="off" then f.title:Hide()
     else

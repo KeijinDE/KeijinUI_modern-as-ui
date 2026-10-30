@@ -33,11 +33,17 @@ function K.Chamfer(frame,cut,bg,border)
         local file=cut<=2 and "IconRim" or (cut<=4 and "BarRim" or "PanelRim")
         for i=1,8 do s.rim[i]=Piece(frame,"OVERLAY",file,i-1) end
         frame.SetBackdropColor=function(self,r,g,b,a)
-            local shape=self.chamfer; shape.background={r,g,b,a or 1}
+            local shape=self.chamfer
+            local c=shape.background
+            if c and c[1]==r and c[2]==g and c[3]==b and c[4]==(a or 1) then return end
+            if c then c[1],c[2],c[3],c[4]=r,g,b,a or 1 else shape.background={r,g,b,a or 1} end
             for _,t in ipairs(shape.back) do t:SetVertexColor(r,g,b,a or 1) end
         end
         frame.SetBackdropBorderColor=function(self,r,g,b,a)
-            local shape=self.chamfer; shape.border={r,g,b,a or 1}
+            local shape=self.chamfer
+            local c=shape.border
+            if c and c[1]==r and c[2]==g and c[3]==b and c[4]==(a or 1) then return end
+            if c then c[1],c[2],c[3],c[4]=r,g,b,a or 1 else shape.border={r,g,b,a or 1} end
             for _,t in ipairs(shape.rim) do t:SetVertexColor(r,g,b,a or 1) end
         end
     end
@@ -52,6 +58,7 @@ function K.Chamfer(frame,cut,bg,border)
     for _,t in ipairs(s.back) do if bg then t:Show() else t:Hide() end end
     if bg then frame:SetBackdropColor(unpack(bg)) end
     frame:SetBackdropBorderColor(unpack(border or {0.62,0.57,0.43,1}))
+    if K.ApplyWindow then K.ApplyWindow(frame) end
     return s
 end
 

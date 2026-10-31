@@ -5,6 +5,18 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.6.1 (2026-10-31, release v4.6.1)
+
+* **Damage reduction label:** the run value formerly labelled Armor is now called Damage reduction in the character window and character stats, matching what it does. The character window rows are slightly wider; where the full name does not fit, a short form is shown there ("DMG reduction" in English, "Réd. dégâts" in French). In the settings, search still finds the value under "Armor" and "Rüstung".
+
+* **Language switch:** after a language switch, which reloads the interface, the character window shows the run values in the new language straight away instead of the normal values until the next value change. A zone change or new run reliably resets the remembered values.
+
+* **Character window text:** long lines such as Melee attack and Ranged attack are no longer cut off with ellipsis dots; the font is scaled down to fit instead.
+
+* **Run overview:** custom width, row count or font no longer adds the two-line spacing to the single-line boss list. Bosses and guardians use the same compact spacing, including scaled panels.
+
+* **Game clock compatibility:** the new native minimap clock has no documented addon control. KeijinUI keeps its header clock; hiding or moving the new clock is not currently supported.
+
 ### 4.6.0 (2026-10-30, release v4.6.0)
 
 * **Performance:** much less work per frame while nothing changes (run overview, bars, layout). Unchanged sizes, positions, colours and visibility are no longer written again every 0.1 seconds, and the layout is no longer recalculated by position queries in between. Fixes the FPS drop and stutter since 4.5.0.
@@ -637,6 +649,18 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.6.1 (2026-10-31, Release v4.6.1)
+
+* **Bezeichnung Schadensreduktion:** Der Run-Wert, der bisher „Rüstung“ hieß, heißt im Charakterfenster und bei den Charakterwerten jetzt „Schadensreduktion“, passend zu seiner Wirkung. Die Zeilen im Charakterfenster sind etwas breiter; wo der volle Begriff nicht passt, steht dort eine Kurzform (Französisch „Réd. dégâts“, Englisch „DMG reduction“). In den Einstellungen findet die Suche den Wert weiterhin auch unter „Armor“ und „Rüstung“.
+
+* **Sprachwechsel:** Nach einem Sprachwechsel, der die Oberfläche neu lädt, zeigt das Charakterfenster die Run-Werte sofort wieder in der neuen Sprache statt bis zur nächsten Werteänderung die normalen Werte. Ein Zonenwechsel oder neuer Run nimmt die gemerkten Werte zuverlässig zurück.
+
+* **Texte im Charakterfenster:** Lange Zeilen wie Nahkampfangriff und Fernkampfangriff werden nicht mehr mit Auslassungspunkten abgeschnitten, sondern die Schrift wird passend verkleinert.
+
+* **Runübersicht:** Eigene Breite, Zeilenzahl oder Schrift vergrößert den Abstand der einzeiligen Bossliste nicht mehr auf zweizeilige Abstände. Bosse und Wächter nutzen denselben kompakten Abstand, auch bei skalierten Fenstern.
+
+* **Spieluhr:** Die neue native Minimapuhr hat keine dokumentierte Addonsteuerung. KeijinUI behält seine Kopfzeilenuhr; Ausblenden oder Versetzen der neuen Spieluhr wird derzeit nicht unterstützt.
 
 ### 4.6.0 (2026-10-30, Release v4.6.0)
 

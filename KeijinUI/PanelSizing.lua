@@ -83,7 +83,9 @@ end
 function P.Metrics(key,baseStep)
     local f=P.entries[key].frame
     local q=P.Factor(key)
-    local step=math.max(baseStep,math.ceil(26*q))
+    -- Tracker bosses and guardians are single-line cells, unlike the two-line
+    -- label/value lists. Keep the same pitch for drawing, height grips and paging.
+    local step=key=="tracker" and math.max(18,math.ceil(18*q)) or math.max(baseStep,math.ceil(26*q))
     local pad=math.max(0,math.ceil(18*q-18))
     return q,step,pad
 end

@@ -139,7 +139,7 @@ local text={
  ["Gnome"]="侏儒", ["Undead"]="亡灵", ["Health bar"]="生命条", ["Class color"]="职业颜色",
  ["Green / red"]="绿色／红色", ["Show portraits"]="显示头像", ["Show enemies"]="显示敌人",
  ["All enemies"]="全部敌人", ["Boss, elite, rare"]="首领、精英、稀有", ["30 percent marker"]="30%标记",
- ["Debuffs in both places"]="两处显示减益", ["Maximum health"]="最大生命值", ["Armor"]="护甲",
+ ["Debuffs in both places"]="两处显示减益", ["Maximum health"]="最大生命值", ["Armor"]="护甲", ["Damage reduction"]="伤害减免", ["DMG reduction"]="伤害减免",
  ["Critical chance"]="暴击率", ["Critical damage"]="暴击伤害", ["Haste"]="急速", ["Lifesteal"]="生命偷取",
  ["Regeneration"]="生命恢复", ["Movement speed"]="移动速度", ["Pickup range"]="拾取范围",
  ["Damage bonus"]="伤害加成", ["Gold bonus"]="金币加成", ["XP bonus"]="经验加成", ["Luck"]="幸运",

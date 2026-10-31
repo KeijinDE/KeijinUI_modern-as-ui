@@ -17,7 +17,7 @@ S.definitions={
     {key="spd",label="Bewegungstempo",format=Bonus},
     {key="luck",label="Glück",format=Percent},
     {key="dmg",label="Schadensbonus",format=Bonus},
-    {key="arm",label="Rüstung",format=WholePercent},
+    {key="arm",label="Schadensreduktion",format=WholePercent},
     {key="area",label="Flächenbonus",format=Bonus},
     {key="hp",label="Maximales Leben",format=K.Short},
     {key="echo",label="Echochance",format=Percent},
@@ -109,9 +109,107 @@ function S.Select(key,on)
     if type(db.characterStatSelection)~="table" then db.characterStatSelection={} end
     db.characterStatSelection[key]=on and true or false; S.Update()
 end
-K.On("CHAT_MSG_ADDON",function(_,prefix)
-    if prefix=="AZSZONE" then fresh=false
-    elseif prefix=="AZS" then fresh=true end
+-- ReloadUI (also after a language change) builds a fresh API state with AZS_STATS=nil, and the game sends AZS only
+-- when the values change. Until then the character window would show the stock labels and values. The last raw
+-- message is therefore kept in memory, saved at PLAYER_LOGOUT (which ReloadUI fires too) and, after the load, replayed
+-- once through the game's own parser: same character, at most 30 s (GetTime runs on across a reload) old.
+-- A replayed state is unconfirmed until a real AZS message comes; AZSZONE or a detected run restart (K.runStart changes)
+-- in the meantime withdraws it again. A chain of unconfirmed restores ends 10 minutes after the last real message.
+local lastText,unconfirmed,pending,deadline,stage,origin,runMark
+-- Every number AZS_Update and AZS_UpdateMore format or calculate without a nil guard (analysis/embedded/108439656.txt),
+-- the g* gear fields included: AZS_Gear gets its text argument already formatted.
+local NEEDED={"hp","dmg","cd","crit","cm","arm","area","cnt","echo","spd","reg","pick","lch","heal","thn","liv","xp","gold",
+    "luck","bp","dots","doth","big","exe","cc","dotd","shd","auto","pet",
+    "ghp","gdmg","gcd","gcrit","gcm","garm","garea","gcnt","gecho","gspd","greg","gpick","ggold"}
+-- The stock setters that PaperDollFrame_OnShow runs (PaperDollFrame.lua); the game script wraps them and hands over to
+-- the stock version while AZS_STATS is nil, so calling them takes back the run numbers.
+local SETTERS={"PaperDollFrame_SetStats","PaperDollFrame_SetResistances","PaperDollFrame_SetArmor","PaperDollFrame_SetDamage",
+    "PaperDollFrame_SetAttackPower","PaperDollFrame_SetAttackBothHands","PaperDollFrame_SetRangedAttack",
+    "PaperDollFrame_SetRangedDamage","PaperDollFrame_SetRangedAttackPower"}
+local function Realm() return GetRealmName and GetRealmName() or "" end
+local function Parsed(text)
+    if type(text)~="string" or type(AZS_Parse)~="function" then return nil end
+    local ok,result=pcall(AZS_Parse,text)
+    if not ok or type(result)~="table" then return nil end
+    for _,key in ipairs(NEEDED) do if not K.Number(result[key]) then return nil end end
+    return result
+end
+-- AZS_Row replaces the OnEnter handler of the rows it writes (and marks them with .azs); the stock setters do not
+-- bring the stock handler back. The handlers are noted now, while AZS_STATS is nil and AZS_Row has not run yet.
+local ROWS={"CharacterStatFrame1","CharacterStatFrame2","CharacterStatFrame3","CharacterStatFrame4","CharacterStatFrame5",
+    "CharacterArmorFrame","CharacterAttackFrame","CharacterAttackPowerFrame","CharacterDamageFrame",
+    "CharacterRangedAttackFrame","CharacterRangedAttackPowerFrame","CharacterRangedDamageFrame"}
+local handlers={}
+if type(AZS_STATS)~="table" then
+    for _,name in ipairs(ROWS) do
+        local row=getglobal(name)
+        if row and row.GetScript and row.SetScript then handlers[name]=row:GetScript("OnEnter") or false end
+    end
+end
+-- AZS_Update hid the resistance row and AZS_UpdateMore showed the run panel; the game script takes neither back itself.
+-- Frames and tooltips are restored whether the window is open or not; the setters only for an open window.
+local function Withdraw()
+    if PaperDollFrame and PaperDollFrame:IsVisible() then
+        for _,name in ipairs(SETTERS) do
+            local fn=getglobal(name)
+            if type(fn)=="function" then pcall(fn) end
+        end
+    end
+    if CharacterResistanceFrame then CharacterResistanceFrame:Show() end
+    if AZSMoreStats then AZSMoreStats:Hide() end
+    for name,handler in pairs(handlers) do
+        local row=getglobal(name)
+        if row then row:SetScript("OnEnter",handler or nil); row.azs=nil end
+    end
+end
+-- Takes an unconfirmed state back for good.
+local function Drop()
+    stage="done"; pending=nil; lastText=nil; K.DB().statsSnapshot=nil
+    if unconfirmed then unconfirmed=false; AZS_STATS=nil; Withdraw() end
+end
+function S.Restore()
+    if stage=="done" then return end
+    local now=GetTime and GetTime()
+    if not K.Number(now) then return end
+    if not stage then
+        stage="try"; deadline=now+10
+        local db=K.DB()
+        local snap=db.statsSnapshot; db.statsSnapshot=nil
+        if type(AZS_STATS)=="table" or type(snap)~="table" or not K.Number(snap.t) then stage="done"; return end
+        if snap.player~=UnitName("player") or snap.realm~=Realm() or now<snap.t or now-snap.t>30 then stage="done"; return end
+        origin=K.Number(snap.origin) and snap.origin or snap.t
+        if now-origin>600 then stage="done"; return end
+        pending=snap.text
+    end
+    if type(AZS_STATS)=="table" then stage="done"; pending=nil; return end
+    if now>deadline then stage="done"; pending=nil; return end
+    local result=Parsed(pending)
+    if result then
+        stage="done"; lastText=pending; pending=nil
+        AZS_STATS=result; fresh=true; unconfirmed=true; runMark=K.runStart
+        if PaperDollFrame and PaperDollFrame:IsVisible() and type(AZS_Update)=="function" and not pcall(AZS_Update) then
+            AZS_STATS=nil; fresh=false; unconfirmed=false; lastText=nil
+            Withdraw()
+        end
+    elseif type(pending)~="string" then stage="done"; pending=nil end
+end
+table.insert(K.updates,S.Restore)
+table.insert(K.updates,function() if unconfirmed and K.runStart~=runMark then Drop() end end)
+K.On("CHAT_MSG_ADDON",function(_,prefix,message)
+    if prefix=="AZSZONE" then
+        fresh=false; Drop()
+    elseif prefix=="AZS" then
+        fresh=true; unconfirmed=false; pending=nil; stage="done"
+        if type(message)=="string" then lastText=message; origin=GetTime and GetTime() or nil end
+    end
+end)
+K.On("PLAYER_LOGOUT",function()
+    local db=K.DB()
+    local now=GetTime and GetTime()
+    if type(AZS_STATS)=="table" and type(lastText)=="string" and K.Number(now) and K.Number(origin) and now-origin<=600
+        and (not unconfirmed or K.runStart==runMark) then
+        db.statsSnapshot={text=lastText,player=UnitName("player"),realm=Realm(),t=now,origin=origin}
+    else db.statsSnapshot=nil end
 end)
 P.Register("attributes",frame,"Charakterwerte",S.Update)
 K.Update("attributes",S.Update)

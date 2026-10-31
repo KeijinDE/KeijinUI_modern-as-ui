@@ -36,6 +36,7 @@ local aliases={
     fpsOpacity="fps opacity alpha transparenz deckkraft text",
     fpsSize="fps font size schriftgröße",
     fpsColor="fps font color schriftfarbe",
+    stat_arm="armor ruestung rüstung",
     attributes="player spieler character stats charakterwerte",
     attributesMaster="player spieler character stats charakterwerte",
     cache_size="minimap minikarte chest chests truhe truhen symbol icon groesse size scale skalierung",

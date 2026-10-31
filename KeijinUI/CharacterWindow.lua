@@ -7,6 +7,8 @@ local C={}
 K.characterWindow=C
 local frame,panel,morePanel,statsPanel,drag,nativeWindow,active=false
 local changed={}
+-- Label and value as last fitted per row; an unchanged row is not written again (no layout writes at idle).
+local fitted={}
 local LEFT={"Head","Neck","Shoulder","Back","Chest","Shirt","Tabard","Wrist"}
 local RIGHT={"Hands","Waist","Legs","Feet","Finger0","Finger1","Trinket0","Trinket1"}
 local function Point(name,parent,point,relative,x,y,width,height)
@@ -42,7 +44,7 @@ local function Restore()
         if s.backdropColor then AZSMoreStats:SetBackdropColor(unpack(s.backdropColor)) end
         if s.borderColor then AZSMoreStats:SetBackdropBorderColor(unpack(s.borderColor)) end
     end
-    W.Restore(changed); changed={}
+    W.Restore(changed); changed={}; fitted={}
     if panel then panel:Hide() end
     if morePanel then morePanel:Hide() end
     if statsPanel then statsPanel:Hide() end
@@ -55,7 +57,7 @@ end
 local function FontTree(f)
     if not f or not f.GetRegions then return end
     for _,r in ipairs({f:GetRegions()}) do
-        if r.GetObjectType and r:GetObjectType()=="FontString" then W.Font(changed,r) end
+        if r.GetObjectType and r:GetObjectType()=="FontString" and not r.keijinFitted then W.Font(changed,r) end
     end
     for _,child in ipairs({f:GetChildren()}) do if not child.keijinWindowArt then FontTree(child) end end
 end
@@ -66,7 +68,11 @@ local STAT_ROWS={
 local CLASSES={WARRIOR="Krieger",PALADIN="Paladin",HUNTER="Jäger",ROGUE="Schurke",PRIEST="Priester",SHAMAN="Schamane",MAGE="Magier",WARLOCK="Hexenmeister",DRUID="Druide"}
 local RACES={Human="Mensch",Dwarf="Zwerg",NightElf="Nachtelf",Gnome="Gnom",Orc="Orc",Scourge="Untoter",Tauren="Tauren",Troll="Troll"}
 local STOCK_LABELS={{"Stärke","Beweglichkeit","Ausdauer","Intelligenz","Willenskraft","Rüstung"},{"Nahkampfangriff","Angriffskraft","Schaden","Fernkampfangriff","Angriffskraft","Schaden"}}
-local RUN_LABELS={{"Leben","Schaden","Tempo","Kritchance","Krit-Schaden","Rüstung"},{"Fläche","Ziele","Echochance","Bewegungstempo","Regeneration","Sammelreichweite"}}
+local RUN_LABELS={{"Leben","Schaden","Tempo","Kritchance","Krit-Schaden","Schadensreduktion"},{"Fläche","Ziele","Echochance","Bewegungstempo","Regeneration","Sammelreichweite"}}
+-- Row geometry in the 232 wide panel: 8 padding at both sides, divider at 116, 4 clear of it on each side.
+local ROW_X,ROW_WIDTH,ROW_GAP,ROW_STEP,VALUE_MIN=8,104,6,112,20
+-- Shorter wording, used only where the full label does not fit the row at the minimum font size 8.
+local SHORT_LABELS={Schadensreduktion="Schadensred."}
 local function Text(fs,text)
     if not fs then return end
     W.Remember(changed,fs)
@@ -91,26 +97,51 @@ local function Identity()
     Text(CharacterLevelText,table.concat(parts," · "))
 end
 local function Stats()
+    local P=K.panelSizing
     for column,rows in ipairs(STAT_ROWS) do
         for index,name in ipairs(rows) do
             local row=getglobal(name)
             if row then
-                W.Anchor(changed,row,CharacterAttributesFrame,"TOPLEFT","TOPLEFT",8+(column-1)*116,-8-(index-1)*12,100,12)
                 local label,value=getglobal(name.."Label"),getglobal(name.."StatText")
                 local labels=type(AZS_STATS)=="table" and RUN_LABELS or STOCK_LABELS
-                Text(label,K.T(labels[column][index])..":")
-                W.Font(changed,label,10); W.Font(changed,value,10)
-                if value then
-                    W.Anchor(changed,value,row,"RIGHT","RIGHT",0,0,math.max(28,value:GetStringWidth()),12)
-                end
-                if label then
-                    local available=100-(value and value:GetWidth() or 28)-6
-                    local measured=label:GetStringWidth()
-                    if measured>available then
-                        local path,size,flags=label:GetFont()
-                        label:SetFont(path,math.max(8,size*available/measured),flags)
+                local want=K.T(labels[column][index])..":"
+                local valueText=value and value:GetText() or ""
+                local done=fitted[name]
+                local size
+                if label then local _,current=label:GetFont(); size=current end
+                if not (done and label and label:GetText()==done.text and valueText==done.value and size==done.size
+                    and want==done.want and K.font==done.font and K.FontSize(10)==done.base) then
+                    W.Anchor(changed,row,CharacterAttributesFrame,"TOPLEFT","TOPLEFT",ROW_X+(column-1)*ROW_STEP,-8-(index-1)*12,ROW_WIDTH,12)
+                    if label then label.keijinFitted=true end
+                    if value then value.keijinFitted=true end
+                    Text(label,want)
+                    W.Font(changed,label,10); W.Font(changed,value,10)
+                    -- Measured on the unbounded measuring label: a label already bounded in width may report only the cut text.
+                    local valueWidth=VALUE_MIN
+                    if value then
+                        valueWidth=math.max(VALUE_MIN,P.Measure(value,valueText))
+                        W.Anchor(changed,value,row,"RIGHT","RIGHT",0,0,valueWidth,12)
                     end
-                    W.Anchor(changed,label,row,"LEFT","LEFT",0,0,available,12)
+                    if label then
+                        local available=ROW_WIDTH-valueWidth-ROW_GAP
+                        local path,base,flags=label:GetFont()
+                        local shown=want
+                        local measured=P.Measure(label,shown)
+                        local short=SHORT_LABELS[labels[column][index]]
+                        if short and base and measured*8/base>available then
+                            shown=K.T(short)..":"; Text(label,shown); measured=P.Measure(label,shown)
+                        end
+                        -- One pixel of reserve; the final width is measured again and corrected once.
+                        for _=1,2 do
+                            local _,current=label:GetFont()
+                            if not current or measured<=available-1 or current<=8 then break end
+                            label:SetFont(path,math.max(8,current*(available-1)/measured),flags)
+                            measured=P.Measure(label,shown)
+                        end
+                        W.Anchor(changed,label,row,"LEFT","LEFT",0,0,available,12)
+                        local _,final=label:GetFont()
+                        fitted[name]={text=shown,value=valueText,size=final,want=want,font=K.font,base=K.FontSize(10)}
+                    end
                 end
             end
         end

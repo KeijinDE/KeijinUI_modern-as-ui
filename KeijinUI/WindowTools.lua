@@ -73,13 +73,14 @@ local function Covers(entry,text)
 end
 -- Native labels and player names may use a different language from K.lang.
 -- Check their actual glyphs rather than assuming the chosen interface language.
-function W.FontForText(text,original)
+function W.FontForText(text,original,chosenPath)
+    chosenPath=chosenPath or K.font
     local chosen,wide
     for _,entry in ipairs(KeijinFontCatalog or {}) do
-        if entry.path==K.font then chosen=entry end
+        if entry.path==chosenPath then chosen=entry end
         if entry.path==K.WideFont then wide=entry end
     end
-    if Covers(chosen,text) then return K.font end
+    if Covers(chosen,text) then return chosenPath end
     if Covers(wide,text) then return K.WideFont end
     return original or K.WideFont
 end

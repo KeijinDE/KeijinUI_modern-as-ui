@@ -1,5 +1,8 @@
 local K=KeijinUI
 local O=K.settings
+-- Profiles exposes its whitelist for windows registered by independent modules.
+K.profiles.windowKeys.totems=true
+K.profiles.windowKeys.gameMessages=true
 -- Each destination is its own page. Data and callbacks remain those of the modules.
 local function Hidden(page,key,label)
     return O.Toggle(page,key,label,function() return not K.DB().hidden[key] end,function(on) K.DB().hidden[key]=not on end)
@@ -32,6 +35,21 @@ O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 9
 O.Choice(p,"headers","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}})
 O.Help(p,"Vorgaben für alle Fenster. Im Layoutmodus ein Fenster anklicken, um seine Darstellung einzeln zu ändern.")
 O.Finish(p)
+
+p=O.Page("totems","Totems","Kampf","combat","totems")
+O.Section(p,"Totems")
+O.Toggle(p,"totems","Totems",K.totems.On,function(on) K.modules.Set("totems",on) end)
+O.Help(p,"Totems mit Anzahl, Obergrenze und Restzeit. Position und Größe im Layoutmodus ändern.")
+O.Finish(p)
+
+if not K.gameMessages.Hidden then
+p=O.Page("gameMessages","Spielmeldungen","Oberfläche & Layout","general")
+O.Section(p,"Spielmeldungen")
+O.Toggle(p,"gameMessages","Spielmeldungen",K.gameMessages.On,function(on) K.modules.Set("gameMessages",on) end)
+O.Help(p,"Spielmeldungen im Layoutmodus verschieben. Aus: ursprüngliche Banneranzeige.")
+O.GameMessageOptions(p)
+O.Finish(p)
+end
 
 p=O.Page("windows","HUD Fenster","Oberfläche & Layout","general","basisHud")
 O.Section(p,"HUD Fenster")
@@ -370,18 +388,62 @@ O.Finish(p)
 do
 local layout=K.layout
 local p=CreateFrame("Frame",nil,layout.hint)
-p:SetWidth(516); p:SetHeight(220); p:SetPoint("TOPLEFT",layout.hint,"TOPLEFT",14,-76)
-p.y=0
+p:SetWidth(516); p:SetHeight(365); p:SetPoint("TOPLEFT",layout.hint,"TOPLEFT",14,-54)
+p.y=0; p.sections={}; p.items={}
 layout.controls=p
 -- Deliberately built without a key so O.SearchEntry (SettingsWidgets.lua) creates no search entries for these layout controls.
 local snap=O.Toggle(p,"snap","Raster und Einrasten",function() return K.DB().snap~=false end,function(on) if (K.DB().snap~=false)~=on then layout.ToggleGrid() end end)
-O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
+local shift=O.Help(p,"Shift beim Loslassen: ohne Einrasten.")
 local scale=O.Requires(O.Slider(p,"uiScale","Gesamte UI",O.UIScale,O.SetUIScale,64,150),O.UIScaleSupported)
 local help=O.Help(p,"Gesamte UI skaliert auch die Spielfenster. Einzelne Rahmengrößen bleiben erhalten. Änderungen beim Loslassen.")
-help:SetHeight(48); p.y=p.y-12
-O.Help(p,"Fenstergröße im Layoutmodus an den Rändern ziehen oder das Fenster anklicken, um Werte einzugeben.")
+local edges=O.Help(p,"Fenstergröße im Layoutmodus an den Rändern ziehen oder das Fenster anklicken, um Werte einzugeben.")
+O.Section(p,"Darstellung")
+layout.alphaControl=O.Slider(p,"layoutBgAlpha","Hintergrund-Deckkraft",K.BackgroundAlpha,K.SetBackgroundAlpha,20,100)
+layout.headerControl=O.Choice(p,"layoutHeaders","Abschnittstitel",K.headers.Mode,K.headers.Set,{{"normal","Normal"},{"thin","Schmal"},{"off","Aus"}},
+    {strata="TOOLTIP",level=layout.hint:GetFrameLevel()+10})
+local opacity=O.Help(p,"Deckkraft der Fensterhintergründe und der Einheitenrahmen. Standard 91 Prozent.")
+-- Keep settings widgets and their hit areas; only this host uses the compact rhythm.
+function layout.ReflowHint()
+    local top=35+O.CompactText(layout.dragHint)+4
+    p:ClearAllPoints(); p:SetPoint("TOPLEFT",layout.hint,"TOPLEFT",14,-top)
+    local y=0
+    local function Place(frame,height,gap)
+        frame:ClearAllPoints(); frame:SetPoint("TOPLEFT",p,"TOPLEFT",0,-y)
+        if height then frame:SetHeight(height) end
+        y=y+frame:GetHeight()+(gap or 4)
+    end
+    Place(snap,28,0)
+    Place(shift,O.CompactText(shift),4)
+    Place(scale,40,0)
+    Place(help,O.CompactText(help),4)
+    Place(edges,O.CompactText(edges),8)
+    local section=p.sections[1]
+    Place(section.heading,19,0)
+    -- Section rules are tracked immediately after their heading, independent of client object types.
+    for i,item in ipairs(p.items or {}) do
+        if item.obj==section.heading then
+            local nextItem=p.items[i+1]
+            local rule=nextItem and nextItem.obj
+            if rule then rule:ClearAllPoints(); rule:SetPoint("TOPLEFT",p,"TOPLEFT",0,-y) end
+            break
+        end
+    end
+    y=y+8
+    Place(layout.alphaControl,40,0)
+    Place(layout.headerControl,34,2)
+    Place(opacity,O.CompactText(opacity),0)
+    p:SetHeight(y)
+    local textHeight=O.CompactText(layout.exitHint,414)
+    local footer=math.max(30,textHeight)
+    layout.exitHint:ClearAllPoints(); layout.exitHint:SetPoint("BOTTOMLEFT",layout.hint,"BOTTOMLEFT",14,14+(footer-textHeight)/2)
+    layout.done:ClearAllPoints(); layout.done:SetPoint("BOTTOMRIGHT",layout.hint,"BOTTOMRIGHT",-14,14+(footer-30)/2)
+    layout.hint:SetHeight(top+y+8+footer+14)
+end
+-- Refreshes skip the reflow while the hint is hidden; Layout.lua reflows explicitly before showing it.
+O.Watch(function() if layout.hint:IsShown() then layout.ReflowHint() end end)
+K.OnLang(layout.ReflowHint)
 -- These controls must never scroll the hidden settings page.
-for _,frame in ipairs({snap,scale,scale.slider}) do frame:EnableMouseWheel(false); frame:SetScript("OnMouseWheel",nil) end
+for _,frame in ipairs({snap,scale,scale.slider,layout.alphaControl,layout.alphaControl.slider,layout.headerControl,layout.headerControl.button}) do frame:EnableMouseWheel(false); frame:SetScript("OnMouseWheel",nil) end
 local sizing=K.panelSizing
 O.Pair(O.pages.maintenance,"Fenstermaße zurücksetzen",function()
     sizing.Reset()
@@ -394,8 +456,8 @@ O.defaultPage="general"
 O.pageAliases={layout="general",display="general",fonts="general",fps="gamewindows",achievements="gamewindows",reset="maintenance",reload="maintenance"}
 O.categoryAliases={display="general"}
 O.Navigation({
-    {"general","Oberfläche & Layout",{"general","appearance","windows","gamewindows"}},
-    {"combat","Kampf",{"units","action","combat","meter","nameplates","attributes"}},
+    {"general","Oberfläche & Layout",K.gameMessages.Hidden and {"general","appearance","windows","gamewindows"} or {"general","appearance","windows","gamewindows","gameMessages"}},
+    {"combat","Kampf",{"units","action","combat","meter","nameplates","attributes","totems"}},
     {"run","Run & Karte",{"run","minimap","caches","guardians","levels","loot"}},
     {"collection","Sammlungen",{"collection","history"}},
     {"shortcuts","Tastenbelegung",{"shortcuts"}},

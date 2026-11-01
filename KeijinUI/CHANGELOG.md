@@ -5,6 +5,20 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.6.2 (2026-11-01, release v4.6.2)
+
+* **Totem display:** a new window in the style of the companion display shows the reworked shaman totems with their icon, count and maximum, plus the remaining time. The time pauses with the run. In layout mode the window can be moved and scaled, and it can be switched off in the settings.
+
+* **Appearance in layout mode:** background opacity and section titles can now be set directly in the layout window, in sync with the settings page. The layout window is also much more compact.
+
+* **Shaman rework:** Rockbiter and Stormstrike, as well as the new enhancement talents, now have names in all languages and matching icons in build and damage displays. Flametongue Weapon, Windfury Weapon and the other shaman talents are also shown in the damage meter in the selected language instead of in German.
+
+* **Character window:** values are no longer cut off, all labels in a column use the same font size, and labels no longer briefly jump to German when new values arrive from the game. Unchanged values no longer trigger an unnecessary recalculation.
+
+* **Settings dropdowns:** the lists (for example the language selection) show their entries again; they were hidden behind the list background.
+
+* **Game update compatibility:** data adjusted to the current game update. The native minimap clock still has no addon control. The game's banner messages cannot currently be hidden, because the game ignores the setting intended for this. A movable replacement will follow once this is fixed.
+
 ### 4.6.1 (2026-10-31, release v4.6.1)
 
 * **Damage reduction label:** the run value formerly labelled Armor is now called Damage reduction in the character window and character stats, matching what it does. The character window rows are slightly wider; where the full name does not fit, a short form is shown there ("DMG reduction" in English, "Réd. dégâts" in French). In the settings, search still finds the value under "Armor" and "Rüstung".
@@ -649,6 +663,20 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.6.2 (2026-11-01, Release v4.6.2)
+
+* **Totemanzeige:** Ein neues Fenster im Stil der Begleiteranzeige zeigt die überarbeiteten Schamanentotems mit Symbol, Anzahl und Obergrenze sowie der Restzeit. Die Restzeit pausiert mit dem Run. Im Layoutmodus lässt sich das Fenster verschieben und skalieren, in den Einstellungen kann es abgeschaltet werden.
+
+* **Darstellung im Layoutmodus:** Hintergrund-Deckkraft und Abschnittstitel lassen sich jetzt auch direkt im Layoutfenster einstellen, synchron mit der Einstellungsseite. Das Layoutfenster ist außerdem deutlich kompakter.
+
+* **Schamanenüberarbeitung:** Felsbeißer und Sturmschlag sowie die neuen Verstärkungstalente haben jetzt Namen in allen Sprachen und passende Symbole in den Anzeigen für Build und Schaden. Auch Flametongue Weapon, Windfury Weapon und die übrigen Schamanentalente werden im Schadensmesser jetzt in der gewählten Sprache angezeigt statt auf Deutsch.
+
+* **Charakterfenster:** Werte werden nicht mehr abgeschnitten, alle Beschriftungen einer Spalte haben dieselbe Schriftgröße, und die Beschriftungen springen nicht mehr kurz ins Deutsche, wenn neue Werte vom Spiel kommen. Unveränderte Werte lösen keine unnötige Neuberechnung mehr aus.
+
+* **Auswahllisten in den Einstellungen:** Die Listen (zum Beispiel die Sprachauswahl) zeigen ihre Einträge wieder; sie lagen hinter dem Listenhintergrund.
+
+* **Kompatibilität mit dem Spielupdate:** Daten an das aktuelle Spielupdate angepasst. Die native Minimapuhr bleibt weiterhin ohne Addonsteuerung. Die Bannermeldungen des Spiels lassen sich derzeit nicht ausblenden, weil das Spiel die dafür vorgesehene Einstellung nicht beachtet; ein verschiebbarer Ersatz folgt, sobald das behoben ist.
 
 ### 4.6.1 (2026-10-31, Release v4.6.1)
 

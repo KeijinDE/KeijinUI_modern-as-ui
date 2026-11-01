@@ -1,6 +1,14 @@
 -- Simplified Chinese UI. German source keys share their English lookup labels.
 local K=KeijinUI
 local text={
+ ["Original"]="原版",
+ ["Boss color"]="首领颜色",
+-- Hotfix 4.6.2 UI texts.
+ ["Totems"]="图腾",
+ ["Game messages"]="游戏消息",
+ ["Restore original"]="恢复原版",
+ ["Totems with count, limit and remaining time. Change position and size in layout mode."]="显示图腾数量、上限和剩余时间。在布局模式中调整位置和大小。",
+ ["Move game messages in layout mode. Off: restore the original banners."]="在布局模式中移动游戏消息。关闭后恢复原版横幅。",
  ["Alt"]="Alt", ["Ctrl"]="Ctrl", ["Shift"]="Shift",
  ["Tap for layout mode"]="轻点切换布局模式",
  ["Key or tap toggles layout mode. Both work together."]="绑定按键或轻点均可切换布局模式，两者可同时使用。",

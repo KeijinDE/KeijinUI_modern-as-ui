@@ -17,6 +17,7 @@ local groups={
     "autorun autowalk automatisch laufen", "levels levelups levelaufstiege levelaufstieg",
     "reset zuruecksetzen", "attributes charakterwerte stats werte values", "haste tempo",
     "lifesteal lebensraub", "module modules modul module", "cursor mauszeiger cursortracker",
+    "totem totems schamane shaman", "banner banners spielmeldungen messages meldungen",
 }
 local aliases={
     cooldownStyle="cooldown abklingzeit timer clockwise uhrzeigersinn sweep action bar aktionsleiste top bottom oben unten",
@@ -71,6 +72,14 @@ local aliases={
     module_tooltip="tooltip",
     module_history="runs history historie verlauf runden",
     module_summons="beschwoerungen summons pets begleiter daemonen demons hexenmeister warlock treants wolf",
+    module_totems="totems totem schamane shaman beschwoerungen summons anzahl count cap obergrenze restzeit remaining",
+    totems="totems totem schamane shaman anzahl count cap obergrenze restzeit remaining layout position groesse size",
+    module_gameMessages="banner banners spielmeldungen game messages original nativ native position layout",
+    gameMessagesFont="banner banners spielmeldungen game messages font schrift original",
+    gameMessagesSize="banner banners spielmeldungen game messages font size schriftgroesse schriftgröße",
+    gameMessagescolor="banner banners spielmeldungen game messages color farbe schriftfarbe",
+    gameMessagesbossColor="banner banners spielmeldungen game messages boss color farbe",
+    gameMessages="banner banners spielmeldungen game messages original nativ native position layout",
     module_party="party partyfenster gruppe koop coop co-op wiederbelebung revive",
 }
 local links={

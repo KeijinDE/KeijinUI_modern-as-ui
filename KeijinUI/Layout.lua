@@ -24,7 +24,7 @@ end
 local OWNERS={tracker="basisHud",bosses="basisHud",statistics="basisHud",meter="basisHud",crits="basisHud",tally="basisHud",xp="basisHud",
     player="units",target="units",resources="units",buffs="units",skills="action",effects="effects",
     fps="fps",chat="chat",worldmap="worldMap",characterwindow="characterWindow",tooltip="tooltip",minimap="minimap",
-    loot="loot",attributes="attributes",cachearrow="caches",party="party",summons="summons",levels="storedLevels",
+    loot="loot",attributes="attributes",cachearrow="caches",party="party",summons="summons",totems="totems",gameMessages="gameMessages",levels="storedLevels",
     combattext="combatText",healtext="combatText",takentext="combatText",achievements="achievements"}
 local function Off(entry)
     return not K.ModuleOn(OWNERS[entry.key]) or (entry.options.inactive and entry.options.inactive())
@@ -169,11 +169,12 @@ L.defaults={
     skills={scale=0.9},
     statistics={scale=0.9},
     summons={scale=0.9},
+    totems={scale=0.9},
     tracker={scale=0.9},
 }
 local function LimitScale(entry,value)
     local maximum=entry.options.maxScale and entry.options.maxScale() or 1.8
-    return math.max(0.5,math.min(1.8,maximum,value))
+    return math.max(entry.options.minScale or 0.5,math.min(1.8,maximum,value))
 end
 function Apply(entry)
     local f,p=entry.frame,K.DB().layout[entry.key]
@@ -402,9 +403,12 @@ end
 function L.Place(key) local e=L.entries[key]; if e and e~=active and not e.sizing then Apply(e) end end
 local hint=K.Panel("KeijinUILayoutHint","Layoutmodus aktiv",548,360)
 hint:SetFrameStrata("TOOLTIP"); hint:SetFrameLevel(220); hint:SetScale(.85)
-hint:SetPoint("TOP",UIParent,"TOP",0,-72); hint.minBackgroundAlpha=.8
+hint:SetPoint("BOTTOM",UIParent,"BOTTOM",0,80); hint.minBackgroundAlpha=.8
+hint:SetMovable(true); hint:EnableMouse(true); hint:RegisterForDrag("LeftButton")
+hint:SetScript("OnDragStart",function() hint:StartMoving() end)
+hint:SetScript("OnDragStop",function() hint:StopMovingOrSizing() end)
 K.ApplyBackground()
-K.LText(hint,"Ziehen: verschieben · Mausrad: Größe ändern",11,"TOPLEFT",14,-35,520):SetHeight(32)
+L.dragHint=K.LText(hint,"Ziehen: verschieben · Mausrad: Größe ändern",11,"TOPLEFT",14,-35,520)
 local exitHint=K.Text(hint,"",11,"BOTTOMLEFT",14,12,414)
 exitHint:SetHeight(32)
 exitHint:SetTextColor(1,.82,.28)
@@ -437,12 +441,14 @@ function L.SetEditing(on,deferRestore)
     editing=on and true or false
     if editing then
         if K.settings then K.settings.MinimizeForLayout(); K.settings.Refresh() end
-        exitHint:SetText(ExitText()); hint:Show()
+        exitHint:SetText(ExitText()); if L.ReflowHint then L.ReflowHint() end; hint:Show()
     else
         Stop(); if K.layoutSizing then K.layoutSizing.Close() end; hint:Hide()
-        if K.settings then K.settings.RestoreAfterLayout(false,deferRestore) end
+        if K.settings then K.settings.CloseChoice(); K.settings.RestoreAfterLayout(false,deferRestore) end
     end
     RefreshGrid(L.Active())
+    if K.totems then K.totems.Refresh() end
+    if K.gameMessages then K.gameMessages.Draw() end
     L.Update()
 end
 function L.Toggle() if K.layoutTap then K.layoutTap.Cancel() end; L.SetEditing(not editing) end
@@ -497,7 +503,10 @@ end
 function L.Update(onDriver)
     parentScale=UIParent:GetEffectiveScale()
     L.SyncFollowers()
-    if editing then exitHint:SetText(ExitText()) end
+    if editing then
+        local text=ExitText()
+        if exitHint:GetText()~=text then exitHint:SetText(text); if L.ReflowHint then L.ReflowHint() end end
+    end
     local w,h=K.UIWidth(),K.UIHeight()
     if lastWidth and (w~=lastWidth or h~=lastHeight) then
         if K.layoutSizing then K.layoutSizing.Finish() end

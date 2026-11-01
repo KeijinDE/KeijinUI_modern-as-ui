@@ -427,6 +427,35 @@ function O.ReflowAll()
     end
     if O.afterReflow then O.afterReflow() end
 end
+-- Lua 5.0 has no GetStringHeight. Measure words with the actual selected font;
+-- split long tokens only on UTF-8 boundaries (also covers unspaced CJK text).
+-- Used on explicit layout/language refreshes, never from an OnUpdate driver.
+function O.CompactText(fs,width)
+    width=width or fs:GetWidth()
+    local _,size=fs:GetFont()
+    local lines=0
+    for paragraph in string.gfind((fs:GetText() or "").."\n","(.-)\n") do
+        local line=""
+        for word in string.gfind(paragraph,"%S+") do
+            local nextLine=line~="" and line.." "..word or word
+            if line~="" and K.panelSizing.Measure(fs,nextLine)>width then lines=lines+1; line="" end
+            if K.panelSizing.Measure(fs,word)>width then
+                local i=1
+                while i<=string.len(word) do
+                    local byte=string.byte(word,i)
+                    local count=byte>=240 and 4 or byte>=224 and 3 or byte>=192 and 2 or 1
+                    local char=string.sub(word,i,i+count-1)
+                    if line~="" and K.panelSizing.Measure(fs,line..char)>width then lines=lines+1; line="" end
+                    line=line..char; i=i+count
+                end
+            else line=line~="" and line.." "..word or word end
+        end
+        lines=lines+1
+    end
+    local height=lines*(math.ceil(size or 11)+3)
+    fs:SetWidth(width); fs:SetHeight(height); fs:SetJustifyV("TOP")
+    return height
+end
 function O.Section(page,text,module)
     module=module or page.module
     page.searchLast=nil
@@ -516,15 +545,21 @@ function O.PlaceMenu(menu,button)
     local ratio=button:GetEffectiveScale()/UIParent:GetEffectiveScale()
     local s=menu:GetEffectiveScale()/UIParent:GetEffectiveScale()
     local w,h=K.UIWidth(),K.UIHeight()
+    local leftEdge,bottomEdge,rightEdge,topEdge=8,8,w-8,h-8
+    if panel:IsShown() then
+        local q=panel:GetEffectiveScale()/UIParent:GetEffectiveScale()
+        leftEdge,bottomEdge=panel:GetLeft()*q+8,panel:GetBottom()*q+8
+        rightEdge,topEdge=panel:GetRight()*q-8,panel:GetTop()*q-8
+    end
     local mh,mw=menu:GetHeight()*s,menu:GetWidth()*s
     local bottom,top,right=bb*ratio,bt*ratio,br*ratio
     local y,x=bottom-3*s,right   -- top and right edge of the menu in UIParent units
     local flipped,dx,dy=false,0,-3
-    if y-mh<8 then
-        if top+3*s+mh<=h-8 then flipped=true; dy=3
-        else dy=-3+(math.max(mh+8,math.min(h-8,y))-y)/s end
+    if y-mh<bottomEdge then
+        if top+3*s+mh<=topEdge then flipped=true; dy=3
+        else dy=-3+(math.max(mh+bottomEdge,math.min(topEdge,y))-y)/s end
     end
-    dx=(math.max(mw+8,math.min(w-8,x))-x)/s
+    dx=(math.max(mw+leftEdge,math.min(rightEdge,x))-x)/s
     menu:ClearAllPoints()
     if flipped then menu:SetPoint("BOTTOMRIGHT",button,"TOPRIGHT",dx,dy)
     else menu:SetPoint("TOPRIGHT",button,"BOTTOMRIGHT",dx,dy) end
@@ -536,7 +571,7 @@ function O.Choice(page,key,label,get,set,items,style)
     local text=button.text; text:SetWidth(146); text:SetJustifyH("LEFT"); text:ClearAllPoints(); text:SetPoint("LEFT",button,"LEFT",9,0)
     local arrow=K.Text(button,"v",9,"RIGHT",-8,0); arrow:SetTextColor(unpack(GOLD))
     row.value=text; row.items=items; row.button=button
-    row.searchEntry.items=items
+    if row.searchEntry then row.searchEntry.items=items end
     local menuWidth,pitch=style and style.width or 170,style and style.pitch or 27
     local menu=CreateFrame("Frame",nil,shield); menu:SetWidth(menuWidth); menu:SetHeight(8+table.getn(items)*pitch); Skin(menu)
     row.menu=menu; row.options={}
@@ -552,7 +587,18 @@ function O.Choice(page,key,label,get,set,items,style)
         O.CloseChoice()
         if was then return end
         for _,m in ipairs(O.menus or {}) do m:Hide() end
-        O.openMenu=menu; O.Fit(); shield:SetScale(1); menu:SetScale(panel:GetEffectiveScale()/UIParent:GetEffectiveScale()); shield:Show(); menu:Show()
+        -- A menu in the layout hint must sit above its TOOLTIP strata, not behind the hint.
+        shield:SetFrameStrata(style and style.strata or "FULLSCREEN_DIALOG")
+        shield:SetFrameLevel(style and style.level or panel:GetFrameLevel()+10)
+        menu:SetFrameStrata(style and style.strata or "FULLSCREEN_DIALOG")
+        menu:SetFrameLevel(shield:GetFrameLevel()+1)
+        -- The client retains explicit child levels when a parent is raised.
+        -- Raise the entries too, otherwise the opaque menu paints over them.
+        for _,option in ipairs(row.options) do
+            option:SetFrameStrata(menu:GetFrameStrata())
+            option:SetFrameLevel(menu:GetFrameLevel()+1)
+        end
+        O.openMenu=menu; O.Fit(); shield:SetScale(1); menu:SetScale((style and style.scaleFrame or panel):GetEffectiveScale()/UIParent:GetEffectiveScale()); shield:Show(); menu:Show()
         O.PlaceMenu(menu,button)
         if style and style.refresh then style.refresh(row) end
     end
@@ -690,3 +736,50 @@ panel:SetScript("OnShow",function()
 end)
 panel:SetScript("OnHide",function() O.FinishMenuResize(); O.moving=nil; O.CloseChoice() end)
 K.OnLang(function() if O.current then title:SetText(K.T(O.current.caption)); subtitle:SetText(K.T(O.current.description)) end; O.Refresh() end)
+
+-- The settings page and the numeric layout editor use the same banner controls.
+function O.GameMessageOptions(page,compact)
+    local B=K.gameMessages
+    local prefix=compact and "layoutGameMessages" or "gameMessages"
+    local items={{"original","Original"}}
+    for _,item in ipairs(K.fontChoices) do table.insert(items,item) end
+    local font=O.Choice(page,prefix.."Font","Schrift",B.Font,function(v) B.Set("font",v) end,items,
+        compact and {strata="TOOLTIP",level=260,scaleFrame=page} or nil)
+    local size=O.Slider(page,prefix.."Size","Schriftgröße",B.Size,function(v) B.Set("size",v) end,12,40,{factor=1,unit=""})
+    local function ColorRow(field,label,boss)
+        local row=O.Row(page,prefix..field,label,34)
+        local swatch=row:CreateTexture(nil,"ARTWORK"); swatch:SetTexture(K.flat)
+        swatch:SetWidth(28); swatch:SetHeight(20); swatch:SetPoint("RIGHT",row,"RIGHT",-8,0)
+        O.Watch(function() swatch:SetVertexColor(B.Color(boss)) end)
+        row:SetScript("OnClick",function()
+            O.CloseChoice()
+            local picker=ColorPickerFrame
+            if not picker or not picker.SetColorRGB or not picker.GetColorRGB then K.Say(K.T("Farbwahl nicht verfügbar.")); return end
+            picker:Hide()
+            local old=(K.DB().gameMessages or {})[field]
+            local r,g,b=B.Color(boss)
+            picker.func=function() local x,y,z=picker:GetColorRGB(); B.Set(field,{x,y,z}); O.Refresh() end
+            picker.cancelFunc=function() B.Set(field,old); O.Refresh() end
+            picker.hasOpacity=false; picker.opacityFunc=nil
+            picker:SetColorRGB(r,g,b); picker:SetFrameStrata(compact and "TOOLTIP" or "FULLSCREEN_DIALOG")
+            if compact then picker:SetFrameLevel(280) end
+            picker:Show()
+        end)
+        return row
+    end
+    local color=ColorRow("color","Schriftfarbe",false)
+    local boss=ColorRow("bossColor","Bossfarbe",true)
+    local reset=O.Pair(page,"Zurück auf Original",B.Original)
+    if compact then
+        for _,row in ipairs({font,size,color,boss}) do row:SetWidth(264); row.name:SetWidth(110) end
+        font.button:ClearAllPoints(); font.button:SetPoint("TOPRIGHT",font,"TOPRIGHT",0,-2)
+        font.button:SetWidth(146); font.value:SetWidth(122)
+        size.slider:SetWidth(105); size.slider:ClearAllPoints(); size.slider:SetPoint("RIGHT",size,"RIGHT",-42,3)
+        size.value:SetWidth(38); reset:SetWidth(264)
+        O.Watch(function()
+            for _,row in ipairs({font,size,color,boss}) do FitLabel({text=row.name},11,110) end
+            FitLabel(font.button,11,122); FitLabel(reset,11,252)
+        end)
+    end
+    return font,size,color,boss,reset
+end

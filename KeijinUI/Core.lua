@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.6.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.6.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -553,6 +553,8 @@ function K.ModuleKey(key) return key and (K.moduleAlias[key] or key) end
 function K.ModuleOn(key)
     key=K.ModuleKey(key)
     local modules=K.DB().modules
+    -- Banner replacement is opt-in: the CVar cannot prove that Bevy stopped drawing.
+    if key=="gameMessages" then return type(modules)=="table" and modules[key]==true end
     return not (key and type(modules)=="table" and modules[key]==false)
 end
 function K.Update(owner,fn) table.insert(K.updates,fn); K.callbackOwners[fn]=owner end

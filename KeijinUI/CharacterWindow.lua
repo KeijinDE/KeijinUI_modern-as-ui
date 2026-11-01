@@ -71,6 +71,8 @@ local STOCK_LABELS={{"Stärke","Beweglichkeit","Ausdauer","Intelligenz","Willens
 local RUN_LABELS={{"Leben","Schaden","Tempo","Kritchance","Krit-Schaden","Schadensreduktion"},{"Fläche","Ziele","Echochance","Bewegungstempo","Regeneration","Sammelreichweite"}}
 -- Row geometry in the 232 wide panel: 8 padding at both sides, divider at 116, 4 clear of it on each side.
 local ROW_X,ROW_WIDTH,ROW_GAP,ROW_STEP,VALUE_MIN=8,104,6,112,20
+-- A label keeps at least this much; only an extreme value is bound in width to leave it.
+local LABEL_MIN=24
 -- Shorter wording, used only where the full label does not fit the row at the minimum font size 8.
 local SHORT_LABELS={Schadensreduktion="Schadensred."}
 local function Text(fs,text)
@@ -96,56 +98,105 @@ local function Identity()
     if class then table.insert(parts,class) end
     Text(CharacterLevelText,table.concat(parts," · "))
 end
-local function Stats()
+-- Refit one row: anchor, translated label, value and label size; stores the size the label needs on its own.
+local function FitRow(name,column,index,labels,want,valueText)
     local P=K.panelSizing
+    local row=getglobal(name)
+    local label,value=getglobal(name.."Label"),getglobal(name.."StatText")
+    -- Layout goes through K.Anchor/K.SetW/K.SetH: written only when it differs from the last value set.
+    W.Remember(changed,row); W.Remember(changed,label); W.Remember(changed,value)
+    K.Anchor(row,"TOPLEFT",CharacterAttributesFrame,"TOPLEFT",ROW_X+(column-1)*ROW_STEP,-8-(index-1)*12)
+    K.SetW(row,ROW_WIDTH); K.SetH(row,12)
+    label.keijinFitted=true
+    if value then value.keijinFitted=true end
+    Text(label,want)
+    W.Font(changed,label,10); W.Font(changed,value,10)
+    -- The value is not bounded in width (0 = size of its text), so it cannot be cut whatever the font measures.
+    -- Only a value wider than the row minus the minimum label is bound, so it never reaches the next column.
+    -- The label gets what remains; one pixel is reserved for the outline.
+    local valueWidth=VALUE_MIN
+    if value then
+        K.Anchor(value,"RIGHT",row,"RIGHT",0,0)
+        K.SetW(value,0); K.SetH(value,12)
+        valueWidth=math.max(VALUE_MIN,P.Measure(value,valueText),value:GetStringWidth() or 0)+1
+        local cap=ROW_WIDTH-LABEL_MIN-ROW_GAP
+        if valueWidth>cap then valueWidth=cap; K.SetW(value,cap) end
+    end
+    local available=math.max(LABEL_MIN,ROW_WIDTH-valueWidth-ROW_GAP)
+    local path,base,flags=label:GetFont()
+    local shown=want
+    local measured=P.Measure(label,shown)
+    local short=SHORT_LABELS[labels[column][index]]
+    if short and base and measured*8/base>available then
+        shown=K.T(short)..":"; Text(label,shown); measured=P.Measure(label,shown)
+    end
+    -- One pixel of reserve; the final width is measured again and corrected once.
+    for _=1,2 do
+        local _,current=label:GetFont()
+        if not current or measured<=available-1 or current<=8 then break end
+        label:SetFont(path,math.max(8,current*(available-1)/measured),flags)
+        measured=P.Measure(label,shown)
+    end
+    K.Anchor(label,"LEFT",row,"LEFT",0,0)
+    K.SetW(label,available); K.SetH(label,12)
+    local _,final=label:GetFont()
+    fitted[name]={text=shown,value=valueText,size=final,need=final,want=want,font=K.font,base=K.FontSize(10)}
+end
+-- Refits only rows whose label, value, size or language differ from the real FontString texts, so a rewrite by
+-- the game script is noticed at once. All labels of a column share the smallest size any of them needs.
+local function Stats()
+    local labels=type(AZS_STATS)=="table" and RUN_LABELS or STOCK_LABELS
     for column,rows in ipairs(STAT_ROWS) do
+        local target
         for index,name in ipairs(rows) do
             local row=getglobal(name)
-            if row then
-                local label,value=getglobal(name.."Label"),getglobal(name.."StatText")
-                local labels=type(AZS_STATS)=="table" and RUN_LABELS or STOCK_LABELS
+            local label,value=getglobal(name.."Label"),getglobal(name.."StatText")
+            if row and label then
                 local want=K.T(labels[column][index])..":"
                 local valueText=value and value:GetText() or ""
                 local done=fitted[name]
-                local size
-                if label then local _,current=label:GetFont(); size=current end
-                if not (done and label and label:GetText()==done.text and valueText==done.value and size==done.size
+                local _,size=label:GetFont()
+                if not (done and valueText==done.value and size==done.size
                     and want==done.want and K.font==done.font and K.FontSize(10)==done.base) then
-                    W.Anchor(changed,row,CharacterAttributesFrame,"TOPLEFT","TOPLEFT",ROW_X+(column-1)*ROW_STEP,-8-(index-1)*12,ROW_WIDTH,12)
-                    if label then label.keijinFitted=true end
-                    if value then value.keijinFitted=true end
-                    Text(label,want)
-                    W.Font(changed,label,10); W.Font(changed,value,10)
-                    -- Measured on the unbounded measuring label: a label already bounded in width may report only the cut text.
-                    local valueWidth=VALUE_MIN
-                    if value then
-                        valueWidth=math.max(VALUE_MIN,P.Measure(value,valueText))
-                        W.Anchor(changed,value,row,"RIGHT","RIGHT",0,0,valueWidth,12)
-                    end
-                    if label then
-                        local available=ROW_WIDTH-valueWidth-ROW_GAP
-                        local path,base,flags=label:GetFont()
-                        local shown=want
-                        local measured=P.Measure(label,shown)
-                        local short=SHORT_LABELS[labels[column][index]]
-                        if short and base and measured*8/base>available then
-                            shown=K.T(short)..":"; Text(label,shown); measured=P.Measure(label,shown)
-                        end
-                        -- One pixel of reserve; the final width is measured again and corrected once.
-                        for _=1,2 do
-                            local _,current=label:GetFont()
-                            if not current or measured<=available-1 or current<=8 then break end
-                            label:SetFont(path,math.max(8,current*(available-1)/measured),flags)
-                            measured=P.Measure(label,shown)
-                        end
-                        W.Anchor(changed,label,row,"LEFT","LEFT",0,0,available,12)
-                        local _,final=label:GetFont()
-                        fitted[name]={text=shown,value=valueText,size=final,want=want,font=K.font,base=K.FontSize(10)}
-                    end
+                    FitRow(name,column,index,labels,want,valueText)
+                    done=fitted[name]
+                elseif label:GetText()~=done.text then
+                    -- Only the text was rewritten: put the translation back, no layout.
+                    Text(label,done.text)
+                end
+                if not target or done.need<target then target=done.need end
+            end
+        end
+        if target then
+            for _,name in ipairs(rows) do
+                local done=fitted[name]
+                local label=getglobal(name.."Label")
+                if done and label and done.size~=target then
+                    local path,_,flags=label:GetFont()
+                    label:SetFont(path,target,flags)
+                    done.size=target
                 end
             end
         end
     end
+end
+-- The game script rewrites labels and values (AZS_Row, stock setters) on every statistics message or event;
+-- refit right behind it so no German text stays visible until the next tick.
+local HOOKED={"AZS_Update","PaperDollFrame_SetStats","PaperDollFrame_SetArmor","PaperDollFrame_SetDamage",
+    "PaperDollFrame_SetAttackPower","PaperDollFrame_SetAttackBothHands","PaperDollFrame_SetRangedAttack",
+    "PaperDollFrame_SetRangedDamage","PaperDollFrame_SetRangedAttackPower"}
+local wrapped={}
+local function Wrap(name)
+    local old=getglobal(name)
+    if type(old)~="function" or wrapped[name]==old then return end
+    local new=function(a,b)
+        old(a,b)
+        if active then Stats() end
+    end
+    wrapped[name]=new; setglobal(name,new)
+end
+local function Hooks()
+    for _,name in ipairs(HOOKED) do Wrap(name) end
 end
 local function Apply()
     if not frame or not PaperDollFrame then return end
@@ -235,6 +286,7 @@ function C.Set(on)
     Apply()
 end
 function C.Refresh()
+    Hooks()
     if not frame and CharacterFrame and PaperDollFrame then
         frame=CharacterFrame
         nativeWindow={points=W.Points(frame),scale=frame:GetScale()}

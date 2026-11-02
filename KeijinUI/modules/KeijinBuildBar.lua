@@ -407,6 +407,12 @@ end
 local function Texture(path)
 	return string.lower(string.gsub(path or "", "/", "\\"))
 end
+-- The game's placeholder for an unknown icon is no icon (shared helper of Core.lua): the fixed icon tables take over.
+local function RealIcon(path)
+	local check = KeijinUI and KeijinUI.RealIcon
+	if check then return check(path) end
+	return path
+end
 local function Matches(row, title, slot)
 	if title == "" then return false end
 	local hit = title == Normalize(row.name) or title == Normalize(row.key)
@@ -634,7 +640,7 @@ local function StopClock(cell)
 end
 -- Game 0.115: use the run-clock based API directly, never estimate talent intervals.
 local function TimerIcon(value,name)
-	if type(value)~="string" or value=="" then return KeijinUI.SpellIcon(name) end
+	if not RealIcon(value) then return KeijinUI.SpellIcon(name) end
 	-- AZS timers can carry the game's bare icon key (e.g. INV_Jewelry_Necklace_12),
 	-- not a texture path. SetTexture needs the Interface path, as inventory icons do.
 	local icon=string.gsub(value,"/","\\")
@@ -826,10 +832,10 @@ local function Update()
 		-- The game casts another 1.12 spell for some abilities (Demonic Empowerment is Fel Domination):
 		-- its book entry gives the tooltip, the name and the icon stay the ability's.
 		local other = (KeijinBuildBarBook or {})[value.key]
-		local display, icon = entry and entry.name or name, entry and entry.icon
+		local display, icon = entry and entry.name or name, entry and RealIcon(entry.icon)
 		if not entry and other and book[Normalize(other)] then
 			entry = book[Normalize(other)]
-			icon = (KeijinBuildBarIcons or {})[value.key] or entry.icon
+			icon = (KeijinBuildBarIcons or {})[value.key] or RealIcon(entry.icon)
 		end
 		table.insert(spells, {kind="spell", key=value.key, identity=value.key..":"..value.spell,
 			name=display, rank=value.rank, cd=value.cd, cdmax=value.cdmax,

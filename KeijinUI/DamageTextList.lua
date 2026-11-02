@@ -1,4 +1,4 @@
--- 4.5.0: list mode of the outgoing damage numbers (option "Als Liste anzeigen", off by default).
+-- 4.5.0: list mode of the outgoing damage numbers (value "Liste" of the option "Position", off by default).
 -- Instead of numbers rising from the enemy or a fixed point, hits appear as rows of one list with fixed
 -- line spacing and a limited number of visible lines. The list is its own movable layout element
 -- KeijinUICombatTextList (Alt to move, Alt and mouse wheel to scale) with its own font size.
@@ -35,10 +35,14 @@ L.frame=frame
 
 -- Settings. Absent keys keep the defaults, so nothing changes for existing players.
 local OWN={compact=true,scroll=true,rise=true}
-function L.Enabled() return K.DB().combatTextList==true end
-function L.SetEnabled(on)
-    K.DB().combatTextList=on and true or nil
+function L.Enabled() return K.DB().combatTextPosition=="list" end
+function L.PositionChanged()
     if not L.On() then L.Clear() else K.layout.Activated("combattextlist") end
+end
+function L.SetEnabled(on)
+    local db=K.DB()
+    if on then db.combatTextPosition="list" elseif db.combatTextPosition=="list" then db.combatTextPosition=nil end
+    L.PositionChanged()
 end
 -- True while hits go to the list instead of the floating numbers.
 function L.On() return L.Enabled() and K.ModuleOn("combatText") and OWN[K.CombatTextMode()] and true or false end

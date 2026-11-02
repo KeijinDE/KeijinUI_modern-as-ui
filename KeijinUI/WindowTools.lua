@@ -109,7 +109,7 @@ function W.Art(list,f,pattern)
     end
 end
 function W.Hook(f,name,after)
-    local original=f:GetScript(name)
+    local original=K.SafeGetScript(f,name)
     f:SetScript(name,function()
         if original then original() end
         after()

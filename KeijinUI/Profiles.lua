@@ -60,7 +60,7 @@ end
 -- Reads the current settings into a plain table; only whitelisted keys, every value clamped into its range.
 function S.Collect(withModules)
     local db=K.DB()
-    local p={w=math.floor(K.UIWidth()+.5),h=math.floor(K.UIHeight()+.5),layout={},sizing={},frameless={},windowOptions={},modules=withModules and {} or nil}
+    local p={w=math.floor(K.UIWidth()+.5),h=math.floor(K.UIHeight()+.5),layout={},sizing={},frameless={},windowOptions={},onTop={},modules=withModules and {} or nil}
     for key,v in pairs(db.layout) do
         if KEYS[key] and type(v)=="table" and Finite(v.x) and Finite(v.y) and Finite(v.scale) and v.scale>0 then
             local item={x=Clamp(v.x,-.5,1.5),y=Clamp(v.y,-.5,1.5),scale=Clamp(v.scale,.5,1.8),ref=v.ref=="bar",bottom=v.bottom==true}
@@ -88,9 +88,13 @@ function S.Collect(withModules)
             if next(v) then p.windowOptions[key]=v end
         end
     end
+    if K.onTop then
+        for key in pairs(K.onTop.elements) do if K.onTop.Get(key) then p.onTop[key]=true end end
+    end
+    p.position=K.damageText.Position()
     local lines,size=db.combatTextListLines,db.combatTextListSize
-    if db.combatTextList==true or K.Number(lines) or K.Number(size) then
-        p.list={on=db.combatTextList==true,lines=K.Number(lines) and Clamp(math.floor(lines+.5),2,12) or nil,
+    if db.combatTextPosition=="list" or K.Number(lines) or K.Number(size) then
+        p.list={on=db.combatTextPosition=="list",lines=K.Number(lines) and Clamp(math.floor(lines+.5),2,12) or nil,
             size=K.Number(size) and Clamp(size,.5,2) or nil}
     end
     if withModules then
@@ -120,6 +124,8 @@ function S.Encode(p)
         table.insert(r,"o,"..key..","..OptionalFlag(v.rim)..","..OptionalFlag(v.back)..","..OptionalFlag(v.strip)..","..(v.alpha and Num(v.alpha) or "")..","..(v.headers or ""))
     end
     for _,key in ipairs(Sorted(p.frameless or {})) do table.insert(r,"n,"..key) end
+    for _,key in ipairs(Sorted(p.onTop or {})) do table.insert(r,"q,"..key..",1") end
+    if p.position then table.insert(r,"u,"..p.position) end
     if p.list then table.insert(r,"t,"..Bit(p.list.on)..","..(p.list.lines and Num(p.list.lines) or "")..","..(p.list.size and Num(p.list.size) or "")) end
     for _,key in ipairs(Sorted(p.modules or {})) do table.insert(r,"m,"..key..","..Bit(p.modules[key])) end
     local body=table.concat(r,";")
@@ -203,6 +209,13 @@ function READ.n(p,f)
     if KEYS[f[2]] then p.frameless[f[2]]=true else p.unknown=p.unknown+1 end
     return true
 end
+function READ.q(p,f)
+    -- Old two-field group records overlap element IDs: ignore them, never reinterpret.
+    if table.getn(f)==2 then return true end
+    if table.getn(f)~=3 or f[3]~="1" then return false end
+    if K.onTop and K.onTop.Element(f[2]) then p.onTop[f[2]]=true else p.unknown=p.unknown+1 end
+    return true
+end
 function READ.o(p,f)
     if table.getn(f)~=7 then return false end
     local v={}
@@ -234,6 +247,12 @@ function READ.t(p,f)
     local size,okSize=Optional(f[4],.5,2)
     if on==nil or not okLines or not okSize then return false end
     p.list={on=on,lines=lines and math.floor(lines+.5) or nil,size=size}
+    return true
+end
+-- Damage number position: plate, fixed or list. Codes of 4.6.2 and the first 4.6.3 carry only the t record.
+function READ.u(p,f)
+    if table.getn(f)~=2 or (f[2]~="plate" and f[2]~="fixed" and f[2]~="list") then return false end
+    p.position=f[2]
     return true
 end
 function READ.m(p,f)
@@ -273,7 +292,7 @@ function S.Decode(code)
     local _,_,body,check=string.find(rest,"^([^~]*)~(%d+)$")
     if not body or string.len(check)>10 then return nil,"format" end
     if string.find(body,"[^%w_%.,;%-]") or tonumber(check)~=Sum(body) then return nil,"damaged" end
-    local p={layout={},sizing={},frameless={},windowOptions={},modules={},missingFonts={},unknown=0,unknownModules=0}
+    local p={layout={},sizing={},frameless={},windowOptions={},onTop={},modules={},missingFonts={},unknown=0,unknownModules=0}
     local records=Split(body,";",S.MAX_RECORDS+1)
     if table.getn(records)>S.MAX_RECORDS then return nil,"long" end
     for _,record in ipairs(records) do
@@ -296,11 +315,13 @@ function S.Counts(p)
     for _ in pairs(p.sizing) do sizes=sizes+1 end
     for _ in pairs(p.frameless) do looks=looks+1 end
     for _ in pairs(p.windowOptions or {}) do looks=looks+1 end
+    for _ in pairs(p.onTop or {}) do looks=looks+1 end
     for _ in pairs(p.modules or {}) do modules=modules+1 end
     if p.font then looks=looks+1 end
     if p.alpha then looks=looks+1 end
     if p.headers then looks=looks+1 end
     if p.list then looks=looks+1 end
+    if p.position and p.position~="plate" and not p.list then looks=looks+1 end
     return windows,sizes,looks,modules
 end
 function S.Describe(p)
@@ -384,8 +405,12 @@ function S.Apply(p)
         if c.back==nil then c.back=false end
         if c.strip==nil then c.strip=false end
     end
+    db.onTop=next(p.onTop or {}) and Copy(p.onTop) or nil
+    if K.onTop then K.onTop.ApplyAll() end
     local list=p.list
-    db.combatTextList=list and list.on and true or nil
+    if p.position then db.combatTextPosition=p.position~="plate" and p.position or nil
+    elseif list and list.on then db.combatTextPosition="list"
+    elseif db.combatTextPosition=="list" then db.combatTextPosition=nil end
     db.combatTextListLines=list and list.lines~=DEFAULT_LINES and list.lines or nil
     db.combatTextListSize=list and list.size and math.abs(list.size-1)>0.001 and list.size or nil
     if p.modules then

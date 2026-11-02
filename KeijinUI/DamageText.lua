@@ -47,7 +47,7 @@ end
 local SCHOOL={Physical={1,0.95,0.85},Holy={1,0.85,0.35},Fire={1,0.5,0.15},Nature={0.45,0.9,0.3},
     Frost={0.45,0.8,1},Shadow={0.75,0.45,1},Arcane={1,0.55,0.95}}
 local MISS_TEXT={miss="Verfehlt",dodge="Ausgewichen",parry="Pariert",block="Geblockt",evade="Entkommen",
-    immune="Immun",resist="Widerstanden"}
+    immune="Immun",resist="Widerstanden",absorb="Absorbiert",reflect="Reflektiert",deflect="Abgelenkt"}
 local FOLLOW_JUMP=80   -- a plate further from the last anchor is another mob; keep the old anchor
 local flip=1           -- strictly alternates the drift side
 local ICON_GAP=2
@@ -70,7 +70,7 @@ local function Give(item)
 end
 -- Shared, side-effect-free presentation for live hits and the settings preview.
 -- The preview never spawns world hits or updates the running damage average.
-function K.damageText.Describe(mode,crit,school,periodic,spell,small)
+function K.damageText.Describe(mode,crit,school,periodic,spell,small,iconKnown)
     if mode=="compact" then
         local s=crit and CRIT or NORMAL
         return Presentation(s),s.r,s.g,s.b,nil,false,false
@@ -83,7 +83,9 @@ function K.damageText.Describe(mode,crit,school,periodic,spell,small)
     if crit then r,g,b=r+(1-r)*.35,g+(1-g)*.35,b+(1-b)*.35 end
     if small and not crit and not periodic then s=T.small; r,g,b=.62,.62,.62 end
     local icon
-    if K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
+    -- iconKnown (the world anchored numbers cache the lookup per ability): a path, or false for none.
+    if iconKnown~=nil then icon=iconKnown or nil
+    elseif K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
     return Presentation(s),r,g,b,icon,true,crit and true or false
 end
 -- Font size and icon side always match.
@@ -110,8 +112,15 @@ local function AnchorCentre()
     if not K.Number(l) or not K.Number(b) or not K.Number(ratio) or ratio<=0 then return w/2,h/2+50,1 end
     return (l+anchor:GetWidth()/2)*ratio,(b+anchor:GetHeight()/2)*ratio,ratio
 end
-function K.damageText.Position() return K.DB().combatTextPosition=="fixed" and "fixed" or "plate" end
-function K.damageText.SetPosition(value) K.DB().combatTextPosition=value=="fixed" and "fixed" or nil end
+-- Position: plate (default, at the enemy), fixed (the combat text anchor) or list (DamageTextList.lua).
+function K.damageText.Position()
+    local value=K.DB().combatTextPosition
+    return (value=="fixed" or value=="list") and value or "plate"
+end
+function K.damageText.SetPosition(value)
+    K.DB().combatTextPosition=(value=="fixed" or value=="list") and value or nil
+    if K.damageText.list then K.damageText.list.PositionChanged() end
+end
 -- Font size of the numbers as a factor (0.5 to 2, K.DB().combatTextSize, settings slider). Only the text
 -- grows; the anchor and its Alt mouse wheel scale stay as they are.
 function K.damageText.TextSize()
@@ -278,6 +287,18 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
     fs:ClearAllPoints(); Place(item,x,y)
     return item
 end
+-- Small normal hits (under half of the running average) are grey in the scroll and rise styles; updates the average.
+-- Shared with the world anchored numbers (DamageTextWorld.lua), so both sources keep one average.
+function K.damageText.Small(mode,amount,crit,periodic)
+    if (mode=="scroll" or mode=="rise") and not crit and not periodic then
+        local small=average and amount<average*.5
+        average=average and (average*.9+amount*.1) or amount
+        return small
+    end
+end
+-- Words and style of a miss for the world anchored numbers.
+K.damageText.MissText=MISS_TEXT
+function K.damageText.MissStyle(mode) return (mode=="rise" and RISE or SCROLL).miss end
 -- school and periodic only matter for the scroll style; spell gives the icon.
 function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
     local mode=K.CombatTextMode()
@@ -299,11 +320,7 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
             end
         end
     end
-    local small
-    if (mode=="scroll" or mode=="rise") and not crit and not periodic then
-        small=average and amount<average*.5
-        average=average and (average*.9+amount*.1) or amount
-    end
+    local small=K.damageText.Small(mode,amount,crit,periodic)
     local style,r,g,b,icon,scroll,pop=K.damageText.Describe(mode,crit,school,periodic,spell,small)
     local item=Add(text,style,r,g,b,targetName,scroll,pop,icon)
     item.crit=crit and true or false; item.amount=amount
@@ -311,18 +328,22 @@ function K.damageText.Spawn(amount,crit,targetName,school,periodic,spell)
     item.mergeKey=mergeKey; item.targetName=targetName; item.hits=1
 end
 -- A miss, dodge, parry ... of the player; only the scroll style shows these.
-function K.damageText.SpawnMiss(missType,targetName,spell)
+-- text: the game's own word for a miss kind we have no word for (combat text feed), shown as it is.
+function K.damageText.SpawnMiss(missType,targetName,spell,text)
     local mode=K.CombatTextMode()
-    if (mode~="scroll" and mode~="rise") or not MISS_TEXT[missType] then return end
-    if K.damageText.list and K.damageText.list.On() then return K.damageText.list.PushMiss(K.T(MISS_TEXT[missType]),targetName,spell,missType) end
+    if (mode~="scroll" and mode~="rise") or not (MISS_TEXT[missType] or text) then return end
+    text=MISS_TEXT[missType] and K.T(MISS_TEXT[missType]) or text
+    if K.damageText.list and K.damageText.list.On() then return K.damageText.list.PushMiss(text,targetName,spell,missType) end
     local icon
     if spell and K.DB().combatTextIcons~=false then icon=K.SpellIcon(spell) end
-    local item=Add(K.T(MISS_TEXT[missType]),Presentation((mode=="rise" and RISE or SCROLL).miss),1,0.82,0.1,targetName,true,true,icon)
+    local item=Add(text,Presentation((mode=="rise" and RISE or SCROLL).miss),1,0.82,0.1,targetName,true,true,icon)
     item.miss=missType
 end
 local combat=CreateFrame("Frame",nil,UIParent)
 for ev in pairs(K.tools.CombatEvents) do combat:RegisterEvent(ev) end
 combat:SetScript("OnEvent",function()
+    -- With the game's combat text feed (game 0.138+, DamageTextWorld.lua) hits come from there; never both.
+    if K.damageText.world and K.damageText.world.Active() then return end
     local hit=K.tools.ParseCombatLine(event,arg1)
     if not hit then return end
     if hit.kind=="damage" then K.damageText.Spawn(hit.amount,hit.critical,hit.targetName,hit.school,hit.periodic,hit.spell)

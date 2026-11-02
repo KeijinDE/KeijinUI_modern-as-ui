@@ -34,7 +34,8 @@ function K.CreateCombatPreview(parent,x,y)
                 local s,r,g,b,icon,scroll,pop=K.damageText.Describe(mode,e.crit,e.school,false,e.spell)
                 local age=self.age
                 local t=math.min(1,age/s.life)
-                local factor=K.damageText.TextSize()
+                local list=K.damageText.list
+                local factor=list and list.Enabled() and list.Size() or K.damageText.TextSize()
                 local size=math.max(1,math.floor((pop and s.size*K.damageText.PopFactor(age) or s.size)*factor+.5))
                 local text=e.text
                 if e.column==3 and K.DB().combatTextMerge==false then text="10" end

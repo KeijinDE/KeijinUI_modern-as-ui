@@ -303,7 +303,7 @@ local function Pin(i)
         pin:SetScript("OnLeave",function() GameTooltip:Hide() end)
         pin:SetScript("OnHide",function() if GameTooltip.GetOwner and GameTooltip:GetOwner()==this then GameTooltip:Hide() end end)
         pin:EnableMouseWheel(true)
-        pin:SetScript("OnMouseWheel",function() local f=Minimap:GetScript("OnMouseWheel"); if f then f() end end)
+        pin:SetScript("OnMouseWheel",function() local f=K.SafeGetScript(Minimap,"OnMouseWheel"); if f then f() end end)
         G.pins[i]=pin
     end
     local scale=G.IconScale()

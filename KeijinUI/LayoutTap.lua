@@ -41,12 +41,12 @@ function T.WatchEditFocus(edit,dialog)
     if edit.keijinTapFocusWatched then return end
     edit.keijinTapFocusWatched=true
     dialog=dialog or edit
-    local hidden=dialog:GetScript("OnHide")
+    local hidden=K.SafeGetScript(dialog,"OnHide")
     dialog:SetScript("OnHide",function()
         edit.keijinTapFocused=nil
         if hidden then hidden() end
     end)
-    local gained,lost=edit:GetScript("OnEditFocusGained"),edit:GetScript("OnEditFocusLost")
+    local gained,lost=K.SafeGetScript(edit,"OnEditFocusGained"),K.SafeGetScript(edit,"OnEditFocusLost")
     edit:SetScript("OnEditFocusGained",function()
         edit.keijinTapFocused=true; T.Cancel()
         if gained then gained() end
@@ -59,7 +59,7 @@ end
 if K.chatCopy and K.chatCopy.edit then T.WatchEditFocus(K.chatCopy.edit,K.chatCopy.panel) end
 if K.collection and K.collection.search then T.WatchEditFocus(K.collection.search,K.collection.panel) end
 local function Observe(frame,eventName)
-    local original=frame:GetScript(eventName)
+    local original=K.SafeGetScript(frame,eventName)
     frame.keijinTapScripts=frame.keijinTapScripts or {}
     if not original or frame.keijinTapScripts[eventName]==original then return end
     local callback=function() T.Cancel(); original() end

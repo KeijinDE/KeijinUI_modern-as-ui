@@ -25,6 +25,7 @@ end
 local NATIVE={"MinimapBorderTop","MinimapBorder","MinimapBackdrop","MinimapToggleButton","MinimapZoneTextButton","GameTimeFrame"}
 local CLOCK_W=40
 local saved,styled,panel,zone,lastZone,clock,lastClock
+local clockValue,clockRead,clockKey=false,0,nil   -- local time read from the game: have a time, last read, minute shown
 local hidden={}
 -- Module "Minimap" off gives the game's own minimap back (Disable); the style switch only matters while it is on.
 local function Wanted() return K.ModuleOn("minimap") and K.DB().minimapStyle~=false end
@@ -56,9 +57,9 @@ local function Build()
     panel:ClearAllPoints(); panel:SetPoint("TOPLEFT",MinimapCluster,"TOPLEFT",0,0)
     zone=K.Text(panel,"",11,"TOPLEFT",13,-10,PANEL_W-26-CLOCK_W)
     zone:SetTextColor(1,0.82,0.28)
-    -- Clock at the right of the zone line. date() in this client always formats UTC (no timezone,
-    -- benilla stdlib.rs) and GetGameTime() is the server time, so the clock is UTC plus the offset
-    -- set in the options (K.DB().clockOffset, whole hours).
+    -- Clock at the right of the zone line: the client's local time from AZS_GetLocalTime (game 0.115+).
+    -- Without it, or while it returns nil, plain UTC from date() (it always formats UTC in this client,
+    -- benilla stdlib.rs); there is no time zone setting. Written only when the minute changes.
     clock=K.Text(panel,"",11,"TOPRIGHT",-13,-10)
     -- Thin border around the map, above it (higher frame level), only the edge is drawn.
     local inner=CreateFrame("Frame",nil,MinimapCluster)
@@ -121,7 +122,7 @@ local function Disable()
         if f then f:Show() end
     end
     hidden={}
-    lastZone=nil; lastClock=nil
+    lastZone=nil; lastClock=nil; clockValue=false; clockKey=nil
 end
 -- Style on or off; the setting is saved, off restores the native look.
 function K.SetMinimapStyle(on)
@@ -130,21 +131,20 @@ function K.SetMinimapStyle(on)
     if on then Enable() else Disable() end
     if K.layout then K.layout.Place("minimap"); K.layout.Place("tracker") end
 end
--- Clock offset to UTC in whole hours, -12 .. +14.
-function K.ClockOffset()
-    local v=tonumber(K.DB().clockOffset) or 0
-    return math.max(-12,math.min(14,math.floor(v)))
+-- The game's own local time clock (HUD part localClock, game 0.115+); without the part it stays as it is.
+local function LocalClockKnown()
+    return type(AZS_SetHudShown)=="function" and type(AZS_IsHudShown)=="function"
+        and type(AZS_HUD_CVARS)=="table" and AZS_HUD_CVARS.localClock~=nil
+        and type(AZS_GetLocalTime)=="function"   -- 0.139 doc: the part is only usable together with AZS_GetLocalTime
 end
-function K.SetClockOffset(v)
-    v=math.floor(tonumber(v) or 0)
-    if v>14 then v=-12 elseif v<-12 then v=14 end
-    K.DB().clockOffset=v
-    lastClock=nil
+-- True where the option can act (shown disabled in the settings otherwise).
+function K.LocalClockAvailable() return LocalClockKnown() end
+function K.LocalClockShown()
+    if not LocalClockKnown() then return true end
+    return AZS_IsHudShown("localClock") and true or false
 end
-function K.ClockOffsetText()
-    local v=K.ClockOffset()
-    if v==0 then return "UTC" end
-    return "UTC"..(v>0 and "+" or "")..v
+function K.SetLocalClockShown(on)
+    if LocalClockKnown() then pcall(AZS_SetHudShown,"localClock",on and true or false) end
 end
 function K.MinimapStyled() return styled and true or false end
 local function Update()
@@ -157,9 +157,35 @@ local function Update()
     HideNative()
     local text=(GetMinimapZoneText and GetMinimapZoneText()) or (GetRealZoneText and GetRealZoneText()) or ""
     if text~=lastZone then lastZone=text; zone:SetText(text) end
-    local now=""
-    if type(date)=="function" and type(time)=="function" then
-        local ok,value=pcall(date,"!%H:%M",time()+K.ClockOffset()*3600)
+    local now=lastClock or ""
+    if type(AZS_GetLocalTime)=="function" then
+        -- Once a second is plenty for a minute display (game doc). nil is also the answer in the first frame after
+        -- /reload: keep what is shown, read again on the next tick and never fall back to UTC while the function exists.
+        local t=GetTime()
+        if not clockValue or t-clockRead>=1 then
+            clockRead=t
+            local ok,value=pcall(AZS_GetLocalTime)
+            if ok and type(value)=="table" and tonumber(value.hour) and tonumber(value.minute) then
+                clockValue=true
+                local h,m=math.floor(value.hour),math.floor(value.minute)
+                local key=h*60+m+(value.is24Hour==false and 2000 or 0)
+                if key~=clockKey then
+                    clockKey=key
+                    local short=h
+                    if value.is24Hour==false then short=math.mod(h,12); if short==0 then short=12 end end
+                    now=string.format("%02d:%02d",short,m)
+                    -- 12 hour clients: the game's own text ("10:42 PM") only if it fits the width reserved by CLOCK_W
+                    if value.is24Hour==false and type(value.text)=="string" and value.text~="" then
+                        clock:SetText(value.text)
+                        local width=clock:GetStringWidth()
+                        if K.Number(width) and width<=CLOCK_W then now=value.text end
+                    end
+                    clock:SetText(now); lastClock=now   -- the measuring write above may hold the long text
+                end
+            else clockValue=false end
+        end
+    elseif type(date)=="function" then
+        local ok,value=pcall(date,"!%H:%M")
         if ok and value then now=value end
     end
     if now~=lastClock then lastClock=now; clock:SetText(now) end

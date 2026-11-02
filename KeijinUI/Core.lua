@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.6.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.7.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -30,6 +30,19 @@ function K.UIWidth()
     local l,r=UIParent:GetLeft(),UIParent:GetRight()
     if l and r and r-l>40 then return r-l end
     return UIParent:GetWidth()
+end
+-- Client update 02.11.: GetScript on a frame type that has no such script (an OnClick on a Minimap or a plain
+-- Frame) raises '<frame> doesn't have a "<type>" script' instead of returning nil. HasScript is the client's own
+-- test; pcall covers a frame without it and any other refusal. Returns the handler or nil.
+function K.SafeGetScript(frame, name)
+    if not frame or not frame.GetScript then return nil end
+    if frame.HasScript then
+        local ok, has = pcall(frame.HasScript, frame, name)
+        if ok and not has then return nil end
+    end
+    local ok, handler = pcall(frame.GetScript, frame, name)
+    if ok then return handler end
+    return nil
 end
 function K.UIHeight()
     local b,t=UIParent:GetBottom(),UIParent:GetTop()
@@ -87,6 +100,11 @@ function K.DB()
     end
     if type(db.layout) ~= "table" then db.layout = {} end
     if type(db.native) ~= "table" then db.native = {} end
+    -- 4.6.3: the list of the damage numbers is the third value of the position; an old switch moves over once.
+    if db.combatTextList ~= nil then
+        if db.combatTextList == true then db.combatTextPosition = "list" end
+        db.combatTextList = nil
+    end
     if type(db.hidden) ~= "table" then db.hidden = {} end
     if db.snap == nil then db.snap = true end
     if db.lang ~= "de" and db.lang ~= "en" and not (K.IsLang and K.IsLang(db.lang)) then db.lang = "en" end
@@ -177,9 +195,17 @@ local book, byName
 local function AsciiLower(c) return string.char(string.byte(c)+32) end
 local function Lower(s) return (string.gsub(s,"[A-Z]",AsciiLower)) end
 local gear, gearDirty, gearScan = {}, true, 0
+-- The game's placeholder for an unknown icon (INV_Misc_QuestionMark, any case, / or \) is no icon: nil.
+-- Shared by K.SpellIcon and KeijinBuildBar.lua, so the fixed icon tables take over.
+function K.RealIcon(path)
+    if type(path)~="string" or path=="" then return nil end
+    if string.find(Lower(path),"inv_misc_questionmark",1,true) then return nil end
+    return path
+end
+local RealIcon=K.RealIcon
 function K.SpellIcon(name)
     if not name or name=="" or K.SourceKey(name)=="melee" then
-        if type(GetInventoryItemTexture)=="function" then return GetInventoryItemTexture("player",16) end
+        if type(GetInventoryItemTexture)=="function" then return RealIcon(GetInventoryItemTexture("player",16)) end
         return nil
     end
     if not book then
@@ -191,7 +217,7 @@ function K.SpellIcon(name)
                 if type(offset)=="number" and type(count)=="number" then
                     for index=math.max(1,offset+1),math.min(1023,offset+count) do
                         local spell=GetSpellName(index,"spell")
-                        if spell then book[spell]=GetSpellTexture(index,"spell") end
+                        if spell then book[spell]=RealIcon(GetSpellTexture(index,"spell")) end
                     end
                 end
             end
@@ -208,7 +234,7 @@ function K.SpellIcon(name)
             for slot=1,19 do
                 local link=GetInventoryItemLink("player",slot)
                 local _,_,item=string.find(link or "","%[(.-)%]")
-                local texture=item and GetInventoryItemTexture("player",slot)
+                local texture=item and RealIcon(GetInventoryItemTexture("player",slot))
                 if texture then gear[Lower(item)]=texture end
             end
         end

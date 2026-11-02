@@ -305,7 +305,8 @@ end
 local function AppearanceClick()
     if not editor or not L.Active() or not L.CanEdit(editor.key) then S.Close(); return end
     local field=this.option
-    if field=="headers" then
+    if field=="onTop" then K.onTop.Set(editor.key,not K.onTop.Get(editor.key))
+    elseif field=="headers" then
         local current=K.WindowConfig(editor.key).headers
         local nextMode={normal="thin",thin="off",off="default"}
         local value=current and nextMode[current] or "normal"
@@ -348,18 +349,20 @@ function S.AppearanceValues()
     else FieldRow("scale") end
     y=y-4
     editor.appearanceTitle:ClearAllPoints(); editor.appearanceTitle:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y)
-    local any=cap.rim or cap.back or cap.strip or cap.alpha or cap.headers
+    local onTop=K.onTop and K.onTop.CanEdit(key)
+    local any=cap.rim or cap.back or cap.strip or cap.alpha or cap.headers or onTop
     if any then editor.appearanceTitle:Show() else editor.appearanceTitle:Hide() end
     if any then y=y-O.CompactText(editor.appearanceTitle,264)-4 end
-    for _,field in ipairs({"rim","back","strip","headers"}) do
+    for _,field in ipairs({"rim","back","strip","headers","onTop"}) do
         local row=editor.appearance[field]
-        if cap[field] then
+        if cap[field] or (field=="onTop" and onTop) then
             row:ClearAllPoints(); row:SetPoint("TOPLEFT",editor,"TOPLEFT",14,y); row:Show()
             local value
             if field=="headers" then
                 local modes={normal="Normal",thin="Schmal",off="Aus"}
                 local mode=K.WindowConfig(key).headers
                 value=mode and modes[mode] or "Vorgabe"
+            elseif field=="onTop" then value=K.onTop.Get(key) and "An" or "Aus"
             else value=K.WindowShown(key,field) and "An" or "Aus" end
             row.value:SetText(K.T(value))
             row:SetHeight(math.max(28,O.CompactText(row.label,190)+8,O.CompactText(row.value,60)+8))
@@ -420,9 +423,17 @@ local function MakeEditor()
     AppearanceRow("back","Hintergrund anzeigen")
     AppearanceRow("strip","Headergrafik anzeigen")
     AppearanceRow("headers","Abschnittstitel")
+    AppearanceRow("onTop","Über Level- und Schmuckauswahl")
+    editor.appearance.onTop:SetScript("OnEnter",function()
+        GameTooltip:SetOwner(this,"ANCHOR_RIGHT")
+        GameTooltip:AddLine(K.T("Hält dieses Fenster über den Karten für Levelaufstieg und Schmuck und macht es dort anklickbar."),1,1,1,true)
+        GameTooltip:Show()
+    end)
+    editor.appearance.onTop:SetScript("OnLeave",function() GameTooltip:Hide() end)
     editor.appearanceReset=Button(editor,"Darstellung zurücksetzen",264,14,function()
         if not L.Active() or not L.CanEdit(editor.key) then S.Close(); return end
         K.ResetWindowOptions(editor.key)
+        K.onTop.Set(editor.key,false)
         editor.settingValues=true
         editor.fields.alpha:SetText(tostring(math.floor(K.WindowAlpha(editor.key)*100+.5)))
         editor.original.alpha=Number(editor.fields.alpha:GetText())

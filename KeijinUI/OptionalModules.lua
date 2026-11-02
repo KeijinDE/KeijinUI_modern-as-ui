@@ -10,7 +10,7 @@ K.modules=M
 local function Bind(key,label,text,drivers,stop,resume,events,reload)
     local entry={key=key,label=label,text=text,drivers={},stop=stop,resume=resume,events=events,reload=reload}
     for _,frame in ipairs(drivers or {}) do
-        table.insert(entry.drivers,{frame=frame,update=frame:GetScript("OnUpdate"),event=frame:GetScript("OnEvent")})
+        table.insert(entry.drivers,{frame=frame,update=K.SafeGetScript(frame,"OnUpdate"),event=K.SafeGetScript(frame,"OnEvent")})
     end
     M.definitions[key]=entry
     table.insert(M.order,key)

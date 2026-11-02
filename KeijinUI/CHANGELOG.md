@@ -5,6 +5,22 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.7.0 (2026-11-02, release v4.7.0)
+
+* **Damage numbers fixed in the world:** With a game version that has the combat text feed (0.138 and later), the numbers of your hits, including those of companions, summons and totems, now come directly from the game. With position "At the enemy" each number sits over the enemy and moves along when you turn or move. After the enemy dies, the number stays at the spot where it died. It is hidden while that spot is outside the view, and its size adjusts to the distance. This works without nameplates. Absorbed, Reflected and Deflected are now shown too. "Bundle area hits" combines identical hits across all enemies. Without the feed (older game versions) everything works as before. In combat this needs noticeably less processing.
+
+* **Damage numbers, list as position:** The list is now the third entry of the "Position" setting (At the enemy, Fixed spot, List). The separate "Show as list" switch is gone. An old list switch is taken over automatically on load. The list settings only apply with position List. Profiles save all three positions.
+
+* **Windows above level-up and jewelry choices:** In layout mode, click a window and enable "Above level up and jewelry choices" under Appearance. The window stays above the choice cards and can be clicked there, and its tooltips are visible there too. Off by default and saved in profiles.
+
+* **Clocks:** The minimap clock shows the client's local time, the time zone setting is gone. The game's local time clock below the minimap can be hidden in Settings, Minimap, "Show game clock (local time)", if the game version supports it.
+
+* **Ability icons:** If the spell book returns only the game's question mark as an icon (for example for Rockbiter Weapon), KeijinUI now shows the correct symbol instead, including for timers and damage numbers.
+
+* **Shaman names:** Earthen Bulwark is now called Stormguard and Unleashed Weapons is now called Elemental Sunder, with the new talent texts in all languages.
+
+* **Compatibility with the client update of 02.11.:** Fixed: after the client update the error "KeijinUIMinimap doesn't have a OnClick script" appeared.
+
 ### 4.6.2 (2026-11-01, release v4.6.2)
 
 * **Totem display:** a new window in the style of the companion display shows the reworked shaman totems with their icon, count and maximum, plus the remaining time. The time pauses with the run. In layout mode the window can be moved and scaled, and it can be switched off in the settings.
@@ -663,6 +679,22 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.7.0 (2026-11-02, Release v4.7.0)
+
+* **Schadenszahlen fest in der Welt:** Mit einer Spielversion, die den Kampftext-Feed hat (0.138 und neuer), kommen die Zahlen deiner Treffer, auch die von Begleitern, Beschwörungen und Totems, jetzt direkt vom Spiel. Bei der Position „Am Gegner“ sitzt jede Zahl über dem Gegner und läuft beim Drehen und Bewegen mit. Nach dessen Tod bleibt sie an der Stelle, an der er gestorben ist. Sie wird ausgeblendet, solange diese Stelle außerhalb der Sicht liegt, und ihre Größe passt sich der Entfernung an. Das funktioniert auch ohne Namensplaketten. Neu angezeigt werden die Meldungen Absorbiert, Reflektiert und Abgelenkt. „Flächentreffer bündeln“ fasst gleiche Treffer über alle Gegner zusammen. Auf älteren Spielversionen bleibt alles wie bisher. Im Kampf braucht das deutlich weniger Rechenaufwand.
+
+* **Schadenszahlen, Liste als Position:** Die Liste ist jetzt der dritte Eintrag der Einstellung „Position“ (Am Gegner, Feste Stelle, Liste). Der getrennte Schalter „Als Liste anzeigen“ entfällt, ein alter Listenschalter wird beim Laden automatisch übernommen. Die Listenregler gelten nur bei Position Liste. Profile speichern alle drei Positionen.
+
+* **Fenster über Level- und Schmuckauswahl:** Im Layoutmodus ein Fenster anklicken und unter Darstellung „Über Level- und Schmuckauswahl“ einschalten. Das Fenster bleibt über den Auswahlkarten, ist dort anklickbar, und seine Tooltips sind ebenfalls sichtbar. Standard aus, im Profil gespeichert.
+
+* **Uhren:** Die Minimap-Uhr zeigt die Ortszeit des Clients, die Zeitzoneneinstellung entfällt. Die Ortszeituhr des Spiels unter der Minimap lässt sich ausblenden (Einstellungen, Minimap, „Spieluhr (Ortszeit) anzeigen“), sofern die Spielversion das unterstützt.
+
+* **Fähigkeitssymbole:** Liefert das Spiel nur ein Fragezeichen als Symbol (zum Beispiel bei Felsbeißer Waffe), zeigt KeijinUI das richtige Symbol, auch bei Zeitgebern und Schadenszahlen.
+
+* **Schamanennamen:** Earthen Bulwark heißt jetzt Stormguard (Sturmwacht), Unleashed Weapons heißt Elemental Sunder (Elementarspaltung), mit den neuen Talenttexten in allen Sprachen.
+
+* **Kompatibilität mit dem Clientupdate vom 02.11.:** Behoben: Nach dem Clientupdate erschien die Fehlermeldung „KeijinUIMinimap doesn't have a OnClick script“.
 
 ### 4.6.2 (2026-11-01, Release v4.6.2)
 

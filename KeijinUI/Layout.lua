@@ -354,6 +354,7 @@ function L.Register(key,frame,name,anchor,options)
     local e={key=key,frame=frame,anchor=anchor,name=name,baseScale=frame:GetScale(),options=options or {}}
     L.entries[key]=e; frame.layoutKey=key
     K.ApplyWindow(frame)
+    if K.onTop then K.onTop.Apply(key) end
     frame:SetMovable(true); frame:SetClampedToScreen(true)
     if frame.SetUserPlaced then frame:SetUserPlaced(false) end
     local handle=CreateFrame("Frame",nil,UIParent); e.handle=handle

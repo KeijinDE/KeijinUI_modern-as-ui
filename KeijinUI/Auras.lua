@@ -45,7 +45,7 @@ local function Release()
         local button=entry.button
         for script,saved in pairs(entry.scripts) do
             saved.active=false
-            if button:GetScript(script)==saved.wrapper then button:SetScript(script,saved.original) end
+            if K.SafeGetScript(button,script)==saved.wrapper then button:SetScript(script,saved.original) end
         end
         local saved=entry.nativeSkin
         if saved then
@@ -117,7 +117,7 @@ local function Add(name)
     Remember(getglobal(name.."Icon")); Remember(getglobal(name.."Duration")); Remember(getglobal(name.."Border"))
     local entry={button=button,name=name,scripts={}}; known[button]=entry; table.insert(entries,entry)
     for _,script in ipairs({"OnShow","OnHide"}) do
-        local original=button:GetScript(script)
+        local original=K.SafeGetScript(button,script)
         local saved={original=original,active=true}
         saved.wrapper=function() if original then original() end; if saved.active and not Inactive() then Layout(false) end end
         entry.scripts[script]=saved

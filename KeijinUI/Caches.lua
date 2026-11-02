@@ -259,7 +259,7 @@ end,arrowOptions)
 C.arrow=arrow
 
 local function Wheel()
-    local f=Minimap and Minimap.GetScript and Minimap:GetScript("OnMouseWheel")
+    local f=Minimap and K.SafeGetScript(Minimap,"OnMouseWheel")
     if f then f() end
 end
 local function ShowTip(button)

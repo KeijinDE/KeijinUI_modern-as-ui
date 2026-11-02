@@ -153,19 +153,18 @@ local function OwnNumbers() local mode=K.CombatTextMode(); return mode=="compact
 O.Requires(O.Toggle(p,"icons","Zaubersymbole",function() return K.DB().combatTextIcons~=false end,function(on) K.DB().combatTextIcons=on end),OwnNumbers)
 O.Requires(O.Toggle(p,"merge","Flächentreffer bündeln",function() return K.DB().combatTextMerge~=false end,function(on) K.DB().combatTextMerge=on end),OwnNumbers)
 O.Help(p,"Fasst gleiche Treffer innerhalb kurzer Zeit zusammen.")
-O.Requires(O.Slider(p,"combatTextSize","Größe der Schadenszahlen",K.damageText.TextSize,K.damageText.SetTextSize,50,200),OwnNumbers)
-O.Requires(O.Choice(p,"combatTextPosition","Position",K.damageText.Position,K.damageText.SetPosition,{{"plate","Am Gegner"},{"fixed","Feste Stelle"}}),OwnNumbers)
+O.Requires(O.Slider(p,"combatTextSize","Größe der Schadenszahlen",K.damageText.TextSize,K.damageText.SetTextSize,50,200),function() return OwnNumbers() and not K.damageText.list.Enabled() end)
+O.Requires(O.Choice(p,"combatTextPosition","Position",K.damageText.Position,K.damageText.SetPosition,{{"plate","Am Gegner"},{"fixed","Feste Stelle"},{"list","Liste"}}),OwnNumbers)
 local list=K.damageText.list
 local function ListOn() return OwnNumbers() and list.Enabled() end
-O.Requires(O.Toggle(p,"combatTextList","Als Liste anzeigen",list.Enabled,list.SetEnabled),OwnNumbers)
 O.Requires(O.Slider(p,"combatTextListLines","Sichtbare Zeilen der Liste",list.Lines,list.SetLines,2,12,{unit="",factor=1}),ListOn)
 O.Requires(O.Slider(p,"combatTextListSize","Schriftgröße der Liste",list.Size,list.SetSize,50,200),ListOn)
-O.Help(p,"Liste: Treffer erscheinen untereinander in einem eigenen Bereich mit festem Zeilenabstand. Gleiche Treffer werden gebündelt, überzählige alte verworfen. Den Bereich im Layoutmodus verschieben und skalieren; die Position am Gegner gilt dann nicht.")
+O.Help(p,"Position Liste: Treffer erscheinen untereinander in einem eigenen Bereich mit festem Zeilenabstand. Gleiche Treffer werden gebündelt, überzählige alte verworfen. Zeilen und Schriftgröße gelten nur bei Position Liste. Den Bereich im Layoutmodus verschieben und skalieren.")
 local function PositionHelp()
     local mode=K.CombatTextMode()
     if mode=="native" then return K.T("Im Stil Spiel zeichnet das Spiel die Zahlen selbst. Ihre Position lässt sich nicht verschieben; für Feste Stelle Kompakt, Scrollend oder Aufsteigend wählen.") end
     if mode=="off" then return K.T("Schadenszahlen sind aus.") end
-    return K.T("Am Gegner: Zahlen steigen über der Namensplakette. Feste Stelle: alle Zahlen starten im Kampftext Anker.").." "..K.T("Position und Größe im Layoutmodus ändern.")
+    return K.T("Am Gegner: Zahlen erscheinen über dem Gegner, fest in der Welt verankert, und bleiben nach dem Tod an der Stelle. Feste Stelle: alle Zahlen starten im Kampftext Anker.").." "..K.T("Position und Größe im Layoutmodus ändern.")
 end
 local positionHelp=O.Help(p,"")
 K.Live(positionHelp,PositionHelp)
@@ -248,12 +247,9 @@ O.Section(p,"Minimap","minimap")
 O.Toggle(p,"minimapStyle","Minimap im KeijinUI Stil",function() return K.DB().minimapStyle~=false end,K.SetMinimapStyle)
 O.Toggle(p,"minimapButton","Minimapknopf",K.MinimapButtonOn,K.SetMinimapButton)
 O.Requires(O.Choice(p,"minimapButtonSpot","Position des Minimapknopfs",K.MinimapButtonSpot,K.SetMinimapButtonSpot,K.minimapButtonSpots),K.MinimapButtonOn)
+O.Requires(O.Toggle(p,"localClock","Spieluhr (Ortszeit) anzeigen",K.LocalClockShown,K.SetLocalClockShown),K.LocalClockAvailable)
+O.Help(p,"Die Ortszeituhr des Spiels unter der Minimap. Ohne diesen Teil im Spiel ohne Wirkung.")
 -- A compact cycling pair avoids an oversized 27-item dropdown.
-local zone=O.Row(p,"clockOffset","Zeitzone der Uhr",34)
-zone.value=K.Text(zone,"",11,"RIGHT",-108,0)
-O.Button(zone,"−",420,-2,40,function() K.SetClockOffset(K.ClockOffset()-1) end)
-O.Button(zone,"+",468,-2,40,function() K.SetClockOffset(K.ClockOffset()+1) end)
-O.Watch(function() zone.value:SetText(K.ClockOffsetText()) end)
 O.Finish(p)
 
 p=O.Page("caches","Caches","Run & Karte","run","caches")
@@ -360,6 +356,7 @@ for _,entry in ipairs(K.shortcuts.actions) do
         O.Choice(p,"layoutTap","Layoutmodus antippen",K.layoutTap.Get,K.layoutTap.Set,{{"off","Aus"},{"ALT","Alt"},{"CTRL","Strg"},{"SHIFT","Shift"}})
         O.Help(p,"Taste oder Antippen schaltet den Layoutmodus um. Beides funktioniert zugleich.")
         table.insert(row.searchEntry.help,"Taste oder Antippen schaltet den Layoutmodus um. Beides funktioniert zugleich.")
+        table.insert(row.searchEntry.help,"Über Level- und Schmuckauswahl: Im Layoutmodus das gewünschte Fenster anklicken und den Schalter unter Darstellung einschalten.")
     else O.RowModule(p,row,"shortcuts") end
 end
 O.RowModule(p,O.ShortcutRow(p,"TOGGLEAUTORUN","Automatisch laufen"),"autowalk")

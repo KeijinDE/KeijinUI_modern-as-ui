@@ -315,6 +315,28 @@ function O.ShowCategory(key)
         end
     end
 end
+local function AddSub(buttons,destination)
+    local sub=CreateFrame("Button",nil,panel); sub:SetWidth(160); sub:SetHeight(20)
+    sub.pageKey=destination
+    sub:SetBackdrop({bgFile=K.flat}); sub:SetBackdropColor(0,0,0,0)
+    sub.text=K.LText(sub,O.pages[destination].caption,11,"LEFT",8,0,140)
+    sub.text:SetHeight(16); sub.text:SetJustifyH("LEFT"); sub.text:SetJustifyV("MIDDLE")
+    sub.marker=sub:CreateTexture(nil,"ARTWORK"); sub.marker:SetTexture(K.flat)
+    sub.marker:SetWidth(2); sub.marker:SetHeight(12); sub.marker:SetPoint("LEFT",sub,"LEFT",0,0)
+    sub.marker:SetVertexColor(1,.82,.28,1); sub.marker:Hide()
+    sub:SetScript("OnClick",function() O.ShowPage(destination) end)
+    sub:SetScript("OnEnter",function() sub.text:SetTextColor(1,.87,.5) end)
+    sub:SetScript("OnLeave",O.MarkSections)
+    O.Wheel(sub); sub:Hide(); table.insert(buttons,sub)
+end
+-- A page added after the navigation was built (late, once the saved variables are known).
+function O.AddNavigationPage(categoryKey,pageKey)
+    for _,item in ipairs(O.navOrder or {}) do
+        if item[1]==categoryKey then
+            table.insert(item[3],pageKey); AddSub(O.navSections[categoryKey],pageKey)
+        end
+    end
+end
 function O.Navigation(items)
     O.navOrder=items; O.categoryPage={}
     for _,v in ipairs(items) do
@@ -327,21 +349,7 @@ function O.Navigation(items)
         b:SetScript("OnLeave",O.UpdateNavigation)
         b.disclosure=K.Text(b,">",10,"RIGHT",-9,0,10)
         local buttons={}; O.navSections[key]=buttons
-        for _,pageKey in ipairs(v[3]) do
-            local destination=pageKey
-            local sub=CreateFrame("Button",nil,panel); sub:SetWidth(160); sub:SetHeight(20)
-            sub.pageKey=destination
-            sub:SetBackdrop({bgFile=K.flat}); sub:SetBackdropColor(0,0,0,0)
-            sub.text=K.LText(sub,O.pages[destination].caption,11,"LEFT",8,0,140)
-            sub.text:SetHeight(16); sub.text:SetJustifyH("LEFT"); sub.text:SetJustifyV("MIDDLE")
-            sub.marker=sub:CreateTexture(nil,"ARTWORK"); sub.marker:SetTexture(K.flat)
-            sub.marker:SetWidth(2); sub.marker:SetHeight(12); sub.marker:SetPoint("LEFT",sub,"LEFT",0,0)
-            sub.marker:SetVertexColor(1,.82,.28,1); sub.marker:Hide()
-            sub:SetScript("OnClick",function() O.ShowPage(destination) end)
-            sub:SetScript("OnEnter",function() sub.text:SetTextColor(1,.87,.5) end)
-            sub:SetScript("OnLeave",O.MarkSections)
-            O.Wheel(sub); sub:Hide(); table.insert(buttons,sub)
-        end
+        for _,pageKey in ipairs(v[3]) do AddSub(buttons,pageKey) end
     end
 end
 -- Everything a page builds is tracked with its anchor and section, so a module switch can hide a section and move

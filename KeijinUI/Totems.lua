@@ -7,7 +7,7 @@ T.frame=frame
 frame:SetWidth(34); frame:SetHeight(47); frame:SetFrameStrata("LOW"); frame:SetClampedToScreen(true)
 K.Skin(frame,4); frame:Hide()
 function T.On() return K.ModuleOn("totems") end
-local function Shaman() local _,class=UnitClass("player"); return class=="SHAMAN" end
+local function Shaman() return K.PlayerClass()=="SHAMAN" end
 local function Available()
     if Shaman() then return true end
     -- The raw current payload is sufficient here; both public getters allocate.

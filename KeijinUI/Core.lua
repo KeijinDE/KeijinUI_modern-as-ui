@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.7.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "4.7.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -63,6 +63,37 @@ end
 function K.ClassColor(token)
     local c = token and (CLASS_OVERRIDE[token] or type(RAID_CLASS_COLORS) == "table" and RAID_CLASS_COLORS[token])
     if type(c) == "table" and type(c.r) == "number" then return c.r, c.g, c.b end
+end
+-- Prefer the per-run class because UnitClass can lag after switching heroes.
+-- Observe message order before module callbacks: GetTime timestamps can tie.
+-- Existing client state (before our first message) uses timestamps conservatively;
+-- a fresh AZSZONE always opens its own run, even next to an old end report.
+local classZone, classZoneEnded
+local function ZoneRunEnded()
+    if classZone and classZone==AZS_ZONE then return classZoneEnded end
+    local e=type(AZS_END)=="table" and AZS_END.result
+    if not e or e=="" then return false end
+    local at,zt=AZS_END_UPDATED,AZS_ZONE_UPDATED
+    return type(at)=="number" and type(zt)=="number" and at>=zt
+end
+local function ObserveClassMessage(prefix)
+    if prefix=="AZSZONE" then
+        classZone=AZS_ZONE; classZoneEnded=false
+    elseif prefix=="AZSEND" and type(AZS_END)=="table" and AZS_END.result and AZS_END.result~="" then
+        classZone=AZS_ZONE; classZoneEnded=true
+    end
+end
+-- The current zone data when it still belongs to the open run (class, cname), else nil.
+function K.ActiveZone()
+    if type(AZS_ZONE)=="table" and not ZoneRunEnded() then return AZS_ZONE end
+end
+function K.PlayerClass()
+    local z=K.ActiveZone(); z=z and z.class
+    if type(z)=="string" and z~="" then return string.upper(z) end
+    if UnitClass then
+        local _,token=UnitClass("player")
+        if type(token)=="string" and token~="" then return token end
+    end
 end
 -- Modules (OptionalModules.lua). Older module keys that were merged map onto the new key.
 K.moduleAlias = { damageText = "combatText", resourceText = "combatText", guardianNav = "guardians",
@@ -580,7 +611,12 @@ function K.ModuleOn(key)
     key=K.ModuleKey(key)
     local modules=K.DB().modules
     -- Banner replacement is opt-in: the CVar cannot prove that Bevy stopped drawing.
-    if key=="gameMessages" then return type(modules)=="table" and modules[key]==true end
+    -- Hidden (the default) also hides the settings page and the module row, which depend on this answer.
+    if key=="gameMessages" then
+        local B=K.gameMessages
+        if not B or B.Hidden then return false end
+        return B.Test or (type(modules)=="table" and modules[key]==true)
+    end
     return not (key and type(modules)=="table" and modules[key]==false)
 end
 function K.Update(owner,fn) table.insert(K.updates,fn); K.callbackOwners[fn]=owner end
@@ -591,6 +627,7 @@ function K.On(eventName, fn, owner)
 end
 K.driver = CreateFrame("Frame", "KeijinUIEvents")
 K.driver:SetScript("OnEvent", function()
+    if event=="CHAT_MSG_ADDON" then ObserveClassMessage(arg1) end
     for _,fn in ipairs(K.events[event] or {}) do if K.ModuleOn(K.callbackOwners[fn]) then fn(event,arg1,arg2) end end
 end)
 -- Shared cache stays current even when the combat text module is disabled.
@@ -605,6 +642,8 @@ K.driver:SetScript("OnUpdate", function()
     if K.layout then K.layout.ClampAll() end
 end)
 K.On("PLAYER_LOGOUT", function()
+    -- A banner value changed by the player must be recognised before anything is written back.
+    if K.gameMessages and K.gameMessages.CheckOutside then K.gameMessages.CheckOutside() end
     local parts = {}
     for part in pairs(K.DB().native) do table.insert(parts,part) end
     for _,part in ipairs(parts) do K.Native(part,false) end

@@ -45,8 +45,7 @@ end
 local function ClassToken(z)
     z=z or AZS_ZONE
     if type(z)=="table" and type(z.class)=="string" and z.class~="" then return string.upper(z.class) end
-    if UnitClass then local _,token=UnitClass("player"); if type(token)=="string" and token~="" then return token end end
-    return nil
+    return K.PlayerClass()
 end
 -- Race of the hero: localized name and token (UnitRace), "?" when the client gives none.
 local function Race(z)

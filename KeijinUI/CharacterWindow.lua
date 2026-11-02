@@ -85,7 +85,12 @@ end
 local function Identity()
     if not CharacterLevelText or not UnitLevel then return end
     local class,token
-    if UnitClass then class,token=UnitClass("player") end
+    if UnitClass then class=UnitClass("player") end
+    token=K.PlayerClass()
+    -- A stale UnitClass name must not survive a class change: with a fresh token the name comes from CLASSES or AZS_ZONE.cname.
+    -- AZS_ZONE.cname only counts while K.PlayerClass() also takes the zone (K.ActiveZone), else UnitClass stays.
+    local zone=K.ActiveZone()
+    if zone and zone.class and type(zone.cname)=="string" and zone.cname~="" then class=zone.cname end
     class=CLASSES[token] and K.T(CLASSES[token]) or class
     local race,raceToken
     if UnitRace then race,raceToken=UnitRace("player") end
@@ -314,6 +319,7 @@ function C.Refresh()
 end
 K.On("ADDON_LOADED",C.Refresh)
 K.On("PLAYER_ENTERING_WORLD",C.Refresh)
+K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSZONE" then C.Refresh() end end)
 K.OnLang(C.Refresh)
 K.Update("characterwindow",function()
     -- Shared updates are throttled by Core; apply only while the native window is visible.

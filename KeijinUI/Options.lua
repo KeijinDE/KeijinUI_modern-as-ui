@@ -72,6 +72,7 @@ SlashCmdList.KEIJINUI=function(message)
     elseif command=="navigation debug" then K.navigation.Debug()
     elseif command=="levels debug" then K.storedLevels.Debug()
     elseif command=="menu" or command=="menu debug" then MenuDebug()
+    elseif command=="messages test" then K.gameMessages.TestToggle()
     elseif command=="messages probe" then K.messageProbe.Toggle()
     elseif command=="mark" or string.find(command,"^mark%s") then
         local _,_,value=string.find(command,"^mark%s+(%S+)$")

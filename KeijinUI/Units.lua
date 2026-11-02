@@ -232,7 +232,10 @@ Create("player",false); Create("target",true)
 -- Class colours remain optional; other targets follow the native relationship.
 local function HealthColor(unit)
     if K.DB().classHealth~=false and (unit=="player" or UnitIsPlayer(unit)) then
-        local _,token=UnitClass(unit)
+        local token
+        -- The player (and a target that is the player) uses the per run class; UnitClass can be stale after a class change.
+        if unit=="player" or (unit=="target" and UnitIsUnit and UnitIsUnit("target","player")) then token=K.PlayerClass()
+        else local _,t=UnitClass(unit); token=t end
         local r,g,b=K.ClassColor(token)
         if r then return r,g,b end
     end
@@ -347,6 +350,8 @@ end
 K.UpdateUnits=Update
 for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update,"units") end
 K.Update("units",Update)
+-- A new run brings a fresh AZS_ZONE (class); redraw so the class colour follows a class change at once.
+K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSZONE" or prefix=="AZSEND" then Update() end end,"units")
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
 -- Saved variables arrive after the files: switch to a saved compact style as soon as they exist.
 K.moduleRefresh=K.moduleRefresh or {}

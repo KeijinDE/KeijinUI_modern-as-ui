@@ -5,6 +5,12 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 4.7.1 (2026-11-02, release v4.7.1)
+
+* **Class changes between runs:** player health colours, self-target colours, class resources, totems and character identity use the class reported for the current run. Once that run ends, the native class takes over until the next zone report. Message order handles reports received at the same time, without requiring a settings reset.
+* **Optional banner diagnostics:** `/kui messages test` enables a diagnostic mode after a UI reload. It is off by default, reports whether the game honours banner suppression, and preserves later changes made in the game options.
+* **Update instructions:** the installation guide now explains replacing the complete addon folder, checking the TOC path and identifying the game installation being started. Saved settings are stored separately.
+
 ### 4.7.0 (2026-11-02, release v4.7.0)
 
 * **Damage numbers fixed in the world:** With a game version that has the combat text feed (0.138 and later), the numbers of your hits, including those of companions, summons and totems, now come directly from the game. With position "At the enemy" each number sits over the enemy and moves along when you turn or move. After the enemy dies, the number stays at the spot where it died. It is hidden while that spot is outside the view, and its size adjusts to the distance. This works without nameplates. Absorbed, Reflected and Deflected are now shown too. "Bundle area hits" combines identical hits across all enemies. Without the feed (older game versions) everything works as before. In combat this needs noticeably less processing.
@@ -679,6 +685,12 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 4.7.1 (2026-11-02, Release v4.7.1)
+
+* **Klassenwechsel zwischen Runs:** Spielerfarbe, Farbe beim Selbstziel, Klassenressourcen, Totems und Charakteranzeige verwenden die vom aktuellen Run gemeldete Klasse. Nach Runende gilt bis zur nächsten Zonenmeldung wieder die native Klasse. Auch gleichzeitig empfangene Meldungen werden in ihrer tatsächlichen Reihenfolge berücksichtigt. Kein Einstellungsreset nötig.
+* **Optionale Bannerdiagnose:** `/kui messages test` aktiviert nach einem Neuladen der Oberfläche einen Testmodus. Er ist standardmäßig aus, meldet, ob das Spiel die Bannerunterdrückung berücksichtigt, und erhält spätere Änderungen in den Spieloptionen.
+* **Updateanleitung:** Die Installationsanleitung erklärt den vollständigen Austausch des Addonordners, die richtige Position der TOC und die Prüfung der gestarteten Spielinstallation. Gespeicherte Einstellungen liegen getrennt.
 
 ### 4.7.0 (2026-11-02, Release v4.7.0)
 

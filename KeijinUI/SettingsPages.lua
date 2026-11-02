@@ -42,13 +42,27 @@ O.Toggle(p,"totems","Totems",K.totems.On,function(on) K.modules.Set("totems",on)
 O.Help(p,"Totems mit Anzahl, Obergrenze und Restzeit. Position und Größe im Layoutmodus ändern.")
 O.Finish(p)
 
-if not K.gameMessages.Hidden then
-p=O.Page("gameMessages","Spielmeldungen","Oberfläche & Layout","general")
-O.Section(p,"Spielmeldungen")
-O.Toggle(p,"gameMessages","Spielmeldungen",K.gameMessages.On,function(on) K.modules.Set("gameMessages",on) end)
-O.Help(p,"Spielmeldungen im Layoutmodus verschieben. Aus: ursprüngliche Banneranzeige.")
-O.GameMessageOptions(p)
-O.Finish(p)
+local function GameMessagesPage()
+    local gp=O.Page("gameMessages","Spielmeldungen","Oberfläche & Layout","general")
+    O.Section(gp,"Spielmeldungen")
+    O.Toggle(gp,"gameMessages","Spielmeldungen",K.gameMessages.On,function(on) K.modules.Set("gameMessages",on) end)
+    O.Help(gp,"Spielmeldungen im Layoutmodus verschieben. Aus: ursprüngliche Banneranzeige.")
+    O.GameMessageOptions(gp)
+    O.Finish(gp)
+end
+if not K.gameMessages.Hidden then GameMessagesPage() end
+-- Test mode (/kui messages test) is only known from ADDON_LOADED on: page, navigation entry and module row are added then.
+function O.AddGameMessagesPage()
+    if O.pages.gameMessages then return end
+    GameMessagesPage()
+    O.AddNavigationPage("general","gameMessages")
+    local mp,key=O.pages.modules,"gameMessages"
+    local definition=K.modules.definitions[key]
+    if mp and definition then
+        O.Toggle(mp,"module_"..key,definition.label,function() return K.ModuleOn(key) end,function(on) K.modules.Set(key,on) end)
+        O.Help(mp,definition.text)
+        O.Finish(mp)
+    end
 end
 
 p=O.Page("windows","HUD Fenster","Oberfläche & Layout","general","basisHud")

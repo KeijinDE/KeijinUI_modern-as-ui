@@ -116,7 +116,7 @@ local function Read()
     local phase=AZS_GetPhase and AZS_GetPhase() or (type(AZS_RUN)=="table" and AZS_RUN.ph)
     if not PHASES[phase] then return nil,"inactive phase" end
     if not UnitExists("player") or not UnitClass or not UnitMana or not UnitManaMax or not UnitPowerType then return nil,"native API unavailable" end
-    local _,class=UnitClass("player")
+    local class=K.PlayerClass()
     local kind=TYPES[class]
     if not kind then return nil,"class has no resource" end
     if not Learned(kind.key) then return nil,"ability not learned" end
@@ -188,7 +188,7 @@ function K.SetResourceFree(free)
     R.Update()
 end
 function K.ResourceDebug()
-    local _,class=UnitClass("player")
+    local class=K.PlayerClass()
     local phase=AZS_GetPhase and AZS_GetPhase() or "?"
     R.Update()
     K.Say(string.format("Resources: class %s, phase %s, type %s, native %s / %s, shown %s, reason %s",

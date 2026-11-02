@@ -1,4 +1,4 @@
-# KeijinUI 4.7.0
+# KeijinUI 4.7.1
 
 Interface addon for Azeroth Survivors (WoW 1.12, Interface 11200). English first, German below.
 Repository: https://github.com/KeijinDE/KeijinUI_modern-as-ui
@@ -86,6 +86,18 @@ Section titles sit under Size & Position, character values have their own small 
 Copy the folder `KeijinUI` into the addon folder of the game and enable it. Disable SurvivorsDragonUi, SurvivorUI,
 KeijinBuildBar, KeijinRunCounters and KeijinAchievements, because KeijinUI contains all of their modules. Their saved
 settings can stay. After changing the enabled addons, restart the game completely. The camera addon is a separate package.
+
+### Updating
+
+Do not drag the new folder over the old one. Windows merges the folders, and old files can remain or the copy can end up in the wrong place. Instead:
+
+1. Close the game.
+2. Delete the old `KeijinUI` folder from the addon folder completely. Your settings are stored separately (`saved/`) and stay.
+3. Copy the new `KeijinUI` folder from the ZIP into the addon folder.
+4. Check that `KeijinUI.toc` lies directly in `AddOns/KeijinUI/`, not in `AddOns/KeijinUI/KeijinUI/` or `AddOns/KeijinUI-x.y.z/`.
+5. If you have more than one game installation, use the addon folder of the installation you actually start.
+
+After starting the game, the chat start message shows the version. If it still shows an old version, the game loads a different folder.
 
 ## Commands
 
@@ -222,6 +234,18 @@ Den Ordner `KeijinUI` in den Addonordner des Spiels kopieren und aktivieren. Sur
 KeijinBuildBar, KeijinRunCounters und KeijinAchievements deaktivieren, weil KeijinUI alle deren Module enthält. Die
 gespeicherten Einstellungen können erhalten bleiben. Nach einer Änderung der aktivierten Addons das Spiel vollständig
 neu starten. Das Kameraaddon ist ein eigenes Paket.
+
+### Aktualisieren
+
+Den neuen Ordner nicht einfach über den alten ziehen. Windows führt die Ordner zusammen, dabei können alte Dateien liegen bleiben oder die Kopie landet an der falschen Stelle. Stattdessen:
+
+1. Das Spiel schließen.
+2. Den alten Ordner `KeijinUI` vollständig aus dem Addonordner löschen. Die Einstellungen liegen getrennt (`saved/`) und bleiben erhalten.
+3. Den neuen Ordner `KeijinUI` aus dem ZIP in den Addonordner kopieren.
+4. Prüfen, dass `KeijinUI.toc` direkt in `AddOns/KeijinUI/` liegt, nicht in `AddOns/KeijinUI/KeijinUI/` oder `AddOns/KeijinUI-x.y.z/`.
+5. Bei mehreren Spielinstallationen den Addonordner der Installation verwenden, die tatsächlich gestartet wird.
+
+Nach dem Spielstart zeigt die Startmeldung im Chat die Version. Steht dort noch eine alte Version, lädt das Spiel einen anderen Ordner.
 
 ## Befehle
 

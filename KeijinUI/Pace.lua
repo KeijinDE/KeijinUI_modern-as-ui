@@ -64,8 +64,7 @@ function P.Details(account)
     local r=AZS_RUN or {}; local phase=AZS_GetPhase and AZS_GetPhase()
     if r.endl==1 then out.status="Endlos"; return out end
     if phase=="ready" or not K.Number(r.t) or not K.Number(r.kills) or r.t<60 then return out end
-    local z=AZS_ZONE or {}; local class=type(z.class)=="string" and string.upper(z.class) or nil
-    if not class and UnitClass then local _,token=UnitClass("player"); class=token end
+    local z=AZS_ZONE or {}; local class=K.PlayerClass()
     local key=Key(z,class); local values,paired,damage={},{},{}
     local open=type(K.DB().runs)=="table" and K.DB().runs.open
     -- The game sends AZS_ZONE once per run, so after a reload it can be empty; the open run keeps its key.

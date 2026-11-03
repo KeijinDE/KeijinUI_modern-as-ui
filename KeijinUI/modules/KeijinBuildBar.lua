@@ -5,6 +5,8 @@ local function SetFont(fs,size)
 end
 local FLAT = "Interface\\ChatFrame\\ChatFrameBackground"
 local ICON, PITCH, COLUMNS, WIDTH, ROWSTART = 28, 30, 11, 400, 58
+-- Width available to the rank (bottom right) and target count (bottom left) plates: half the icon minus margin and gap.
+local BADGE = math.floor((ICON - 2 - 2) / 2)
 -- Action bar (cooldown display only), one row: normal skills, then the racial ability at the far right.
 -- Source: AZS_SPELLS is "your spells, your racial last" (addon_docs.md:240), so the last list entry is the
 -- racial and all entries before it are normal skills. The game exposes no maximum for normal skills; the
@@ -277,6 +279,8 @@ local function Number(value)
 	return type(value) == "number" and value == value and value >= 0 and value < 1e15
 end
 -- Height of the cooldown number strip above each spell row; 0 when the option is off.
+-- Number of targets in the bottom left corner of the spell icon (option "Zielanzahl anzeigen", on by default).
+local function TargetsOn() return KeijinUI.DB().buildTargetCount ~= false end
 local function CooldownStrip()
 	return KeijinUI.DB().buildCooldownText ~= false and 14 or 0
 end
@@ -524,13 +528,21 @@ local function Cell(pool, index)
 	cell.icon:SetPoint("CENTER", cell, "CENTER", 0, 0)
 	cell.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
 	cell.rankBackground = Fill(cell, "OVERLAY", 0, 0, 0, 0.9)
-	cell.rankBackground:SetWidth(14)
+	cell.rankBackground:SetWidth(BADGE)
 	cell.rankBackground:SetHeight(13)
-	cell.rankBackground:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 2)
+	cell.rankBackground:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -1, 2)
     cell.rank = cell:CreateFontString(nil, "OVERLAY")
 	SetFont(cell.rank,10)
 	cell.rank:SetTextColor(1, 0.82, 0)
-	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -3, 2)
+	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 2)
+	cell.targetBackground = Fill(cell, "OVERLAY", 0, 0, 0, 0.9)
+	cell.targetBackground:SetWidth(BADGE)
+	cell.targetBackground:SetHeight(13)
+	cell.targetBackground:SetPoint("BOTTOMLEFT", cell, "BOTTOMLEFT", 1, 2)
+	cell.targets = cell:CreateFontString(nil, "OVERLAY")
+	SetFont(cell.targets,10)
+	cell.targets:SetTextColor(0.7, 0.9, 1)
+	cell.targets:SetPoint("BOTTOMLEFT", cell, "BOTTOMLEFT", 2, 2)
 	-- A dark chamfered tab docks into the icon rim; the strip reserves its height.
 	local cooltext = CreateFrame("Frame", nil, cell)
 	cooltext:SetWidth(ICON); cooltext:SetHeight(14)
@@ -556,6 +568,26 @@ local function Cell(pool, index)
 	end)
 	pool[index] = cell
 	return cell
+end
+-- Rank (bottom right) and target count (bottom left) each get at most half of the icon minus margin and gap, so two
+-- digits each never meet: the font shrinks until the measured text fits, the dark plate follows the text width.
+local function BadgeStamp(fs, text)
+	return text..":"..tostring(KeijinUI.fontFactor)..":"..tostring(KeijinUI.fontBase[fs])..":"..tostring((fs:GetFont()))
+end
+local function Badge(fs, plate, text)
+	-- Measured once per text, font file, font size and font scale; an idle repaint writes nothing.
+	if fs.badgeStamp == BadgeStamp(fs, text) then return end
+	fs:SetText(text)
+	local size = 10
+	KeijinUI.SetFontSize(fs, size)
+	local width = fs:GetStringWidth()
+	while size > 6 and width > BADGE - 2 do
+		size = size - 1
+		KeijinUI.SetFontSize(fs, size)
+		width = fs:GetStringWidth()
+	end
+	plate:SetWidth(math.min(BADGE, math.max(8, math.floor(width + 0.5) + 2)))
+	fs.badgeStamp = BadgeStamp(fs, text)
 end
 local function Paint(pool, rows, top, pitch)
 	for index = 1, table.getn(rows) do
@@ -593,10 +625,19 @@ local function Paint(pool, rows, top, pitch)
             KeijinUI.Shown(cell.nativeCooldown,true)
         elseif cell.nativeCooldown then KeijinUI.Shown(cell.nativeCooldown,false) end
 		if row.kind == "spell" then
-			cell.rank:SetText(string.format("%.0f", row.rank))
+			Badge(cell.rank, cell.rankBackground, string.format("%.0f", row.rank))
 			KeijinUI.Shown(cell.rank,true); KeijinUI.Shown(cell.rankBackground,true)
 		else
 			KeijinUI.Shown(cell.rank,false); KeijinUI.Shown(cell.rankBackground,false)
+		end
+		-- Targets from the spell tooltip (cached per ability and rank); a single target shows nothing.
+		local targets = row.kind == "spell" and TargetsOn() and KeijinBuildAdvisor and KeijinBuildAdvisor.TargetCount
+			and KeijinBuildAdvisor.TargetCount(row) or nil
+		if targets and targets >= 2 then
+			Badge(cell.targets, cell.targetBackground, string.format("%.0f", targets))
+			KeijinUI.Shown(cell.targets,true); KeijinUI.Shown(cell.targetBackground,true)
+		else
+			KeijinUI.Shown(cell.targets,false); KeijinUI.Shown(cell.targetBackground,false)
 		end
 		local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
 		cell.runCooldown:SetText(cooldown)

@@ -108,7 +108,9 @@ function loot.SetGrow(mode)
     end
 end
 function loot.NewOnly() return K.DB().lootNewOnly==true end
-function loot.SetNewOnly(on) K.DB().lootNewOnly=on and true or nil end
+local refresh
+-- Only the display is filtered; the switch redraws at once instead of waiting for the next tick.
+function loot.SetNewOnly(on) K.DB().lootNewOnly=on and true or nil; if refresh then refresh() end end
 -- The list of the run in progress, newest first. id names the run (zone, character and start time of runs.open),
 -- so a reload keeps the entries and a new run drops them.
 local function Run()
@@ -327,7 +329,8 @@ local function Receive(_,message)
     else tail=Trim(Plain(string.sub(message,last+1))) end
     -- The game itself marks items that are already in the collection with a trailing "(...)" note
     -- ("(already collected)", "(bereits gesammelt)", ...); a line without it is new to the collection.
-    local collected=string.find(Trim(tail or ""),"^%(.+%)%.?$")~=nil
+    -- The note may be followed by more text (amount, colour reset), so it is looked for anywhere after the name.
+    local collected=string.find(tail or "","%(.-%)")~=nil
     local isNew=(item or plainName) and not collected
     local _,_,id=string.find(item or "","^item:(%d+)")
     id=tonumber(id)
@@ -348,7 +351,7 @@ local function Receive(_,message)
         offset=0
     end
     if loot.Mode()~="notice" then return end
-    if loot.NewOnly() and not isNew then return end
+    -- Recorded and prepared in any case; "new only" decides at display time (see Update), so the switch acts at once.
     notice.title:SetText(K.T("Beute"))
     local suffix
     if item then
@@ -360,9 +363,10 @@ local function Receive(_,message)
     end
     if suffix=="" or suffix=="." then suffix=K.T("Beute erhalten") end
     detail:SetText(suffix)
-    current={item=item,message=message,expires=GetTime()+8}
+    current={item=item,message=message,expires=GetTime()+8,new=isNew and true or false}
     Icon()
     Place()
+    if loot.NewOnly() and not current.new then return end
     notice:Show(); K.Native("loot",true)
 end
 notice:EnableMouse(true); notice:EnableMouseWheel(true)
@@ -461,9 +465,12 @@ local function Update()
     if not Enabled() or not current or GetTime()>=current.expires then
         current=nil; K.Shown(notice,false); return
     end
+    if loot.NewOnly() and not current.new then notice:Hide(); return end
     Icon()
     Place()
+    if not notice:IsShown() then notice:Show(); K.Native("loot",true) end
 end
+refresh=Update
 function loot.Command(rest)
     if rest=="clear" then
         loot.Clear(); Update()
@@ -477,6 +484,37 @@ end
 -- Module "Beute" off: the notice goes, the game's own loot notice and its chat lines come back.
 function loot.Stop() current=nil; notice:Hide(); K.NativeFollow("loot",false) end
 function loot.Resume() Update() end
+-- Diagnosis: the last raw loot events (name, arg1 to arg9 as text, time) in a fixed ring of 12 slots; /kui probe writes them out.
+local RAW_SLOTS=12
+local raw,rawNext,rawCount={},1,0
+for i=1,RAW_SLOTS do raw[i]={} end
+local function Record(name)
+    local slot=raw[rawNext]
+    slot.event=name; slot.time=GetTime()
+    slot[1]=tostring(arg1); slot[2]=tostring(arg2); slot[3]=tostring(arg3); slot[4]=tostring(arg4); slot[5]=tostring(arg5)
+    slot[6]=tostring(arg6); slot[7]=tostring(arg7); slot[8]=tostring(arg8); slot[9]=tostring(arg9)
+    rawNext=rawNext+1; if rawNext>RAW_SLOTS then rawNext=1 end
+    if rawCount<RAW_SLOTS then rawCount=rawCount+1 end
+end
+-- Oldest first.
+function loot.RawEvents()
+    local out={}
+    local first=rawCount<RAW_SLOTS and 1 or rawNext
+    for i=0,rawCount-1 do
+        local slot=raw[math.mod(first-1+i,RAW_SLOTS)+1]
+        table.insert(out,{event=slot.event,time=slot.time,slot[1],slot[2],slot[3],slot[4],slot[5],slot[6],slot[7],slot[8],slot[9]})
+    end
+    return out
+end
+K.On("CHAT_MSG_LOOT",function(name) Record(name) end)
+K.On("CHAT_MSG_SYSTEM",function(name)
+    -- Only loot lines; other system lines would flush the ring.
+    if type(arg1)~="string" then return end
+    local plain=Plain(arg1)
+    for _,prefix in ipairs(prefixes) do
+        if string.sub(plain,1,string.len(prefix))==prefix then Record(name); return end
+    end
+end)
 K.On("CHAT_MSG_LOOT",Receive)
 K.On("CHAT_MSG_SYSTEM",Receive)
 K.On("CHAT_MSG_ADDON",function(_,prefix)

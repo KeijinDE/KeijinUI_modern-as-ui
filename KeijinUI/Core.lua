@@ -1,4 +1,4 @@
-KeijinUI = { version = "4.7.1", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "5.0.0", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -210,7 +210,10 @@ local abilityColors={
     soul_fire={0.90,0.53,0.29}
 }
 local sourceKeys
-local function Key(s) return string.gsub(string.lower(s or ""),"[%s%p]","") end
+-- Byte-safe normalization: C locale classes can split UTF-8 names on Windows.
+local function AsciiLower(c) return string.char(string.byte(c)+32) end
+local function Lower(s) return (string.gsub(s,"[A-Z]",AsciiLower)) end
+local function Key(s) return (string.gsub(Lower(s or ""),"[ \009-\013!-/:-@[-`{-~]","")) end
 -- Stable ability key of any localized name (English, German, ... from the Names and Aliases tables).
 function K.SourceKey(name)
     if not sourceKeys then
@@ -222,9 +225,6 @@ function K.SourceKey(name)
 end
 -- Spell book as name -> texture, rebuilt on SPELLS_CHANGED and at the first need (same calls as KeijinBuildBar.lua).
 local book, byName
--- Lower case for A to Z only: string.lower follows the C locale and could alter UTF-8 bytes (Ü, Ä).
-local function AsciiLower(c) return string.char(string.byte(c)+32) end
-local function Lower(s) return (string.gsub(s,"[A-Z]",AsciiLower)) end
 local gear, gearDirty, gearScan = {}, true, 0
 -- The game's placeholder for an unknown icon (INV_Misc_QuestionMark, any case, / or \) is no icon: nil.
 -- Shared by K.SpellIcon and KeijinBuildBar.lua, so the fixed icon tables take over.

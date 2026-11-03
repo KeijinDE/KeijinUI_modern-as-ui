@@ -149,6 +149,8 @@ O.Toggle(p,"buildBar","Zauber & Schmuck",K.buildBar.On,K.buildBar.Set)
 O.Help(p,"Buildübersicht mit Stufen und Tooltips. Schmuckeffekte und Abklingzeiten stehen am jeweiligen Gegenstandssymbol.")
 O.Requires(O.Toggle(p,"spellCooldownText","Abklingzeit am Symbol",function() return K.DB().buildCooldownText~=false end,function(on) K.DB().buildCooldownText=on end),K.buildBar.On)
 O.Help(p,"Zeigt die Abklingzeit der Fähigkeit im Run oben links am Symbol, in Sekunden.")
+O.Requires(O.Toggle(p,"spellTargetCount","Zielanzahl anzeigen",function() return K.DB().buildTargetCount~=false end,function(on) K.DB().buildTargetCount=on end),K.buildBar.On)
+O.Help(p,"Zeigt unten links am Symbol, wie viele Gegner der Zauber trifft, sobald es mehr als einer sind. Die Zahl steht in der Beschreibung des Zaubers und steigt mit dem Rang.")
 O.Section(p,"Aktionsleiste","action")
 O.Toggle(p,"actionBar","Aktionsleiste",K.buildBar.ActionOn,K.buildBar.SetAction)
 O.Requires(O.Choice(p,"cooldownStyle","Abklingzeit",function() return K.CooldownClockwise() and "clock" or "down" end,K.SetCooldownStyle,{{"clock","Im Uhrzeigersinn"},{"down","Von oben nach unten"}}),K.buildBar.ActionOn)
@@ -287,6 +289,19 @@ O.Requires(O.Choice(p,"guardianMarker","Hortmarker",K.guardianNav.MarkerStyle,K.
 O.Requires(O.Slider(p,"guardian_size","Hortmarkergröße",K.guardianNav.IconScale,K.guardianNav.SetIconScale,50,200),K.guardianNav.PinsOn)
 O.Help(p,"Jeder Hort hat für den ganzen Run sein eigenes Symbol, auf der Minimap und vor dem Namen in der Runübersicht. Mit ! im Kampf, abgedunkelt mit x leer. Ersetzt die rote Flagge des Spiels (ab 0.102), davor nur Symbole für besiegte Horte. Tooltip mit Rückkehrzeit.")
 O.Help(p,"Kleine Richtungspfeile rechts neben den Wächternamen. Entfernung zum festen Hort im Tooltip. Mit der Runübersicht verschiebbar.")
+O.Finish(p)
+
+p=O.Page("worldmarkers","Weltmarker","Run & Karte","run")
+O.Section(p,"Weltmarker")
+O.Toggle(p,"worldMarkers","Weltmarker für Truhen und Wächter",K.worldMarkers.On,K.worldMarkers.Set)
+O.Requires(O.Toggle(p,"worldMarkerCaches","Truhen markieren",function() return K.worldMarkers.Part("caches") end,function(on) K.worldMarkers.SetPart("caches",on) end),K.worldMarkers.On)
+O.Requires(O.Toggle(p,"worldMarkerLairs","Wächterhorte markieren",function() return K.worldMarkers.Part("lairs") end,function(on) K.worldMarkers.SetPart("lairs",on) end),K.worldMarkers.On)
+O.Requires(O.Toggle(p,"worldMarkerGuardians","Wächter markieren",function() return K.worldMarkers.Part("guardians") end,function(on) K.worldMarkers.SetPart("guardians",on) end),K.worldMarkers.On)
+O.Requires(O.Slider(p,"worldMarkerDistance","Größte Entfernung der Weltmarker",K.worldMarkers.Distance,K.worldMarkers.SetDistance,20,300,{unit=" yd",factor=1}),K.worldMarkers.On)
+O.Help(p,"Symbol mit Entfernung in Yards über Truhen, Wächterhorten und Wächtern in der Spielwelt. Nur sichtbare Ziele, geöffnete Truhen entfallen, höchstens 8 Marker, die nächsten zuerst. Die Kompasspfeile bleiben unverändert.")
+O.Section(p,"Gefallene Mitspieler")
+O.Toggle(p,"worldMarkerDowned","Marker für gefallene Mitspieler",K.worldMarkers.DownedOn,K.worldMarkers.SetDownedOn)
+O.Help(p,"Gefallene Mitspieler erscheinen mit Namen und Entfernung in der Spielwelt und im Partyfenster als Am Boden. Wirkt nur in einer Gruppe, ohne Entfernungsgrenze. Der Marker verschwindet bei Wiederbelebung, beim Verlassen der Gruppe und beim Kartenwechsel.")
 O.Finish(p)
 
 p=O.Page("levels","Gespeicherte Level","Run & Karte","run","storedLevels")
@@ -469,7 +484,7 @@ O.categoryAliases={display="general"}
 O.Navigation({
     {"general","Oberfläche & Layout",K.gameMessages.Hidden and {"general","appearance","windows","gamewindows"} or {"general","appearance","windows","gamewindows","gameMessages"}},
     {"combat","Kampf",{"units","action","combat","meter","nameplates","attributes","totems"}},
-    {"run","Run & Karte",{"run","minimap","caches","guardians","levels","loot"}},
+    {"run","Run & Karte",{"run","minimap","caches","guardians","worldmarkers","levels","loot"}},
     {"collection","Sammlungen",{"collection","history"}},
     {"shortcuts","Tastenbelegung",{"shortcuts"}},
     {"comfort","Eingabehilfen",{"comfort"}},

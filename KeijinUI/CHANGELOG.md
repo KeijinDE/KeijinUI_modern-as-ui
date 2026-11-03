@@ -5,6 +5,16 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.0 (2026-11-03, release v5.0.0)
+
+* **World markers:** A symbol with the distance in yards now floats above chests, guardian lairs and guardians in the game world. Chests, lairs and guardians can be switched on separately on the new settings page "World markers" (Run & Map), and you can set a maximum distance.
+* **Downed party members:** Fallen party members get a marker with name and distance in the world, and show as "Downed" in the party window. This can be switched off on the same page.
+* **Target count on the build bar:** A small number at the bottom left of a spell icon shows how many enemies the spell hits, read from its tooltip. This also works for abilities without a spellbook slot, such as Rockbiter Weapon. Option "Show target count".
+* **Diagnostic command:** `/kui probe` writes client data into the saved variables so bug reports can include it.
+* **Jewelry collection:** The window can be moved and its position is saved. It sits correctly above or below the settings window and no longer redraws constantly, which fixes the FPS loss while it is open.
+* **Loot display:** "Only new loot" now filters the display only. Switching it takes effect immediately on the loot of the current run, also in message mode. "(already collected)" is recognised more reliably.
+* **Names with special characters:** Names such as those with ß are now recognised regardless of the system language.
+
 ### 4.7.1 (2026-11-02, release v4.7.1)
 
 * **Class changes between runs:** player health colours, self-target colours, class resources, totems and character identity use the class reported for the current run. Once that run ends, the native class takes over until the next zone report. Message order handles reports received at the same time, without requiring a settings reset.
@@ -685,6 +695,16 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.0 (2026-11-03, Release v5.0.0)
+
+* **Weltmarker:** Über Truhen, Wächterhorten und Wächtern schwebt jetzt ein Symbol mit der Entfernung in Yards. Truhen, Horte und Wächter lassen sich auf der neuen Einstellungsseite "Weltmarker" (Run & Karte) einzeln schalten, außerdem gibt es eine größte Entfernung.
+* **Gefallene Mitspieler:** Gefallene Mitspieler bekommen in der Welt einen Marker mit Name und Entfernung und erscheinen im Partyfenster als "Am Boden". Das lässt sich auf derselben Seite abschalten.
+* **Zielanzahl in der Buildleiste:** Eine kleine Zahl unten links am Zaubersymbol zeigt, wie viele Gegner der Zauber trifft, gelesen aus dem Tooltip. Das funktioniert auch bei Fähigkeiten ohne Zauberbuch Platz, etwa Waffe des Felsbeißers. Option "Zielanzahl anzeigen".
+* **Diagnosebefehl:** `/kui probe` schreibt Clientdaten in die gespeicherten Variablen, damit Fehlerberichte sie enthalten können.
+* **Schmucksammlung:** Das Fenster lässt sich verschieben, die Position wird gespeichert. Es liegt korrekt über oder unter dem Einstellungsfenster und zeichnet nicht mehr ständig neu, das behebt den FPS Verlust bei offenem Fenster.
+* **Beuteanzeige:** "Nur neuer Loot" filtert nur noch die Anzeige. Das Umschalten wirkt sofort auf die Beute des aktuellen Runs, auch im Modus Meldung. "(bereits gesammelt)" wird zuverlässiger erkannt.
+* **Namen mit Sonderzeichen:** Namen mit Zeichen wie ß werden unabhängig von der Systemsprache erkannt.
 
 ### 4.7.1 (2026-11-02, Release v4.7.1)
 

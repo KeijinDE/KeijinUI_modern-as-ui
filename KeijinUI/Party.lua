@@ -80,6 +80,8 @@ local function Members(revive)
                 local dead=type(UnitIsDeadOrGhost)=="function" and UnitIsDeadOrGhost(unit) and true or false
                 if K.Number(max) and max>0 and K.Number(hp) and hp<=0 then dead=true end
                 if reviving and name==reviving then dead=true end
+                -- 5.0.0 (package E): the world marker module knows the downed heroes by name (AZS_GetDownedPartyMembers).
+                if K.worldMarkers and K.worldMarkers.IsDowned(name) then dead=true end
                 table.insert(list,{unit=unit,name=name,class=token,hp=hp,max=max,dead=dead,offline=offline and true or false,health=true})
             end
         end
@@ -89,7 +91,7 @@ local function Members(revive)
     for _,line in ipairs(lines or {}) do
         if not Own(line.name) and table.getn(list)<MAXMEMBERS then
             table.insert(list,{name=line.name,class=type(line.class)=="string" and string.upper(line.class) or nil,
-                dead=reviving~=nil and line.name==reviving,offline=false,health=false})
+                dead=(reviving~=nil and line.name==reviving) or (K.worldMarkers~=nil and K.worldMarkers.IsDowned(line.name)),offline=false,health=false})
         end
     end
     return list,"meter"

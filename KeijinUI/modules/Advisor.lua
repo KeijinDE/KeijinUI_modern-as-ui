@@ -4,7 +4,7 @@ KeijinBuildAdvisor = {}
 local A = KeijinBuildAdvisor
 local WINDOW, MINIMUM, LIMIT = 30, 8, 40
 local history, lastTime, lastTotal, identity = {}, nil, nil, nil
-local tip, tipCache, tipStamp = nil, {}, -100
+local tip, tipCache, tipStamp, textCache = nil, {}, -100, {}
 
 -- Texts are German sources translated by KeijinUI.T; without KeijinUI they stay German.
 local function T(text, a1, a2, a3)
@@ -157,30 +157,199 @@ function A.ParseBonus(text, rank)
 	return nil
 end
 
+-- The spell's tooltip text from the hidden tooltip, one scan per ability and rank (a new rank or spell book slot
+-- scans again) and at most one per maxAge seconds. Returns the text (false if it cannot be read) and the cache entry,
+-- a new table for every scan.
+local function TipLines()
+	local lines = {}
+	for index = 1, math.min(40, tip:NumLines()) do
+		local region = getglobal("KeijinBuildAdvisorTooltipTextLeft"..index)
+		if region and type(region.GetText) == "function" then table.insert(lines, region:GetText() or "") end
+	end
+	return table.concat(lines, "\n")
+end
+-- Ability names compared byte-safe (A-Z only, no locale classes: UTF-8 names such as "Felsbeißers" stay intact).
+local function Fold(name)
+	name = ClearColor(name)
+	name = string.gsub(name, "[A-Z]", function(c) return string.char(string.byte(c) + 32) end)
+	return (string.gsub(name, "[ \009-\013!-/:-@[-`{-~]", ""))
+end
+-- Abilities that are not in the spell book (the game writes their text for an action slot only): one shared index of
+-- the action slots (first tooltip line and icon), built a few slots per frame and started again when a slot changes.
+local SLOTS_PER_FRAME = 12
+local slotIndex = {slots = {}, pending = {}, ready = false, cursor = 1, frame = -1, used = 0, at = 0}
+local function RestartSlots()
+	-- Keep the published snapshot readable until its replacement is complete.
+	if not slotIndex.ready and slotIndex.cursor > 1 then
+		slotIndex.slots, slotIndex.ready = slotIndex.pending, true
+	end
+	slotIndex.pending = {}
+	slotIndex.cursor = 1
+	slotIndex.at = GetTime()
+end
+local slotWatcher = CreateFrame("Frame")
+slotWatcher:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
+slotWatcher:SetScript("OnEvent", RestartSlots)
+local function Icon(path) return (string.gsub(string.lower(path or ""), "/", "\\")) end
+-- Folded name -> ability key, or false when one name belongs to two abilities (Portuguese Shred / Slice and Dice).
+local owners
+local function Owners()
+	if owners then return owners end
+	owners = {}
+	for _, source in ipairs({KeijinBuildBarAliases or {}, KeijinGameAbilityNames or {}}) do
+		for key, names in pairs(source) do
+			for index = 1, table.getn(names) do
+				local name = Fold(names[index])
+				if owners[name] == nil or owners[name] == key then owners[name] = key else owners[name] = false end
+			end
+		end
+	end
+	return owners
+end
+-- Returns the text (false if none), and whether the index was complete when looking.
+local function ActionText(row)
+	if type(HasAction) ~= "function" or type(tip.SetAction) ~= "function" then return false, true end
+	local now = GetTime()
+	if now - slotIndex.at > 30 then RestartSlots() end
+	if slotIndex.frame ~= now then slotIndex.frame, slotIndex.used = now, 0 end
+	local function Title(slot)
+		if type(tip.ClearLines) == "function" then tip:ClearLines() end
+		tip:SetOwner(UIParent, "ANCHOR_NONE")
+		tip:SetAction(slot)
+		if tip:NumLines() < 1 then return "" end
+		local first = getglobal("KeijinBuildAdvisorTooltipTextLeft1")
+		return first and type(first.GetText) == "function" and Fold(first:GetText()) or ""
+	end
+	while slotIndex.cursor <= 120 and slotIndex.used < SLOTS_PER_FRAME do
+		local slot = slotIndex.cursor
+		slotIndex.used = slotIndex.used + 1
+		if HasAction(slot) then
+			slotIndex.pending[slot] = {title = Title(slot),
+				icon = Icon(type(GetActionTexture) == "function" and GetActionTexture(slot) or nil), text = TipLines()}
+		else slotIndex.pending[slot] = false end
+		slotIndex.cursor = slot + 1
+	end
+	if slotIndex.cursor > 120 and slotIndex.pending then
+		slotIndex.slots, slotIndex.pending, slotIndex.ready = slotIndex.pending, nil, true
+	end
+	local names = {}
+	local lists = {{row.name, row.key}, (KeijinBuildBarAliases or {})[row.key] or {}, (KeijinGameAbilityNames or {})[row.key] or {}}
+	for list = 1, 3 do
+		for index = 1, table.getn(lists[list]) do names[Fold(lists[list][index])] = true end
+	end
+	names[""] = nil
+	local known = Owners()
+	for slot = 1, 120 do
+		local entry = (slotIndex.ready and slotIndex.slots or slotIndex.pending)[slot]
+		-- An ambiguous name only counts when the slot also shows this ability's icon.
+		if entry and names[entry.title] and (known[entry.title] == row.key or known[entry.title] == nil
+			or (known[entry.title] == false and row.icon and Icon(row.icon) == entry.icon)) then
+			return entry.text, true
+		end
+	end
+	return false, slotIndex.cursor > 120
+end
+local function SpellText(row, maxAge)
+	local now = GetTime()
+	local entry = textCache[row.key]
+	if not row.book and entry and entry.rank ~= row.rank then RestartSlots() end
+	if row.book and entry and entry.rank == row.rank and entry.book == row.book and now - entry.at <= maxAge then
+		return entry.text, entry
+	end
+	local text, complete = false, true
+	if not tip then
+		tip = CreateFrame("GameTooltip", "KeijinBuildAdvisorTooltip", UIParent, "GameTooltipTemplate")
+		tip:Hide()
+	end
+	if type(tip.SetOwner) == "function" and type(tip.NumLines) == "function" then
+		tip:SetOwner(UIParent, "ANCHOR_NONE")
+		if row.book and type(tip.SetSpell) == "function" then
+			tip:SetSpell(row.book, "spell")
+			text = TipLines()
+		elseif not row.book then
+			text, complete = ActionText(row)
+		end
+		tip:Hide()
+	end
+	-- An unfinished slot index may still find it: look again next frame.
+	if not row.book and entry and entry.rank == row.rank and entry.book == row.book and entry.text == text then return text, entry end
+	entry = {rank = row.rank, book = row.book, text = text, at = complete and now or now - maxAge - 1}
+	textCache[row.key] = entry
+	return text, entry
+end
+
 local function NativeBonus(row)
 	if not row.book then return nil end
 	local now = GetTime()
 	if now - tipStamp > 5 then tipCache, tipStamp = {}, now end
 	local key = row.key..":"..tostring(row.rank)..":"..row.book
 	if tipCache[key] ~= nil then return tipCache[key] ~= false and tipCache[key] or nil end
-	if not tip then
-		tip = CreateFrame("GameTooltip", "KeijinBuildAdvisorTooltip", UIParent, "GameTooltipTemplate")
-		tip:Hide()
-	end
-	if type(tip.SetOwner) ~= "function" or type(tip.SetSpell) ~= "function" or type(tip.NumLines) ~= "function" then
-		tipCache[key] = false; return nil
-	end
-	tip:SetOwner(UIParent, "ANCHOR_NONE")
-	tip:SetSpell(row.book, "spell")
-	local lines = {}
-	for index = 1, math.min(40, tip:NumLines()) do
-		local region = getglobal("KeijinBuildAdvisorTooltipTextLeft"..index)
-		if region and type(region.GetText) == "function" then table.insert(lines, region:GetText() or "") end
-	end
-	tip:Hide()
-	local bonus = A.ParseBonus(table.concat(lines, "\n"), row.rank)
+	local text = SpellText(row, 5)
+	if not text then tipCache[key] = false; return nil end
+	local bonus = A.ParseBonus(text, row.rank)
 	tipCache[key] = bonus or false
 	return bonus
+end
+
+-- Number of targets of a spell, read from its tooltip: "the nearest enemy" 1, "the 3 nearest enemies" 3,
+-- "up to 4 enemies" 4, "nearest enemy, then jumps to up to 3 more" 4. Patterns per language in TargetText.lua.
+-- Nothing recognised returns nil (better blank than wrong). Digits only; the game writes the number as a digit.
+local foundLanguage
+local function TargetLanguages()
+	local order, seen = {}, {}
+	local function Add(code)
+		if code and not seen[code] and KeijinTargetText and KeijinTargetText[code] then
+			seen[code] = true; table.insert(order, code)
+		end
+	end
+	-- The tooltip language is not detectable (GetLocale is fixed): the language that matched last time, the interface
+	-- language and English go first, every other game language follows.
+	Add(foundLanguage); Add(KeijinUI and KeijinUI.lang); Add("en")
+	local rest = {}
+	for code in pairs(KeijinTargetText or {}) do if not seen[code] then table.insert(rest, code) end end
+	table.sort(rest)
+	for index = 1, table.getn(rest) do Add(rest[index]) end
+	return order
+end
+function A.ParseTargets(text)
+	if type(text) ~= "string" or not KeijinTargetText then return nil end
+	text = ClearColor(text)
+	-- Only the description counts: the upgrade and bonus lines list other targets ("+1 target").
+	local words, cut = KeijinGameText or {}, nil
+	for _, list in ipairs({words.upgrades or {"Upgrades:", "Verbesserungen:"}, words.bonuses or {"Your bonuses:", "Deine Boni:"}}) do
+		for _, prefix in ipairs(list) do
+			local first = string.find(text, prefix, 1, true)
+			if first and (not cut or first < cut) then cut = first end
+		end
+	end
+	if cut then text = string.sub(text, 1, cut - 1) end
+	local order = TargetLanguages()
+	for index = 1, table.getn(order) do
+		local list = KeijinTargetText[order[index]]
+		for entry = 1, table.getn(list) do
+			local first, _, found = string.find(text, list[entry][2])
+			if first then
+				local amount = found and tonumber(found) or 1
+				if amount and amount >= 1 and amount < 100 then
+					foundLanguage = order[index]
+					return list[entry][1] == "chain" and amount + 1 or amount
+				end
+			end
+		end
+	end
+	return nil
+end
+local targetCache = {}
+function A.TargetCount(row)
+	if type(row) ~= "table" or type(row.key) ~= "string" then return nil end
+	local text, scan = SpellText(row, 30)
+	if not text then return nil end
+	local entry = targetCache[row.key]
+	if not entry or entry.scan ~= scan then
+		entry = {scan = scan, count = A.ParseTargets(text) or false}
+		targetCache[row.key] = entry
+	end
+	return entry.count or nil
 end
 
 function A.DamageGain(share, localBonus)

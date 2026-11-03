@@ -2,6 +2,7 @@
 -- Written by check_locales.py write; characters were checked against the font of the language.
 local K=KeijinUI
 local text={
+ ["CD"]="CD",
  ["\nAdditional effect"]="\\n추가 효과",
  ["\nNo observed hits since the UI loaded."]="\\nUI 로드 후 관측된 적중이 아직 없습니다.",
  ["\nNormal hits: %s · average %s · min %s · max %s"]="\\n일반 적중: %s · 평균 %s · 최소 %s · 최대 %s",

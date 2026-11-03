@@ -1,6 +1,7 @@
 -- Simplified Chinese UI. German source keys share their English lookup labels.
 local K=KeijinUI
 local text={
+ ["CD"]="冷却",
  ["Keeps this window above the level up and jewelry cards and makes it clickable there."]="让此窗口保持在升级和饰品卡牌之上，并可在其上点击。",
  ["Above level up and jewelry choices: in layout mode, click the desired window and enable the switch under Appearance."]="位于升级和饰品选择之上：在布局模式中点击所需窗口，并在外观下启用开关。",
  ["At the enemy: numbers appear above the enemy, anchored in the world, and stay there after death. Fixed spot: all numbers start at the combat text anchor."]="敌人处：数字显示在敌人上方，固定在世界中，死亡后仍留在原处。固定位置：所有数字从战斗文字锚点开始。",

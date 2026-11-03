@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.1 (2026-11-03, release v5.0.1)
+
+* Build bar: the target count now has its own row "Targets" below the spell icons, and the cooldown row is labelled "CD". Thanks to AvA for the idea.
+
 ### 5.0.0 (2026-11-03, release v5.0.0)
 
 * **World markers:** A symbol with the distance in yards now floats above chests, guardian lairs and guardians in the game world. Chests, lairs and guardians can be switched on separately on the new settings page "World markers" (Run & Map), and you can set a maximum distance.
@@ -695,6 +699,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.1 (2026-11-03, Release v5.0.1)
+
+* Buildleiste: Die Zielanzahl hat jetzt eine eigene Zeile "Ziele" unter den Zaubersymbolen, und die Abklingzeitzeile ist mit "CD" beschriftet. Danke an AvA für die Idee.
 
 ### 5.0.0 (2026-11-03, Release v5.0.0)
 

@@ -5,8 +5,8 @@ local function SetFont(fs,size)
 end
 local FLAT = "Interface\\ChatFrame\\ChatFrameBackground"
 local ICON, PITCH, COLUMNS, WIDTH, ROWSTART = 28, 30, 11, 400, 58
--- Width available to the rank (bottom right) and target count (bottom left) plates: half the icon minus margin and gap.
-local BADGE = math.floor((ICON - 2 - 2) / 2)
+-- The rank can use the full icon width now that targets have their own row.
+local BADGE = ICON - 4
 -- Action bar (cooldown display only), one row: normal skills, then the racial ability at the far right.
 -- Source: AZS_SPELLS is "your spells, your racial last" (addon_docs.md:240), so the last list entry is the
 -- racial and all entries before it are normal skills. The game exposes no maximum for normal skills; the
@@ -194,6 +194,12 @@ local function Label(text, r, g, b)
 end
 local spellsLabel = Label("", 0.8, 0.8, 0.82)
 local itemsLabel = Label("", 0.8, 0.8, 0.82)
+local rowLabels = {cooldown=Label("", 0.8, 0.8, 0.82), targets=Label("", 0.8, 0.8, 0.82)}
+for _,label in pairs(rowLabels) do
+	label:SetWidth(ROWSTART - 14); label:SetHeight(12); label:SetJustifyH("LEFT")
+end
+KeijinUI.Live(rowLabels.cooldown, function() return T("CD") end)
+KeijinUI.Live(rowLabels.targets, function() return T("Ziele") end)
 KeijinUI.Live(spellsLabel, function() return T("Spells") end)
 KeijinUI.Live(itemsLabel, function() return T("Items") end)
 
@@ -279,7 +285,7 @@ local function Number(value)
 	return type(value) == "number" and value == value and value >= 0 and value < 1e15
 end
 -- Height of the cooldown number strip above each spell row; 0 when the option is off.
--- Number of targets in the bottom left corner of the spell icon (option "Zielanzahl anzeigen", on by default).
+-- Separate target count row below the spell icons (option "Zielanzahl anzeigen", on by default).
 local function TargetsOn() return KeijinUI.DB().buildTargetCount ~= false end
 local function CooldownStrip()
 	return KeijinUI.DB().buildCooldownText ~= false and 14 or 0
@@ -535,14 +541,6 @@ local function Cell(pool, index)
 	SetFont(cell.rank,10)
 	cell.rank:SetTextColor(1, 0.82, 0)
 	cell.rank:SetPoint("BOTTOMRIGHT", cell, "BOTTOMRIGHT", -2, 2)
-	cell.targetBackground = Fill(cell, "OVERLAY", 0, 0, 0, 0.9)
-	cell.targetBackground:SetWidth(BADGE)
-	cell.targetBackground:SetHeight(13)
-	cell.targetBackground:SetPoint("BOTTOMLEFT", cell, "BOTTOMLEFT", 1, 2)
-	cell.targets = cell:CreateFontString(nil, "OVERLAY")
-	SetFont(cell.targets,10)
-	cell.targets:SetTextColor(0.7, 0.9, 1)
-	cell.targets:SetPoint("BOTTOMLEFT", cell, "BOTTOMLEFT", 2, 2)
 	-- A dark chamfered tab docks into the icon rim; the strip reserves its height.
 	local cooltext = CreateFrame("Frame", nil, cell)
 	cooltext:SetWidth(ICON); cooltext:SetHeight(14)
@@ -555,6 +553,18 @@ local function Cell(pool, index)
 	SetFont(cell.runCooldown,9)
 	cell.runCooldown:SetPoint("CENTER", cooltext, "CENTER", 0, 0)
 	cooltext:Hide()
+	local targets = CreateFrame("Frame", nil, cell)
+	targets:SetWidth(ICON); targets:SetHeight(14)
+	targets:SetPoint("TOP", cell, "BOTTOM", 0, 1)
+	targets:SetFrameLevel(cell:GetFrameLevel() + 2)
+	targets:EnableMouse(false)
+	KeijinUI.Chamfer(targets,2,{0.025,0.025,0.03,0.98},{0.48,0.44,0.34,1})
+	cell.targetPlate = targets
+	cell.targets = targets:CreateFontString(nil, "OVERLAY")
+	SetFont(cell.targets,9)
+	cell.targets:SetTextColor(0.7, 0.9, 1)
+	cell.targets:SetPoint("CENTER", targets, "CENTER", 0, 0)
+	targets:Hide()
 	cell:SetScript("OnEnter", function()
 		if not this.row or this.row.kind == "emptySpell" then return end
 		hovered = this
@@ -569,8 +579,7 @@ local function Cell(pool, index)
 	pool[index] = cell
 	return cell
 end
--- Rank (bottom right) and target count (bottom left) each get at most half of the icon minus margin and gap, so two
--- digits each never meet: the font shrinks until the measured text fits, the dark plate follows the text width.
+-- Rank stays bottom right; shrink only when its measured text exceeds the icon width.
 local function BadgeStamp(fs, text)
 	return text..":"..tostring(KeijinUI.fontFactor)..":"..tostring(KeijinUI.fontBase[fs])..":"..tostring((fs:GetFont()))
 end
@@ -588,6 +597,49 @@ local function Badge(fs, plate, text)
 	end
 	plate:SetWidth(math.min(BADGE, math.max(8, math.floor(width + 0.5) + 2)))
 	fs.badgeStamp = BadgeStamp(fs, text)
+end
+-- Keep strip writes out of idle repaints, including font/size changes and option toggles.
+local function StripText(fs, text)
+	local stamp = BadgeStamp(fs, text)
+	if fs.stripStamp == stamp then return end
+	fs:SetText(text)
+	fs.stripStamp = stamp
+end
+local function PaintStrips(cell, row)
+	local on = (row.kind == "spell" or row.kind == "emptySpell") and TargetsOn()
+	local count = on and row.kind == "spell" and KeijinBuildAdvisor and KeijinBuildAdvisor.TargetCount
+		and KeijinBuildAdvisor.TargetCount(row) or nil
+	StripText(cell.targets, count and count >= 1 and string.format("%.0f", count) or "")
+	KeijinUI.Shown(cell.targetPlate,on)
+	local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
+	StripText(cell.runCooldown,cooldown)
+	KeijinUI.Shown(cell.cooldownPlate,cooldown ~= "")
+	local gold = Number(row.cdmax) and row.cdmax < 1 and true or false
+	if cell.cooldownGold ~= gold then
+		cell.cooldownGold = gold
+		if gold then cell.runCooldown:SetTextColor(1, 0.82, 0)
+		else cell.runCooldown:SetTextColor(0.86, 0.86, 0.88) end
+	end
+end
+local function FitRowLabel(fs)
+	local stamp = BadgeStamp(fs, fs:GetText())
+	if fs.labelStamp == stamp then return end
+	local size = 9
+	KeijinUI.SetFontSize(fs,size)
+	while size > 6 and fs:GetStringWidth() > ROWSTART - 14 do
+		size = size - 1; KeijinUI.SetFontSize(fs,size)
+	end
+	fs.labelStamp = BadgeStamp(fs, fs:GetText())
+end
+local function StripLabels(strip, targets)
+	FitRowLabel(rowLabels.cooldown); FitRowLabel(rowLabels.targets)
+	if strip > 0 or targets > 0 then
+		local cell = Cell(spellCells,1)
+		KeijinUI.Anchor(rowLabels.cooldown,"LEFT",cell.cooldownPlate,"LEFT",10-ROWSTART,0)
+		KeijinUI.Anchor(rowLabels.targets,"LEFT",cell.targetPlate,"LEFT",10-ROWSTART,0)
+	end
+	KeijinUI.Shown(rowLabels.cooldown,strip > 0)
+	KeijinUI.Shown(rowLabels.targets,targets > 0)
 end
 local function Paint(pool, rows, top, pitch)
 	for index = 1, table.getn(rows) do
@@ -630,21 +682,7 @@ local function Paint(pool, rows, top, pitch)
 		else
 			KeijinUI.Shown(cell.rank,false); KeijinUI.Shown(cell.rankBackground,false)
 		end
-		-- Targets from the spell tooltip (cached per ability and rank); a single target shows nothing.
-		local targets = row.kind == "spell" and TargetsOn() and KeijinBuildAdvisor and KeijinBuildAdvisor.TargetCount
-			and KeijinBuildAdvisor.TargetCount(row) or nil
-		if targets and targets >= 2 then
-			Badge(cell.targets, cell.targetBackground, string.format("%.0f", targets))
-			KeijinUI.Shown(cell.targets,true); KeijinUI.Shown(cell.targetBackground,true)
-		else
-			KeijinUI.Shown(cell.targets,false); KeijinUI.Shown(cell.targetBackground,false)
-		end
-		local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
-		cell.runCooldown:SetText(cooldown)
-		if cooldown ~= "" then KeijinUI.Shown(cell.cooldownPlate,true) else KeijinUI.Shown(cell.cooldownPlate,false) end
-		-- Gold below one second: about where more cooldown reduction stops paying off.
-		if Number(row.cdmax) and row.cdmax < 1 then cell.runCooldown:SetTextColor(1, 0.82, 0)
-		else cell.runCooldown:SetTextColor(0.86, 0.86, 0.88) end
+		PaintStrips(cell, row)
 		if hovered == cell and not empty then
 			cell.border:SetBackdropBorderColor(1, 0.82, 0, 1)
 		else
@@ -661,15 +699,17 @@ local function Paint(pool, rows, top, pitch)
 	end
 end
 local function BuildLayout(spells)
+	if not spells then StripLabels(0,0); return end
 	local spellRows = math.max(1, math.ceil(table.getn(spells) / COLUMNS))
-	-- Each spell row gets a strip above it for the cooldown numbers; without them the original size.
-	local strip = CooldownStrip()
-	local spellTop, itemTop = 8 + strip, 8 + spellRows * (PITCH + strip) + 6
+	-- Each spell row reserves only its enabled strips, above and below the icons.
+	local strip, targets = CooldownStrip(), TargetsOn() and 14 or 0
+	local spellTop, itemTop = 8 + strip, 8 + spellRows * (PITCH + strip + targets) + 6
+	StripLabels(strip,targets)
 	KeijinUI.SetH(panel,itemTop + ICON + 10)
 	KeijinUI.Anchor(spellsLabel,"TOPLEFT",panel,"TOPLEFT",10,-(spellTop+10)); KeijinUI.Shown(spellsLabel,true)
 	KeijinUI.Anchor(itemsLabel,"TOPLEFT",panel,"TOPLEFT",10,-(itemTop+10)); KeijinUI.Shown(itemsLabel,true)
 	KeijinUI.Anchor(divider,"TOPLEFT",panel,"TOPLEFT",6,-(itemTop-3)); KeijinUI.Shown(divider,true)
-	return spellTop, itemTop, PITCH + strip
+	return spellTop, itemTop, PITCH + strip + targets
 end
 -- Cooldown style of the action bar: clockwise sweep (default, like stock action buttons) or the
 -- older shade that shrinks from top to bottom.
@@ -913,6 +953,7 @@ local function Update()
 		KeijinUI.Anchor(advice,"TOPLEFT", panel, "TOPLEFT", 248, -itemTop)
 	else
 		-- Reuse the proven movable carrier, with no spell/jewelry rows or native HUD ownership.
+		BuildLayout(nil)
 		Paint(spellCells, {}, 0); Paint(itemCells, {}, 0)
 		KeijinUI.Shown(spellsLabel,false); KeijinUI.Shown(itemsLabel,false); KeijinUI.Shown(divider,false)
 		KeijinUI.SetW(panel,140); KeijinUI.SetH(panel,48)

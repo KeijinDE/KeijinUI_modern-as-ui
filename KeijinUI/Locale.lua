@@ -987,3 +987,5 @@ K.EN["Hält dieses Fenster über den Karten für Levelaufstieg und Schmuck und m
 K.EN["Über Level- und Schmuckauswahl: Im Layoutmodus das gewünschte Fenster anklicken und den Schalter unter Darstellung einschalten."]="Above level up and jewelry choices: in layout mode, click the desired window and enable the switch under Appearance."
 
 K.EN["Am Gegner: Zahlen erscheinen über dem Gegner, fest in der Welt verankert, und bleiben nach dem Tod an der Stelle. Feste Stelle: alle Zahlen starten im Kampftext Anker."]="At the enemy: numbers appear above the enemy, anchored in the world, and stay there after death. Fixed spot: all numbers start at the combat text anchor."
+
+K.EN["CD"]="CD"

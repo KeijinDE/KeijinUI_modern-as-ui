@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.2 (2026-11-04, release v5.0.2)
+
+* Support for the new hunter ability Kill Command (game 0.141.0): name, icon and spell book link.
+
 ### 5.0.1 (2026-11-03, release v5.0.1)
 
 * Build bar: the target count now has its own row "Targets" below the spell icons, and the cooldown row is labelled "CD". Thanks to AvA for the idea.
@@ -699,6 +703,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.2 (2026-11-04, Release v5.0.2)
+
+* Unterstützung der neuen Jägerfähigkeit Tötungsbefehl (Spiel 0.141.0): Name, Symbol und Zauberbuchzuordnung.
 
 ### 5.0.1 (2026-11-03, Release v5.0.1)
 

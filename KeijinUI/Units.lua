@@ -257,9 +257,13 @@ function K.RefreshTargetDebuffs()
     if UnitExists("target") and (K.DB().targetDebuffsBoth~=false or not K.targetPlateShown) then K.UpdateDebuffRow(f.debuffs,"target")
     else K.UpdateDebuffRow(f.debuffs,nil) end
 end
+-- The portrait texture is only set again when the game says it changed (UNIT_PORTRAIT_UPDATE), on a target
+-- change or world entry, or when the frame shows another unit (name) than the one the texture was set for.
+local portraitDirty={}
 local function Update()
     if Inactive() then
         for _,f in pairs(K.units) do
+            f.portraitName=nil
             if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(f) then GameTooltip:Hide() end
             f:Hide()
             local entry=K.layout.entries[f.unit]
@@ -278,7 +282,8 @@ local function Update()
             if (not K.Number(hp) or not K.Number(max) or max<=0 or (unit=="target" and max<=100))
                 and type(r)=="table" and K.Number(r.hp) and K.Number(r.hpm) and r.hpm>0
                 and (unit=="player" or r.name==UnitName(unit)) then hp,max=r.hp,r.hpm end
-            f.label:SetText(UnitName(unit) or "?")
+            local unitName=UnitName(unit)
+            f.label:SetText(unitName or "?")
             local lvl=UnitLevel(unit)
             -- Elite and rare targets: marker behind the level and a border in the matching colour.
             local class=unit=="target" and UnitClassification and UnitClassification(unit) or "normal"
@@ -303,13 +308,19 @@ local function Update()
                 f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
             f.bar:SetStatusBarColor(HealthColor(unit))
             -- The compact style has no portrait; the pointer is not touched there.
-            if not f.clean and f.portrait then SetPortraitTexture(f.portrait,unit); K.Shown(f.portrait,true) end
+            if not f.clean and f.portrait then
+                if portraitDirty[unit] or f.portraitName~=(unitName or false) then
+                    SetPortraitTexture(f.portrait,unit); f.portraitName=unitName or false; portraitDirty[unit]=nil
+                end
+                K.Shown(f.portrait,true)
+            else f.portraitName=nil end
         else
             f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
             f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
             if f.bar.SetShield then f.bar:SetShield(0,nil) end
             f.rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
             if not f.clean and f.portrait then f.portrait:SetTexture(nil); f.portrait:Hide() end
+            f.portraitName=nil
         end
         if unit=="target" and not UnitExists(unit) then
             -- No target: the whole frame is gone. Alt or layout editing keeps an invisible,
@@ -341,17 +352,45 @@ function K.ApplyUnitBackground()
     end
 end
 local updateUnits=Update
+local unitsDirty=false
 Update=function()
+    unitsDirty=false
     updateUnits()
     for _,f in pairs(K.units) do
         if f.windowAppearanceDirty then K.ApplyUnitBackground(); break end
     end
 end
 K.UpdateUnits=Update
-for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,Update,"units") end
+-- The unit events carry the unit in arg1; only the two frames' units (player, target) matter, everything
+-- else (party, raid, pets, nameplate units) is ignored. Health changes only set a flag: the 0.1 s update below
+-- redraws anyway (and clears it). Level, faction and portrait changes are rare and drawn at once.
+local SHOWN_UNIT={player=true,target=true}
+local UNIT_EVENT={UNIT_HEALTH=true,UNIT_MAXHEALTH=true,UNIT_LEVEL=true,UNIT_PORTRAIT_UPDATE=true,UNIT_FACTION=true}
+local function MarkPortraits()
+    for unit in pairs(K.units) do portraitDirty[unit]=true end
+end
+local function OnUnitsEvent(ev,unit)
+    if UNIT_EVENT[ev] then
+        if not SHOWN_UNIT[unit] then return end
+        if ev=="UNIT_PORTRAIT_UPDATE" then
+            -- The target frame may show the same unit as the player frame.
+            for shown in pairs(K.units) do
+                if shown==unit or (UnitIsUnit and UnitIsUnit(shown,unit)) then portraitDirty[shown]=true end
+            end
+        elseif ev=="UNIT_HEALTH" or ev=="UNIT_MAXHEALTH" then
+            unitsDirty=true; return
+        end
+    elseif ev=="PLAYER_TARGET_CHANGED" then
+        portraitDirty.target=true
+    elseif ev=="PLAYER_ENTERING_WORLD" then
+        MarkPortraits()
+    end
+    Update()
+end
+for _,ev in ipairs({"PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_LEVEL","UNIT_PORTRAIT_UPDATE","RAID_TARGET_UPDATE","UNIT_FACTION"}) do K.On(ev,OnUnitsEvent,"units") end
 K.Update("units",Update)
 -- A new run brings a fresh AZS_ZONE (class); redraw so the class colour follows a class change at once.
-K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSZONE" or prefix=="AZSEND" then Update() end end,"units")
+K.On("CHAT_MSG_ADDON",function(_,prefix) if prefix=="AZSZONE" or prefix=="AZSEND" then MarkPortraits(); Update() end end,"units")
 K.On("PLAYER_ENTERING_WORLD",K.ApplyBackground)
 -- Saved variables arrive after the files: switch to a saved compact style as soon as they exist.
 K.moduleRefresh=K.moduleRefresh or {}

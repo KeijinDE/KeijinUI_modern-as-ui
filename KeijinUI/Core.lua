@@ -1,4 +1,4 @@
-KeijinUI = { version = "5.0.2", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "5.0.3", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -490,7 +490,8 @@ local function RowBase(parent, index, height)
     row:SetScript("OnEnter", function()
         if not this.tip then return end
         GameTooltip:SetOwner(this,"ANCHOR_LEFT"); GameTooltip:SetText(this.tip,1,0.82,0.28)
-        if this.detail then GameTooltip:AddLine(this.detail,0.94,0.91,0.82,true) end
+        local detail=this.detailFn and this.detailFn(this) or this.detail
+        if detail then GameTooltip:AddLine(detail,0.94,0.91,0.82,true) end
         GameTooltip:Show()
     end)
     row:SetScript("OnLeave", function() GameTooltip:Hide() end)

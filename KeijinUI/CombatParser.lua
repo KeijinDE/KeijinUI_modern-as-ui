@@ -58,6 +58,12 @@ local function Split(globalName)
         end
     end
     FlushLiteral()
+    -- Every fixed text piece must occur in a matching line, so a line missing one can skip the walk.
+    local literals = {}
+    for n = 1, table.getn(pieces) do
+        if pieces[n].text then table.insert(literals, pieces[n].text) end
+    end
+    pieces.literals = literals
     compiled[globalName] = pieces
     return pieces
 end
@@ -94,6 +100,10 @@ end
 local function Read(line, globalName, fieldNames)
     local pieces = Split(globalName)
     if not pieces then return nil end
+    local literals = pieces.literals
+    for n = 1, table.getn(literals) do
+        if not string.find(line, literals[n], 1, true) then return nil end
+    end
     local found = {}
     if not Walk(pieces, 1, line, 1, found) then return nil end
     local record = {}
@@ -285,10 +295,24 @@ local READERS = {
 
 K.tools.CombatEvents = READERS
 
+-- Damage text, statistics and combat details each parse the same line of the same event. The result of the
+-- last (event, line) pair is kept, nil included, so the later handlers of that event get it without a new walk.
+-- The consumers only read the record. Every handler is still called once per event and counts for itself, so
+-- two identical lines in a row are two events and are counted twice. The player and pet names decide who owns
+-- a line, so the cached answer is only used while both are the same as when it was stored.
+local lastEvent, lastLine, lastResult, lastPlayer, lastPet
+
 -- Returns a damage or miss record for a line of the given chat event, otherwise nil.
 function K.tools.ParseCombatLine(eventName, line)
     if type(line) ~= "string" or line == "" then return nil end
+    local player, pet
+    if UnitName then player, pet = UnitName("player"), UnitName("pet") end
+    if eventName == lastEvent and line == lastLine and player == lastPlayer and pet == lastPet then
+        return lastResult
+    end
     local reader = READERS[eventName]
-    if reader then return reader(line) end
-    return nil
+    local result
+    if reader then result = reader(line) end
+    lastEvent, lastLine, lastResult, lastPlayer, lastPet = eventName, line, result, player, pet
+    return result
 end

@@ -1,5 +1,6 @@
 local K=KeijinUI
 local P=K.panelSizing
+local Redraw
 local function Inactive() return not K.basisHud.On() end
 local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
 K.layout.Register("statistics",stats,"Runstatistiken",function(f) f:ClearAllPoints(); f:SetPoint("TOPLEFT",UIParent,"TOPLEFT",24,-36) end,{inactive=Inactive})
@@ -126,10 +127,10 @@ local function PaintTabs()
     Paint(tabRun,view=="run"); Paint(tabBoss,view=="boss"); Paint(tabHeal,view=="healing"); Paint(tabParty,view=="party")
 end
 function K.SetMeterView(view)
-    if autoView and view==autoView then offset=0; P.offsets.meter=0; PaintTabs(); return end
+    if autoView and view==autoView then offset=0; P.offsets.meter=0; PaintTabs(); if Redraw then Redraw() end; return end
     K.DB().meterView=(view=="boss" or view=="healing" or view=="party") and view or nil
     autoView=nil   -- Manual Run/Healing choices remain until the next fight.
-    offset=0; P.offsets.meter=0; PaintTabs()
+    offset=0; P.offsets.meter=0; PaintTabs(); if Redraw then Redraw() end
 end
 function K.SetMeterAuto(on) K.DB().meterAutoBoss=on and true or nil end
 tabRun:SetScript("OnClick",function() K.SetMeterView("run") end)
@@ -175,6 +176,7 @@ local function ResetMeter()
     baseline={}; meterStart=AZS_GetRunTime and AZS_GetRunTime() or 0; offset=0; P.offsets.meter=0
     local lines=AZS_GetMeter and AZS_GetMeter()
     for _,v in ipairs(lines or {}) do if K.Number(v.dmg) then baseline[v.name]=v.dmg end end
+    if Redraw then Redraw() end
 end
 reset:SetScript("OnClick",ResetMeter)
 local crit=K.Panel("KeijinUICrits","Größte kritische Treffer",K.PANEL_WIDTH,220)
@@ -254,6 +256,48 @@ local function AutoSwitch()
         end
     elseif began and K.MeterView()=="run" then autoView="boss"; offset=0; P.offsets.meter=0 end
 end
+-- Tooltip strings are built only while entering a row; scalar fields retain the displayed values.
+local function Detail(row)
+    local v=row
+    local total,rate,dps,average=row.detailTotal,row.detailRate,row.detailDPS,row.detailAverage
+    local value=row
+    if row.detailMode=="boss" then
+            return string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
+                K.Short(rate),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+    elseif row.detailMode=="healing" then
+            return K.T("%.0f Heilung\n%s HPS\n%.1f%% Anteil\nNative Heilungsdaten, ohne Überheilung.",value.dmg,
+                K.Short(K.Number(row.detailRate) and row.detailRate or 0),total>0 and value.dmg/total*100 or 0)
+    elseif row.detailMode=="party" then
+            local detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,K.Short(dps),total>0 and v.dmg/total*100 or 0,"")
+            if type(v.top)=="string" and v.top~="" then
+                detail=detail.."\n"..K.T("Stärkster Zauber: %s (%s DPS)",K.DisplayName(v.top),K.Short(K.Number(v.topdps) and v.topdps or 0))
+            end
+            return detail
+    elseif row.detailMode=="crit" then
+                return string.format(K.T("Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"),v.best,v.last,v.sum/v.count,v.min,v.count)
+    elseif row.detailMode=="run" then
+                local detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
+                    K.Short(average),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+                detail=detail.."\n"..K.T("DPS (10 s): %s\nDPS oben: letzte 10 Spielsekunden. Durchschnitt: seit Runbeginn oder Reset.",K.Short(dps))
+                detail=detail..K.combatDetails.Detail(v.detailName)
+                return detail
+    elseif row.detailMode=="stat:xp" then
+        if K.Number(row.dmg) and K.Number(row.detailTotal) and row.detailTotal>0 then
+            return K.T("%.0f / %.0f, %.0f %% bis zum nächsten Level",row.dmg,row.detailTotal,math.min(100,row.dmg/row.detailTotal*100))
+        end
+        return K.T("Noch keine Spieldaten")
+    elseif row.detailMode=="stat:taken" then return K.combatDetails.Taken()
+    else return K.Number(row.dmg) and string.format("%.0f",row.dmg) or K.T("Noch keine Spieldaten") end
+end
+local function BindDetail(row,mode,v,total,rate,dps,average)
+    row.detail=nil; row.detailFn=Detail; row.detailMode=mode
+    row.detailName=v.name; row.dmg=v.dmg; row.proc=v.proc; row.top=v.top; row.topdps=v.topdps
+    row.best=v.best; row.last=v.last; row.sum=v.sum; row.count=v.count; row.min=v.min
+    row.detailTotal=total; row.detailRate=rate; row.detailDPS=dps; row.detailAverage=average
+end
+local function StatDetail(row,key,value,need)
+    row.detail=nil; row.detailFn=Detail; row.detailMode="stat:"..key; row.dmg=value; row.detailTotal=need
+end
 local function UpdateBoss()
     local lines,total,dps
     if AZS_GetBossMeter then lines,total,dps=AZS_GetBossMeter() end
@@ -286,8 +330,7 @@ local function UpdateBoss()
             local red,green,blue=K.SourceColor(v.name)
             row.bar:SetStatusBarColor(red,green,blue,0.85)
             row.tip=K.DisplayName(v.name)
-            row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
-                K.Short(rate),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
+            BindDetail(row,"boss",v,total,rate)
             K.Shown(row,true)
         else K.Shown(row,false) end
     end
@@ -320,8 +363,7 @@ local function UpdateHealing(lines,total,hps,supported)
             row.bar:SetValue(sorted[1].dmg>0 and value.dmg/sorted[1].dmg or 0)
             local red,green,blue=K.SourceColor(value.name); row.bar:SetStatusBarColor(red,green,blue,.85)
             row.tip=K.DisplayName(value.name)
-            row.detail=K.T("%.0f Heilung\n%s HPS\n%.1f%% Anteil\nNative Heilungsdaten, ohne Überheilung.",value.dmg,
-                K.Short(K.Number(value.dps) and value.dps or 0),total>0 and value.dmg/total*100 or 0)
+            BindDetail(row,"healing",value,total,K.Number(value.dps) and value.dps or 0)
             K.Shown(row,true)
         else K.Shown(row,false) end
     end
@@ -351,10 +393,7 @@ local function UpdateParty(sorted,total,rate)
             row.bar:SetStatusBarColor(red,green,blue,own and 0.95 or 0.65)
             for _,t in ipairs(row.rim) do if own then t:SetVertexColor(1,0.82,0.28,1) else t:SetVertexColor(0.62,0.57,0.43,0.95) end end
             row.tip=v.name
-            row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,K.Short(dps),total>0 and v.dmg/total*100 or 0,"")
-            if type(v.top)=="string" and v.top~="" then
-                row.detail=row.detail.."\n"..K.T("Stärkster Zauber: %s (%s DPS)",K.DisplayName(v.top),K.Short(K.Number(v.topdps) and v.topdps or 0))
-            end
+            BindDetail(row,"party",v,total,nil,dps)
             K.Shown(row,true)
         else K.Shown(row,false) end
     end
@@ -422,7 +461,7 @@ local function UpdateCrits(valid)
                 row.bar:SetValue(v.best/crits[1].best)
                 local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=v.name
-                row.detail=string.format(K.T("Größter: %.0f\nLetzter: %.0f\nDurchschnitt: %.0f\nKleinster: %.0f\nKritische Treffer: %d"),v.best,v.last,v.sum/v.count,v.min,v.count)
+                BindDetail(row,"crit",v)
                 K.Shown(row,true)
             else K.Shown(row,false) end
         end
@@ -457,18 +496,16 @@ local function Update()
                 K.Shown(row,true)
                 local key=def[1]; local value=r[key]
                 row.tip=K.T(def[2]); row.label:SetText(K.T(def[2]))
+                StatDetail(row,key,value,r.xpn)
                 if key=="xp" then
                     local need=r.xpn
                     if K.Number(value) and K.Number(need) and need>0 then
                         row.value:SetText(K.Short(value).." / "..K.Short(need))
-                        row.detail=K.T("%.0f / %.0f, %.0f %% bis zum nächsten Level",value,need,math.min(100,value/need*100))
                     else
-                        row.value:SetText(K.Short(nil)); row.detail=K.T("Noch keine Spieldaten")
+                        row.value:SetText(K.Short(nil))
                     end
                 else
                     row.value:SetText(K.Short(value))
-                    if key=="taken" then row.detail=K.combatDetails.Taken()
-                    else row.detail=K.Number(value) and string.format("%.0f",value) or K.T("Noch keine Spieldaten") end
                 end
             K.Shown(row.line,i~=visible)
             else K.Shown(row,false) end
@@ -520,10 +557,7 @@ local function Update()
                 local red,green,blue=K.SourceColor(v.name)
                 row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=K.DisplayName(v.name)
-                row.detail=string.format(K.T("%.0f Schaden\n%s / Sekunde\n%.1f%% Anteil%s"),v.dmg,
-                    K.Short(average),total>0 and v.dmg/total*100 or 0,v.proc==1 and K.T("\nZusätzlicher Effekt") or "")
-                row.detail=row.detail.."\n"..K.T("DPS (10 s): %s\nDPS oben: letzte 10 Spielsekunden. Durchschnitt: seit Runbeginn oder Reset.",K.Short(dps))
-                row.detail=row.detail..K.combatDetails.Detail(v.name)
+                BindDetail(row,"run",v,total,nil,dps,average)
                 K.Shown(row,true)
             else K.Shown(row,false) end
         end
@@ -543,6 +577,7 @@ local function Update()
     if P.Custom("meter") then K.SetW(summary,meter:GetWidth()-26) end
     UpdateCrits(valid)
 end
+Redraw=Update
 -- /kui heal debug: 60 seconds of buff chat events (all names are in the 1.12 event catalog).
 local HEAL_EVENTS={"CHAT_MSG_SPELL_SELF_BUFF","CHAT_MSG_SPELL_PERIODIC_SELF_BUFFS","CHAT_MSG_SPELL_FRIENDLYPLAYER_BUFF",
     "CHAT_MSG_SPELL_PERIODIC_FRIENDLYPLAYER_BUFFS","CHAT_MSG_SPELL_HOSTILEPLAYER_BUFF","CHAT_MSG_SPELL_PARTY_BUFF"}
@@ -603,5 +638,13 @@ end
 table.insert(K.basisHud.refresh,Refresh)
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then Refresh() end end)
 K.On("PLAYER_ENTERING_WORLD",Refresh)
-K.Update("basisHud",Update)
+-- Only the periodic redraw is throttled; explicit refreshes keep calling Update directly.
+local nextUpdate=0
+local function Tick()
+    local now=GetTime()
+    if now<nextUpdate then return end
+    nextUpdate=now+0.25
+    Update()
+end
+K.Update("basisHud",Tick)
 Refresh()

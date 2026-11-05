@@ -37,27 +37,55 @@ local function ByKind(kind)
     if kind=="elite" or kind=="guardian" then return "elite" end
     return "normal"
 end
-local function Kind(name,isTarget)
-    -- Only the target can be identified for certain; other plates only by name.
-    if isTarget and UnitClassification then
+-- Unit lists are replaced or stamped by the client. Schedule rows can also change in place.
+local unitNames,scheduleNames={},{}
+local units,unitsUpdated,indexVersion=nil,nil,0
+local scheduleRows={}
+local function RefreshKinds()
+    -- Unit index invalidation relies on AZS_UNITS table identity and the AZS_UNITS_UPDATED stamp.
+    if units~=AZS_UNITS or unitsUpdated~=AZS_UNITS_UPDATED then
+        units=AZS_UNITS; unitsUpdated=AZS_UNITS_UPDATED; unitNames={}
+        for _,u in ipairs(units or {}) do
+            if u.name and not unitNames[u.name] then unitNames[u.name]=ByKind(u.kind) end
+        end
+        indexVersion=indexVersion+1
+    end
+    local schedule=K.Schedule()
+    local changed=table.getn(scheduleRows)~=table.getn(schedule)
+    for i,u in ipairs(schedule) do
+        local old=scheduleRows[i]
+        if not old or old.name~=u.name or old.state~=u.state then changed=true; break end
+    end
+    if changed then
+        scheduleNames={}; scheduleRows={}
+        for i,u in ipairs(schedule) do
+            scheduleRows[i]={name=u.name,state=u.state}
+            if u.name and u.state~="dead" and u.state~="due" then scheduleNames[u.name]="boss" end
+        end
+        indexVersion=indexVersion+1
+    end
+end
+local function TargetKind(name)
+    if UnitClassification then
         local class=UnitClassification("target")
-        if class=="rare" or class=="rareelite" then rareNames[name]=true; return "rare" end
+        if class=="rare" or class=="rareelite" then
+            return "rare",true
+        end
         if class=="worldboss" then return "boss" end
     end
-    if isTarget and AZS_UnitKind then
+    if AZS_UnitKind then
         local kind=AZS_UnitKind("target")
         if kind then return ByKind(kind) end
     end
-    if isTarget and AZS_TARGET and AZS_TARGET.name==name and AZS_TARGET.kind then return ByKind(AZS_TARGET.kind) end
-    for _,u in ipairs(AZS_UNITS or {}) do
-        if u.name==name then return ByKind(u.kind) end
+    if AZS_TARGET and AZS_TARGET.name==name and AZS_TARGET.kind then return ByKind(AZS_TARGET.kind) end
+end
+local function Kind(p,name,target,targetKind,targetRare)
+    if target and targetRare and not rareNames[name] then rareNames[name]=true; indexVersion=indexVersion+1 end
+    if p.kindName~=name or p.kindVersion~=indexVersion then
+        p.kindName=name; p.kindVersion=indexVersion
+        p.baseKind=unitNames[name] or (rareNames[name] and "rare") or scheduleNames[name] or "normal"
     end
-    -- Rares are not in AZS_UNITS: remembered by name once seen as a target.
-    if rareNames[name] then return "rare" end
-    for _,u in ipairs(K.Schedule()) do
-        if u.name==name and u.state~="dead" and u.state~="due" then return "boss" end
-    end
-    return "normal"
+    return target and targetKind or p.baseKind
 end
 local layers={"BACKGROUND","BORDER","ARTWORK","OVERLAY","HIGHLIGHT"}
 -- Hide or give back every native layer: the plate's art and the health bar's fill.
@@ -131,10 +159,8 @@ local function Skin(plate,how)
     label:ClearAllPoints(); label:SetPoint("BOTTOM",bar,"TOP",0,2)
     local value=K.Text(textLayer,"",8,"RIGHT",-3,0)
     -- Debuffs of the current target only (UnitDebuff exists for the target, not for any plate).
-    local debuffs=K.DebuffRow(f,14,true)
-    debuffs:SetPoint("TOP",bar,"BOTTOM",0,-2)
     local left,right,top,bottom=plate:GetHitRectInsets()
-    local p={plate=plate,health=health,nativeName=name,frame=f,bar=bar,label=label,value=value,debuffs=debuffs,how=how,
+    local p={plate=plate,health=health,nativeName=name,frame=f,bar=bar,label=label,value=value,how=how,
         raidMarker=raidMarker,maskRegions={},healthAlpha=health:GetAlpha() or 1,insets={left or 0,right or 0,top or 0,bottom or 0}}
     if raidMarker then
         for _,r in ipairs(regions) do
@@ -160,6 +186,10 @@ local function Run()
     if not WorldFrame then return end
     Discover()
     local mode=Mode()
+    RefreshKinds()
+    local targetName=table.getn(plates)>0 and UnitExists("target") and UnitName("target")
+    local targetKind,targetRare
+    if targetName then targetKind,targetRare=TargetKind(targetName) end
     local targetShown=false
     for _,p in ipairs(plates) do
         if p.plate:IsShown() then
@@ -167,8 +197,8 @@ local function Run()
             local red,green,blue=p.health:GetStatusBarColor()
             red,green,blue=red or 1,green or 0,blue or 0
             local enemy=not (green>red+0.1 and green>blue+0.1) and not (blue>red+0.1 and blue>green+0.1)
-            local target=UnitExists("target") and UnitName("target")==name and p.plate:GetAlpha()>=0.99
-            local kind=Kind(name,target)
+            local target=targetName==name and p.plate:GetAlpha()>=0.99
+            local kind=Kind(p,name,target,targetKind,targetRare)
             Mask(p,enemy)
             local show=enemy and mode~="off" and (mode=="all" or kind~="normal")
             if show then
@@ -184,7 +214,7 @@ local function Run()
                 if p.cOffset~=offset then
                     p.cOffset=offset; p.bar:ClearAllPoints(); p.bar:SetPoint("CENTER",p.frame,"CENTER",offset,-4)
                 end
-                p.label:SetWidth(width)
+                if p.cLabelWidth~=width then p.cLabelWidth=width; p.label:SetWidth(width) end
                 if p.cHeight~=height then p.cHeight=height; p.bar:SetHeight(height) end
                 if p.cShare~=share then
                     p.cShare=share; p.bar:SetValue(share)
@@ -207,16 +237,22 @@ local function Run()
                 if kind=="normal" and not target then p.label:Hide() else p.label:Show() end
                 p.frame:Show()
                 Click(p,false)
-                if target then targetShown=true; K.UpdateDebuffRow(p.debuffs,"target")
-                elseif p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
+                if target then
+                    targetShown=true
+                    if not p.debuffs then
+                        p.debuffs=K.DebuffRow(p.frame,14,true)
+                        p.debuffs:SetPoint("TOP",p.bar,"BOTTOM",0,-2)
+                    end
+                    K.UpdateDebuffRow(p.debuffs,"target")
+                elseif p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
             else
                 p.frame:Hide()
                 Click(p,enemy)
-                if p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
+                if p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
             end
         else
             p.frame:Hide()
-            if p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
+            if p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
         end
     end
     if K.targetPlateShown~=targetShown then K.targetPlateShown=targetShown; if K.RefreshTargetDebuffs then K.RefreshTargetDebuffs() end end

@@ -5,6 +5,10 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.3 (2026-11-05, release v5.0.3)
+
+* Performance with many enemies: nameplates, combat log parsing, unit frames and the damage meter do less work per frame.
+
 ### 5.0.2 (2026-11-04, release v5.0.2)
 
 * Support for the new hunter ability Kill Command (game 0.141.0): name, icon and spell book link.
@@ -703,6 +707,10 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.3 (2026-11-05, Release v5.0.3)
+
+* Leistung bei vielen Gegnern: Namensplaketten, Kampflogauswertung, Einheitenfenster und Schadensanzeige erledigen weniger Arbeit pro Bild.
 
 ### 5.0.2 (2026-11-04, Release v5.0.2)
 

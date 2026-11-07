@@ -101,7 +101,6 @@ local function NewLabel()
     local label=table.remove(spare)
     if not label then
         local fs=host:CreateFontString(nil,"OVERLAY")
-        fs:SetFont(K.font,14,"OUTLINE")   -- game 0.101 refuses SetText before a font is set
         label={fs=fs}
     end
     return label
@@ -111,7 +110,9 @@ local function Size()
     return textSize
 end
 local function SetSize(label,size)
-    local shown=math.max(1,math.floor(size*(label.scale or 1)*Size()+0.5))
+    -- Ordinary camera scaling uses 2 px steps. The short pop gets bounded 1 px steps.
+    local step=label.pop and label.age<0.24 and 1 or 2
+    local shown=math.max(step,math.floor(size*(label.scale or 1)*Size()/step+0.5)*step)
     if shown~=label.fontSize or label.font~=K.font then
         label.fontSize=shown; label.font=K.font
         label.fs:SetFont(K.font,shown,"OUTLINE")
@@ -173,11 +174,11 @@ local function AddLabel(ev,text,style,r,g,b,iconPath,scroll,pop,mode,spell,schoo
     label.jx=math.random(-14,14); label.oy=oy; label.scale=1
     flip=-flip; label.dir=flip; label.drift=math.random(10,22)
     label.shown=false; label.alpha=nil; label.fontSize=nil
+    label.x=nil; label.y=nil
     local fs=label.fs
     fs:ClearAllPoints()
     fs:SetTextColor(r,g,b)
-    fs:SetFont(K.font,14,"OUTLINE")
-    fs:SetText(text)
+    -- SetSize supplies the font before SetText, including newly created FontStrings.
     fs:Hide()
     -- hasIcon is decided per use: a reused label never shows the icon of its previous number.
     label.hasIcon=iconPath and true or false
@@ -189,6 +190,7 @@ local function AddLabel(ev,text,style,r,g,b,iconPath,scroll,pop,mode,spell,schoo
         tex:Hide()
     elseif label.icon then label.icon:Hide() end
     SetSize(label,pop and math.floor(style.size*K.damageText.PopFactor(0)+0.5) or style.size)
+    fs:SetText(text)
     table.insert(labels,label)
 end
 
@@ -328,11 +330,15 @@ local function Place(dt)
                 else lift=s.rise*t; alpha=ui.Opacity(s,t) end
                 SetSize(label,label.pop and math.floor(s.size*ui.PopFactor(label.age)+0.5) or s.size)
                 local fs=label.fs
-                fs:ClearAllPoints()
                 -- Projection x/y and the head height are WorldFrame units (game doc) and get k; the extras (jitter, drift,
                 -- rise) are already host units and do not.
-                fs:SetPoint("BOTTOM",WorldFrame,"BOTTOMLEFT",entry.x*k+(label.jx+dx)*factor,
-                    (entry.y+W.HEAD_YARDS*upy)*k+(label.oy+lift)*factor)
+                local x=math.floor(entry.x*k+(label.jx+dx)*factor+0.5)
+                local y=math.floor((entry.y+W.HEAD_YARDS*upy)*k+(label.oy+lift)*factor+0.5)
+                if label.x~=x or label.y~=y then
+                    label.x=x; label.y=y
+                    fs:ClearAllPoints()
+                    fs:SetPoint("BOTTOM",WorldFrame,"BOTTOMLEFT",x,y)
+                end
                 if label.alpha~=alpha then
                     label.alpha=alpha; fs:SetAlpha(alpha)
                     if label.hasIcon then label.icon:SetAlpha(alpha) end

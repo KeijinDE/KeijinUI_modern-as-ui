@@ -21,13 +21,20 @@ local EMPTY_JEWELRY = {
 	[11] = {"Finger", "Freier Ringplatz"}, [12] = {"Finger", "Freier Ringplatz"},
 	[13] = {"Trinket", "Freier Schmuckplatz"}, [14] = {"Trinket", "Freier Schmuckplatz"}
 }
+local emptyItems = {}
 local function EmptyItem(slot)
+	local row = emptyItems[slot]
+	if row then return row end
 	local info = EMPTY_JEWELRY[slot]
-	return {kind="emptyItem", identity="emptyItem:"..slot, slot=slot, name=info[2],
+	row = {kind="emptyItem", identity="emptyItem:"..slot, slot=slot, name=info[2],
 		icon="Interface\\PaperDoll\\UI-PaperDoll-Slot-"..info[1]}
+	emptyItems[slot] = row
+	return row
 end
 -- Keep placeholders out of the advisor and the action bar's native spell list.
+local slotSource, slotRows
 local function SpellSlots(spells)
+	if slotSource == spells and slotRows then return slotRows end
 	local rows, total = {}, table.getn(spells)
 	local normal = math.max(0, total - 1)
 	local count = math.max(NORMAL_SLOTS, normal) + 1
@@ -36,8 +43,10 @@ local function SpellSlots(spells)
 		if index == count then row = spells[total] elseif index <= normal then row = spells[index] end
 		rows[index] = row or {kind="emptySpell", identity="emptySpell:"..index}
 	end
+	slotSource, slotRows = spells, rows
 	return rows
 end
+local COLOR_PLAIN, COLOR_EMPTY, COLOR_SAFE, COLOR_ADVISED = {0.4,0.4,0.43}, {0.2,0.2,0.23}, {0.35,0.9,0.5}, {0.9,0.75,0.2}
 local PHASES = { ready = true, playing = true, choosing = true, paused = true }
 local QUALITY = { [0] = {0.62,0.62,0.62}, [1] = {0.85,0.85,0.85},
 	[2] = {0.12,1,0}, [3] = {0,0.44,0.87}, [4] = {0.64,0.21,0.93},
@@ -303,17 +312,27 @@ local function CooldownText(value)
 	else text = string.format("%.0f", value) end
 	return text
 end
+-- Names are a bounded set (spell book, ability tables, tooltip titles): remember each result.
+local normCache, normCount = {}, 0
 local function Normalize(name)
-	name = string.gsub(name or "", "|c%x%x%x%x%x%x%x%x", "")
-	name = string.gsub(name, "|r", "")
-	return string.gsub(string.lower(name), "[%s%p]", "")
+	name = name or ""
+	local hit = normCache[name]
+	if hit then return hit end
+	local text = string.gsub(name, "|c%x%x%x%x%x%x%x%x", "")
+	text = string.gsub(text, "|r", "")
+	text = string.gsub(string.lower(text), "[%s%p]", "")
+	if normCount >= 2000 then normCache = {}; normCount = 0 end
+	normCache[name] = text; normCount = normCount + 1
+	return text
 end
 local function NameFromLink(link)
 	local _, _, name = string.find(link or "", "|h%[(.-)%]|h")
 	return name
 end
+-- The five jewelry rows are reused while link, icon and quality stay the same; the list itself is reused too.
+local itemRows, itemList = {}, {}
 local function Items()
-	local items = {}
+	local items = itemList
 	local available = type(GetInventoryItemLink) == "function" and type(GetInventoryItemTexture) == "function"
 	for index = 1, table.getn(JEWELRY) do
 		local slot = JEWELRY[index]
@@ -323,31 +342,54 @@ local function Items()
 			-- Do not conceal a real item whose visual data has not arrived yet.
 			if not icon then return nil end
 			local quality = type(GetInventoryItemQuality) == "function" and GetInventoryItemQuality("player", slot) or 1
-			table.insert(items, {kind="item", identity=link, name=NameFromLink(link) or T("Item"),
-				link=link, slot=slot, icon=icon, quality=quality})
+			local row = itemRows[slot]
+			if not row or row.link ~= link or row.icon ~= icon or row.quality ~= quality then
+				row = {kind="item", identity=link, name=NameFromLink(link) or T("Item"),
+					link=link, slot=slot, icon=icon, quality=quality}
+				itemRows[slot] = row
+			end
+			items[index] = row
 		else
-			table.insert(items, EmptyItem(slot))
+			items[index] = EmptyItem(slot)
 		end
 	end
 	return items
 end
-local function Book()
-	local out = {}
+local function BuildBook()
+	local out, count = {}, 0
 	if type(GetNumSpellTabs) ~= "function" or type(GetSpellTabInfo) ~= "function"
-		or type(GetSpellName) ~= "function" or type(GetSpellTexture) ~= "function" then return out end
+		or type(GetSpellName) ~= "function" or type(GetSpellTexture) ~= "function" then return out, 0 end
 	for tab = 1, math.min(16, GetNumSpellTabs()) do
-		local _, _, offset, count = GetSpellTabInfo(tab)
-		if type(offset) == "number" and type(count) == "number" then
-			for index = math.max(1, offset + 1), math.min(1023, offset + count) do
+		local _, _, offset, count2 = GetSpellTabInfo(tab)
+		if type(offset) == "number" and type(count2) == "number" then
+			for index = math.max(1, offset + 1), math.min(1023, offset + count2) do
 				local name = GetSpellName(index, "spell")
 				if name then
 					out[Normalize(name)] = {slot=index, name=name, icon=GetSpellTexture(index, "spell")}
+					count = count + 1
 				end
 			end
 		end
 	end
-	return out
+	return out, count
 end
+-- The spell book only changes on SPELLS_CHANGED, LEARNED_SPELL_IN_TAB or a zone change (AZSSPELLS never touches it):
+-- rebuild it then, not on every tick. An empty result (book not ready yet) is retried at most once per second.
+local bookCache, bookDirty, bookVersion, bookTried = {}, true, 0, -10
+local function Book()
+	if bookDirty then
+		local now = type(GetTime) == "function" and GetTime() or 0
+		if now - bookTried >= 1 or now < bookTried then
+			bookTried = now
+			local count
+			bookCache, count = BuildBook()
+			bookVersion = bookVersion + 1
+			if count > 0 then bookDirty = false end
+		end
+	end
+	return bookCache
+end
+local function InvalidateBook() bookDirty = true; bookTried = -10 end
 
 local advice = CreateFrame("Frame", "KeijinBuildAdviceFrame", panel)
 advice:SetWidth(116)
@@ -580,12 +622,20 @@ local function Cell(pool, index)
 	return cell
 end
 -- Rank stays bottom right; shrink only when its measured text exceeds the icon width.
-local function BadgeStamp(fs, text)
-	return text..":"..tostring(KeijinUI.fontFactor)..":"..tostring(KeijinUI.fontBase[fs])..":"..tostring((fs:GetFont()))
+-- A stamp is a table of text, font scale, font size and font file, written in place: comparing it builds no string.
+local function StampSame(fs, name, text)
+	local stamp = fs[name]
+	return stamp ~= nil and stamp.text == text and stamp.factor == KeijinUI.fontFactor
+		and stamp.base == KeijinUI.fontBase[fs] and stamp.font == (fs:GetFont())
+end
+local function StampStore(fs, name, text)
+	local stamp = fs[name]
+	if not stamp then stamp = {}; fs[name] = stamp end
+	stamp.text, stamp.factor, stamp.base, stamp.font = text, KeijinUI.fontFactor, KeijinUI.fontBase[fs], (fs:GetFont())
 end
 local function Badge(fs, plate, text)
 	-- Measured once per text, font file, font size and font scale; an idle repaint writes nothing.
-	if fs.badgeStamp == BadgeStamp(fs, text) then return end
+	if StampSame(fs, "badgeStamp", text) then return end
 	fs:SetText(text)
 	local size = 10
 	KeijinUI.SetFontSize(fs, size)
@@ -596,22 +646,34 @@ local function Badge(fs, plate, text)
 		width = fs:GetStringWidth()
 	end
 	plate:SetWidth(math.min(BADGE, math.max(8, math.floor(width + 0.5) + 2)))
-	fs.badgeStamp = BadgeStamp(fs, text)
+	StampStore(fs, "badgeStamp", text)
 end
 -- Keep strip writes out of idle repaints, including font/size changes and option toggles.
 local function StripText(fs, text)
-	local stamp = BadgeStamp(fs, text)
-	if fs.stripStamp == stamp then return end
+	if StampSame(fs, "stripStamp", text) then return end
 	fs:SetText(text)
-	fs.stripStamp = stamp
+	StampStore(fs, "stripStamp", text)
+end
+-- Number to text, remembered per cell: the same value builds no new string on the next tick.
+local function Whole(cell, valueKey, textKey, value)
+	if cell[valueKey] ~= value or not cell[textKey] then
+		cell[valueKey], cell[textKey] = value, string.format("%.0f", value)
+	end
+	return cell[textKey]
 end
 local function PaintStrips(cell, row)
 	local on = (row.kind == "spell" or row.kind == "emptySpell") and TargetsOn()
 	local count = on and row.kind == "spell" and KeijinBuildAdvisor and KeijinBuildAdvisor.TargetCount
 		and KeijinBuildAdvisor.TargetCount(row) or nil
-	StripText(cell.targets, count and count >= 1 and string.format("%.0f", count) or "")
+	StripText(cell.targets, count and count >= 1 and Whole(cell, "targetValue", "targetText", count) or "")
 	KeijinUI.Shown(cell.targetPlate,on)
-	local cooldown = row.kind == "spell" and CooldownStrip() > 0 and CooldownText(row.cdmax) or ""
+	local cooldown = ""
+	if row.kind == "spell" and CooldownStrip() > 0 then
+		if not cell.cdmaxKnown or cell.cdmaxSeen ~= row.cdmax then
+			cell.cdmaxKnown, cell.cdmaxSeen, cell.cdmaxText = true, row.cdmax, CooldownText(row.cdmax)
+		end
+		cooldown = cell.cdmaxText
+	end
 	StripText(cell.runCooldown,cooldown)
 	KeijinUI.Shown(cell.cooldownPlate,cooldown ~= "")
 	local gold = Number(row.cdmax) and row.cdmax < 1 and true or false
@@ -622,14 +684,13 @@ local function PaintStrips(cell, row)
 	end
 end
 local function FitRowLabel(fs)
-	local stamp = BadgeStamp(fs, fs:GetText())
-	if fs.labelStamp == stamp then return end
+	if StampSame(fs, "labelStamp", fs:GetText()) then return end
 	local size = 9
 	KeijinUI.SetFontSize(fs,size)
 	while size > 6 and fs:GetStringWidth() > ROWSTART - 14 do
 		size = size - 1; KeijinUI.SetFontSize(fs,size)
 	end
-	fs.labelStamp = BadgeStamp(fs, fs:GetText())
+	StampStore(fs, "labelStamp", fs:GetText())
 end
 local function StripLabels(strip, targets)
 	FitRowLabel(rowLabels.cooldown); FitRowLabel(rowLabels.targets)
@@ -645,17 +706,21 @@ local function Paint(pool, rows, top, pitch)
 	for index = 1, table.getn(rows) do
 		local row = rows[index]
 		local cell = Cell(pool, index)
-		local changed = not cell.row or cell.row.identity ~= row.identity or cell.row.rank ~= row.rank
-			or cell.row.recommended ~= row.recommended
+		-- Rows are reused and edited in place, so the cell remembers what it showed last.
+		local changed = not cell.row or cell.seenIdentity ~= row.identity or cell.seenRank ~= row.rank
+			or cell.seenRecommended ~= row.recommended or cell.seenHeading ~= row.adviceHeading
+			or cell.seenBook ~= row.book or cell.seenBookVersion ~= row.bookVersion or cell.seenCdmax ~= row.cdmax
+		cell.seenIdentity, cell.seenRank, cell.seenRecommended = row.identity, row.rank, row.recommended
+		cell.seenHeading, cell.seenBook, cell.seenBookVersion, cell.seenCdmax = row.adviceHeading, row.book, row.bookVersion, row.cdmax
 		local empty = row.kind == "emptySpell" or row.kind == "emptyItem"
 		if row.kind == "emptySpell" and hovered == cell then hovered = nil; GameTooltip:Hide() end
 		cell.row = row
-		cell.color = row.kind == "item" and (QUALITY[row.quality] or QUALITY[1]) or {0.4,0.4,0.43}
-		if empty then cell.color = {0.2,0.2,0.23} end
+		cell.color = row.kind == "item" and (QUALITY[row.quality] or QUALITY[1]) or COLOR_PLAIN
+		if empty then cell.color = COLOR_EMPTY end
 		cell:EnableMouse(true)
 		cell:SetScript("OnDragStart", DragStart)
 		cell:SetScript("OnDragStop", DragStop)
-		if row.recommended then cell.color = row.safety and {0.35,0.9,0.5} or {0.9,0.75,0.2} end
+		if row.recommended then cell.color = row.safety and COLOR_SAFE or COLOR_ADVISED end
 		local columns = pool == spellCells and COLUMNS or 5
 		local start = ROWSTART
 		KeijinUI.Anchor(cell,"TOPLEFT",panel,"TOPLEFT",start+math.mod(index-1,columns)*PITCH,-top-math.floor((index-1)/columns)*(pitch or PITCH))
@@ -677,7 +742,7 @@ local function Paint(pool, rows, top, pitch)
             KeijinUI.Shown(cell.nativeCooldown,true)
         elseif cell.nativeCooldown then KeijinUI.Shown(cell.nativeCooldown,false) end
 		if row.kind == "spell" then
-			Badge(cell.rank, cell.rankBackground, string.format("%.0f", row.rank))
+			Badge(cell.rank, cell.rankBackground, Whole(cell, "rankValue", "rankText", row.rank))
 			KeijinUI.Shown(cell.rank,true); KeijinUI.Shown(cell.rankBackground,true)
 		else
 			KeijinUI.Shown(cell.rank,false); KeijinUI.Shown(cell.rankBackground,false)
@@ -728,22 +793,35 @@ local function TimerIcon(value,name)
 	if not string.find(icon,"\\",1,true) then icon="Interface\\Icons\\"..icon end
 	return icon
 end
+-- The row tables and the list are reused: filled in place each tick, the icon path rebuilt only when name or icon change.
+local timerRows, timerList = {}, {}
+local NO_TIMERS = {}
 local function TalentTimers()
-	if type(AZS_GetTimers)~="function" or type(AZS_GetPhase)~="function" then return {} end
+	if type(AZS_GetTimers)~="function" or type(AZS_GetPhase)~="function" then return NO_TIMERS end
 	local okPhase,phase=pcall(AZS_GetPhase)
-	if not okPhase or (phase~="playing" and phase~="choosing" and phase~="paused") then return {} end
+	if not okPhase or (phase~="playing" and phase~="choosing" and phase~="paused") then return NO_TIMERS end
 	local ok,values=pcall(AZS_GetTimers)
-	if not ok or type(values)~="table" then return {} end
-	local rows={}
+	if not ok or type(values)~="table" then return NO_TIMERS end
+	local used=0
 	for _,v in ipairs(values) do
 		if type(v)=="table" and type(v.name)=="string" and v.name~="" and Number(v.remaining)
 			and (v.kind=="summon" or v.kind=="cooldown") then
-			table.insert(rows,{kind="talentTimer",name=v.name,timerKind=v.kind,cd=v.remaining,
-				cdmax=Number(v.duration) and v.duration or nil,frozen=phase~="playing",
-				icon=TimerIcon(v.icon,v.name)})
+			used=used+1
+			local row=timerRows[used]
+			if not row then row={kind="talentTimer"}; timerRows[used]=row end
+			if row.srcName~=v.name or row.srcIcon~=v.icon then
+				row.srcName,row.srcIcon=v.name,v.icon
+				row.icon=TimerIcon(v.icon,v.name)
+			end
+			row.name,row.timerKind,row.cd=v.name,v.kind,v.remaining
+			row.cdmax=Number(v.duration) and v.duration or nil
+			row.frozen=phase~="playing"
+			timerList[used]=row
 		end
 	end
-	return rows
+	for index=table.getn(timerList),used+1,-1 do timerList[index]=nil end
+	if used==0 then return NO_TIMERS end
+	return timerList
 end
 local function TimerTip(cell)
 	local row=cell.row
@@ -800,7 +878,7 @@ local function PaintCell(cell,row)
 		KeijinUI.Shown(cell.icon,true)
 		cell.frame:SetBackdropBorderColor(0.62,0.57,0.43,1)
 		local left = Number(row.cd) and row.cd > 0 and row.cd or nil
-		cell.cooldown:SetText(left and string.format("%.0f", math.ceil(left)) or "")
+		cell.cooldown:SetText(left and Whole(cell, "leftValue", "leftText", math.ceil(left)) or "")
 		local full = Number(row.cdmax) and row.cdmax > 0 and row.cdmax or nil
 		if left and cell.clock and KeijinUI.CooldownClockwise() and full and not row.frozen then
 			-- Only a new or shifted cooldown restarts the model; the game data counts down in steps.
@@ -861,7 +939,7 @@ local function PaintActions(rows, timers)
 	local total = table.getn(rows)
 	local racial = total > 0 and rows[total] or nil
 	local normal = total > 0 and total - 1 or 0
-	timers = timers or {}
+	timers = timers or NO_TIMERS
 	local count = math.max(NORMAL_SLOTS, normal+table.getn(timers)) + 1
 	for index = 1, count do
 		local row, cell = nil, ActionCell(index)
@@ -882,26 +960,14 @@ local function PanelOn() return BuildOn() or AdvisorOn() end
 KeijinUI.layout.Register("build", panel, "Zauber, Schmuck und Buildtipps", function(f)
 	KeijinUI.Anchor(f,"BOTTOM", UIParent, "BOTTOM", 0, 42)
 end, {keepBottom=true, legacyHeight=82, inactive=function() return not PanelOn() end})
-local function Update()
-	local settings, run = Settings(), AZS_RUN
-	local panelOn, actionOn, effectsOn, advisorOn = BuildOn(), ActionOn(), EffectsSplit(), AdvisorOn()
-	local items = panelOn and Items() or nil
-	if panelOn and not items then panelOn=false end
-	StockBar(not actionOn)
-	if panelOn then HideNative() else ShowNative() end
-	if not panelOn and not actionOn and not effectsOn and not advisorOn then Release(); return end
-	local activeRun = type(run) == "table" and (not run.ph or PHASES[run.ph])
-	-- Timers require neither spell book nor inventory nor the native build HUD API.
-	local timers = KeijinUI.ModuleOn("effects") and (effectsOn or actionOn) and TalentTimers() or {}
-	PaintEffects(effectsOn and timers or {})
-	ShowEffects(effectsOn)
-	local needSpells = panelOn or actionOn or advisorOn
-	local book, spells = needSpells and Book() or {}, {}
-	local nativeSpells = needSpells and type(AZS_SPELLS) == "table" and AZS_SPELLS or {}
+local EMPTY = {}
+local list = {rows = EMPTY}
+local function BuildSpells(book, nativeSpells)
+	local out = {}
 	for index = 1, table.getn(nativeSpells) do
 		local value = nativeSpells[index]
 		if type(value) ~= "table" or type(value.key) ~= "string" or not Number(value.rank)
-			or not Number(value.spell) then spells = {}; break end
+			or not Number(value.spell) then return {} end
 		local name = (KeijinBuildBarNames or {})[value.key] or string.gsub(value.key, "_", " ")
 		local entry = book[Normalize(name)] or book[Normalize(value.key)]
 		local aliases = (KeijinBuildBarAliases or {})[value.key]
@@ -918,15 +984,61 @@ local function Update()
 			entry = book[Normalize(other)]
 			icon = (KeijinBuildBarIcons or {})[value.key] or RealIcon(entry.icon)
 		end
-		table.insert(spells, {kind="spell", key=value.key, identity=value.key..":"..value.spell,
-			name=display, rank=value.rank, cd=value.cd, cdmax=value.cdmax,
-			book=entry and entry.slot,
+		table.insert(out, {kind="spell", key=value.key, identity=value.key..":"..value.spell,
+			name=display, rank=value.rank, spellId=value.spell, cd=value.cd, cdmax=value.cdmax,
+			book=entry and entry.slot, bookVersion=bookVersion,
 			icon=icon or (KeijinBuildBarIcons or {})[value.key]})
 	end
+	return out
+end
+-- The spell rows only change when the spell set (key, rank, spell id, count) or the client's spell book changes.
+-- An AZSSPELLS report that only carries new cooldowns (a new table and stamp every time) just copies cd/cdmax into the rows.
+local function SpellList(needSpells)
+	if not needSpells then return EMPTY end
+	local nativeSpells = type(AZS_SPELLS) == "table" and AZS_SPELLS or EMPTY
+	local rows = list.rows
+	local sameSet = table.getn(rows) == table.getn(nativeSpells)
+	if sameSet then
+		for index = 1, table.getn(rows) do
+			local value, row = nativeSpells[index], rows[index]
+			if type(value) ~= "table" or value.key ~= row.key or value.rank ~= row.rank or value.spell ~= row.spellId then
+				sameSet = false; break
+			end
+			row.cd, row.cdmax = value.cd, value.cdmax
+		end
+	end
+	-- A real change of the spell set (new spell, new rank, other count) scans the native book once more;
+	-- a pure cooldown report never does.
+	if not sameSet then InvalidateBook() end
+	local book = Book()
+	local same = sameSet and list.book == bookVersion
+	if not same then
+		list.book = bookVersion
+		list.rows = BuildSpells(book, nativeSpells)
+		-- A changed spell set (new rank, new ability) makes the advisor read its tooltips again.
+		if KeijinBuildAdvisor and KeijinBuildAdvisor.Invalidate then KeijinBuildAdvisor.Invalidate() end
+	end
+	return list.rows
+end
+local function Update()
+	local settings, run = Settings(), AZS_RUN
+	local panelOn, actionOn, effectsOn, advisorOn = BuildOn(), ActionOn(), EffectsSplit(), AdvisorOn()
+	local items = panelOn and Items() or nil
+	if panelOn and not items then panelOn=false end
+	StockBar(not actionOn)
+	if panelOn then HideNative() else ShowNative() end
+	if not panelOn and not actionOn and not effectsOn and not advisorOn then Release(); return end
+	local activeRun = type(run) == "table" and (not run.ph or PHASES[run.ph])
+	-- Timers require neither spell book nor inventory nor the native build HUD API.
+	local timers = KeijinUI.ModuleOn("effects") and (effectsOn or actionOn) and TalentTimers() or EMPTY
+	PaintEffects(effectsOn and timers or EMPTY)
+	ShowEffects(effectsOn)
+	local needSpells = panelOn or actionOn or advisorOn
+	local spells = SpellList(needSpells)
 	if actionOn then
 		-- The former inline selection remains an action preference; an off effects module adds no timer cells.
-		local inline = KeijinUI.ModuleOn("effects") and not effectsOn and timers or {}
-		PaintActions(activeRun and spells or {}, inline); KeijinUI.Shown(skills,true)
+		local inline = KeijinUI.ModuleOn("effects") and not effectsOn and timers or EMPTY
+		PaintActions(activeRun and spells or EMPTY, inline); KeijinUI.Shown(skills,true)
 	else KeijinUI.Shown(skills,false) end
 	if advisorOn and activeRun then
 		local result = KeijinBuildAdvisor.Get(spells, run, AZS_STATS, AZS_ZONE, settings.focus)
@@ -941,11 +1053,19 @@ local function Update()
 		end
 	else
 		advice.result = nil; KeijinUI.Shown(advice,false)
+		-- The rows are reused: without a result no row keeps an old recommendation.
+		local staleRows = list.rows
+		for index = 1, table.getn(staleRows) do
+			local row = staleRows[index]
+			if row.recommended or row.safety or row.adviceHeading then
+				row.recommended, row.safety, row.adviceHeading = false, nil, nil
+			end
+		end
 		if KeijinBuildAdvisor then KeijinBuildAdvisor.Reset() end
 		if hovered == advice then hovered = nil; GameTooltip:Hide() end
 	end
 	if panelOn then
-		local displaySpells = SpellSlots(activeRun and spells or {})
+		local displaySpells = SpellSlots(activeRun and spells or EMPTY)
 		local spellTop, itemTop, spellPitch = BuildLayout(displaySpells)
 		KeijinUI.SetW(panel,WIDTH)
 		Paint(spellCells, displaySpells, spellTop, spellPitch)
@@ -954,7 +1074,7 @@ local function Update()
 	else
 		-- Reuse the proven movable carrier, with no spell/jewelry rows or native HUD ownership.
 		BuildLayout(nil)
-		Paint(spellCells, {}, 0); Paint(itemCells, {}, 0)
+		Paint(spellCells, EMPTY, 0); Paint(itemCells, EMPTY, 0)
 		KeijinUI.Shown(spellsLabel,false); KeijinUI.Shown(itemsLabel,false); KeijinUI.Shown(divider,false)
 		KeijinUI.SetW(panel,140); KeijinUI.SetH(panel,48)
 		KeijinUI.Anchor(advice,"TOPLEFT", panel, "TOPLEFT", 12, -8)
@@ -1021,12 +1141,18 @@ end
 local watcher = CreateFrame("Frame")
 watcher:RegisterEvent("PLAYER_ENTERING_WORLD")
 watcher:RegisterEvent("PLAYER_LOGOUT")
+watcher:RegisterEvent("SPELLS_CHANGED")
+watcher:RegisterEvent("LEARNED_SPELL_IN_TAB")
 watcher:RegisterEvent("CHAT_MSG_ADDON")
 watcher:SetScript("OnEvent", function()
 	if event == "PLAYER_LOGOUT" then Release()
+	elseif event == "SPELLS_CHANGED" or event == "LEARNED_SPELL_IN_TAB" then
+		InvalidateBook(); elapsed = 0.2
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		ApplyPosition()
+		InvalidateBook(); ApplyPosition()
 		Update()
+	-- AZSSPELLS only fills AZS_SPELLS (spell, rank, cooldown), never the client's spell book. The next tick
+	-- compares the content (SpellList): cooldowns only update the rows, a changed spell set rebuilds them.
 	elseif arg1 == "AZSSPELLS" or arg1 == "AZSRUN" or arg1 == "AZSTIMERS" then elapsed = 0.2 end
 end)
 watcher:SetScript("OnUpdate", function()

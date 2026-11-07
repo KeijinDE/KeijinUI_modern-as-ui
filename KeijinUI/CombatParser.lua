@@ -89,9 +89,41 @@ local function Walk(pieces, index, line, at, found)
         found[piece.arg] = tonumber(string.sub(line, at, last))
         return Walk(pieces, index + 1, line, last + 1, found)
     end
+    -- Text slot: only positions are tried, the string is cut once the rest has matched.
+    local following = pieces[index + 1]
+    if not following then
+        found[piece.arg] = string.sub(line, at)
+        return true
+    end
+    local stop
+    if following.text then
+        stop = string.find(line, following.text, at, true)
+        while stop do
+            if Walk(pieces, index + 1, line, stop, found) then
+                found[piece.arg] = string.sub(line, at, stop - 1)
+                return true
+            end
+            stop = string.find(line, following.text, stop + 1, true)
+        end
+        return false
+    end
+    if following.numeric then
+        stop = string.find(line, "%d", at)
+        while stop do
+            if Walk(pieces, index + 1, line, stop, found) then
+                found[piece.arg] = string.sub(line, at, stop - 1)
+                return true
+            end
+            stop = string.find(line, "%d", stop + 1)
+        end
+        return false
+    end
+    -- Two text slots next to each other: every end position is possible.
     for stop = at, string.len(line) + 1 do
-        found[piece.arg] = string.sub(line, at, stop - 1)
-        if Walk(pieces, index + 1, line, stop, found) then return true end
+        if Walk(pieces, index + 1, line, stop, found) then
+            found[piece.arg] = string.sub(line, at, stop - 1)
+            return true
+        end
     end
     return false
 end

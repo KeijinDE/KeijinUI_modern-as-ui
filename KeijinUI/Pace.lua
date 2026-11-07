@@ -14,14 +14,24 @@ local function Key(z,class)
     z=z or {}
     return tostring(z.zone)..":"..tostring(class)..":"..tostring(z.diff or "?")..":"..tostring(z.mods or "?")
 end
+-- Samples are stored under string keys (saved variables stay readable); the strings are made once per bucket.
+local bucketNames={}
+local function Bucket(number)
+    local name=bucketNames[number]
+    if not name then name=tostring(number); bucketNames[number]=name end
+    return name
+end
+-- Bumped whenever a sample or a history entry is added, so cached details notice new data.
+local dataVersion=0
 function P.Observe(open,r,z)
     if open.won or not K.Number(r.t) or not K.Number(r.kills) then return end
     open.paceKey=open.paceKey or Key(z,open.class)
     open.paceSamples=open.paceSamples or {}
     -- Only actual received reports, never interpolated kills or filled gaps.
-    local bucket=tostring(math.floor(r.t/15))
+    local bucket=Bucket(math.floor(r.t/15))
     if not open.paceSamples[bucket] then
         open.paceSamples[bucket]={t=r.t,kills=r.kills,dealt=K.Number(r.dealt) and r.dealt or nil}
+        dataVersion=dataVersion+1
     end
 end
 function P.Record(open)
@@ -30,14 +40,14 @@ function P.Record(open)
     local db=K.DB(); if type(db.paceHistory)~="table" then db.paceHistory={} end
     table.insert(db.paceHistory,{key=open.paceKey,samples=samples,won=open.won and true or false,snapshotId=open.snapshotId})
     while table.getn(db.paceHistory)>120 do table.remove(db.paceHistory,1) end
-    open.paceRecorded=true
+    open.paceRecorded=true; dataVersion=dataVersion+1
 end
 local function Reference(samples,t,field)
     if type(samples)~="table" then return end
     field=field or "kills"
     local bucket=math.floor(t/15)
-    local left,right=samples[tostring(bucket)],samples[tostring(bucket+1)]
-    if type(left)=="table" and left.t>t then right=left; left=samples[tostring(bucket-1)] end
+    local left,right=samples[Bucket(bucket)],samples[Bucket(bucket+1)]
+    if type(left)=="table" and left.t>t then right=left; left=samples[Bucket(bucket-1)] end
     if type(left)~="table" or not K.Number(left.t) or not K.Number(left[field]) or t<left.t then return end
     if t==left.t then return left[field] end
     if type(right)=="table" and K.Number(right.t) and K.Number(right[field]) and right.t>left.t and right.t-left.t<=20 and t<=right.t and right[field]>=left[field] then
@@ -59,14 +69,38 @@ local function DamageRate(samples,t,total)
     local middle=Reference(samples,t-15,"dealt")
     if K.Number(first) and K.Number(middle) and K.Number(last) and last>=middle and middle>=first then return (last-first)/30 end
 end
+-- The result changes with the run clock (whole seconds), kills, damage and new data only: one calculation
+-- per input change, at most once per second, instead of two full history passes per tick.
+local detailCache={[false]={},[true]={}}
+local compute
 function P.Details(account)
+    account=account and true or false
+    local c=detailCache[account]
+    local r=AZS_RUN or {}; local z=AZS_ZONE or {}
+    local db=K.DB(); local history=db.paceHistory
+    local open=type(db.runs)=="table" and db.runs.open
+    local phase=AZS_GetPhase and AZS_GetPhase()
+    local second=K.Number(r.t) and math.floor(r.t) or r.t
+    if c.out and c.run==r and c.second==second and c.kills==r.kills and c.dealt==r.dealt and c.endl==r.endl
+        and c.phase==phase and c.zone==z.zone and c.diff==z.diff and c.mods==z.mods and c.history==history
+        and c.version==dataVersion and c.open==open and c.snapshotId==(type(open)=="table" and open.snapshotId or nil)
+        and c.paceKey==(type(open)=="table" and open.paceKey or nil) and c.class==K.PlayerClass() then
+        return c.out
+    end
+    local out=compute(account,r,phase,open)
+    c.out,c.run,c.second,c.kills,c.dealt,c.endl,c.phase=out,r,second,r.kills,r.dealt,r.endl,phase
+    c.zone,c.diff,c.mods,c.history,c.version,c.open=z.zone,z.diff,z.mods,history,dataVersion,open
+    c.snapshotId=type(open)=="table" and open.snapshotId or nil
+    c.paceKey=type(open)=="table" and open.paceKey or nil
+    c.class=K.PlayerClass()
+    return out
+end
+compute=function(account,r,phase,open)
     local out={status="Wird erfasst",refs=0,mode="kills"}
-    local r=AZS_RUN or {}; local phase=AZS_GetPhase and AZS_GetPhase()
     if r.endl==1 then out.status="Endlos"; return out end
     if phase=="ready" or not K.Number(r.t) or not K.Number(r.kills) or r.t<60 then return out end
     local z=AZS_ZONE or {}; local class=K.PlayerClass()
     local key=Key(z,class); local values,paired,damage={},{},{}
-    local open=type(K.DB().runs)=="table" and K.DB().runs.open
     -- The game sends AZS_ZONE once per run, so after a reload it can be empty; the open run keeps its key.
     if type(z.zone)~="string" and type(open)=="table" and type(open.paceKey)=="string" then key=open.paceKey end
     out.key=key

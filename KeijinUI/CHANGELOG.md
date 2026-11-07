@@ -5,6 +5,11 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.4 (2026-11-07, release v5.0.4)
+
+* Performance with many enemies: nameplates and floating combat text do far less work per frame, the build bar, advisor, pace tracker and cache markers only recalculate when something changed, and combat log parsing creates far less garbage.
+* Totems: the counter is no longer cut off at two digits and the remaining time sits a few pixels higher.
+
 ### 5.0.3 (2026-11-05, release v5.0.3)
 
 * Performance with many enemies: nameplates, combat log parsing, unit frames and the damage meter do less work per frame.
@@ -707,6 +712,11 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.4 (2026-11-07, Release v5.0.4)
+
+* Leistung bei vielen Gegnern: Namensplaketten und Schadenszahlen erledigen pro Bild deutlich weniger Arbeit, Buildleiste, Buildtipps, Pace-Indikator und Cachemarkierungen rechnen nur noch bei Änderungen neu, und die Kampflogauswertung erzeugt deutlich weniger Datenmüll.
+* Totems: der Zähler wird bei zweistelligen Werten nicht mehr abgeschnitten und die Restzeit sitzt ein paar Pixel höher.
 
 ### 5.0.3 (2026-11-05, Release v5.0.3)
 

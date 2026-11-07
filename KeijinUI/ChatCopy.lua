@@ -1,10 +1,14 @@
 local K=KeijinUI
 local C={lines={}}
 K.chatCopy=C
+-- The game client may offer no message history (GetMessageInfo is not part of the 1.12 API), so the last 300
+-- lines are kept in a ring buffer: one slot write per line, nothing is shifted or removed.
+local LIMIT,head,count=300,0,0
 function C.Capture(text)
     if not K.ModuleOn("chat") or type(text)~="string" then return end
-    table.insert(C.lines,text)
-    while table.getn(C.lines)>300 do table.remove(C.lines,1) end
+    head=head+1; if head>LIMIT then head=1 end
+    C.lines[head]=text
+    if count<LIMIT then count=count+1 end
 end
 -- Observe the native window's actual messages without filtering or replacing them.
 local original,wrapper
@@ -32,7 +36,13 @@ function C.Text()
             local text=ChatFrame1:GetMessageInfo(i)
             if type(text)=="string" then table.insert(lines,text) end
         end
-    else for _,v in ipairs(C.lines) do table.insert(lines,v) end end
+    else
+        local first=head-count
+        for i=1,count do
+            local slot=first+i; if slot<1 then slot=slot+LIMIT end
+            table.insert(lines,C.lines[slot])
+        end
+    end
     local text=table.concat(lines,"\n")
     text=string.gsub(text,"|c%x%x%x%x%x%x%x%x",""); text=string.gsub(text,"|r","")
     text=string.gsub(text,"|H.-|h(.-)|h","%1")

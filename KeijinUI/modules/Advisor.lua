@@ -4,7 +4,12 @@ KeijinBuildAdvisor = {}
 local A = KeijinBuildAdvisor
 local WINDOW, MINIMUM, LIMIT = 30, 8, 40
 local history, lastTime, lastTotal, identity = {}, nil, nil, nil
-local tip, tipCache, tipStamp, textCache = nil, {}, -100, {}
+local tip, tipCache, textCache = nil, {}, {}
+-- Tooltip data is entered anew only after a relevant event (spells, talents, action bar, AZSSPELLS), not on a timer.
+-- generation counts those events; a scan budget spreads the rescan over several evaluations.
+local generation, slotGeneration, scanBudget, scanPending = 0, 0, 0, false
+local SCANS_PER_EVALUATION = 4
+local cache, used = {at = -100}, false
 
 -- Texts are German sources translated by KeijinUI.T; without KeijinUI they stay German.
 local function T(text, a1, a2, a3)
@@ -62,8 +67,17 @@ local CONTROL = Keys("hammer_of_justice frost_nova psychic_scream fear polymorph
 local SINGLE = Keys("exorcism hammer_of_wrath holy_shock judgement arcane_shot aimed_shot sinister_strike eviscerate backstab ghostly_strike smite mind_blast holy_fire lightning_bolt earth_shock frost_shock fireball frostbolt arcane_missiles fire_blast pyroblast shadow_bolt searing_pain soul_fire wrath starfire rend serpent_sting rupture sw_pain devouring_plague flame_shock corruption immolate curse_of_agony moonfire insect_swarm")
 
 function A.Reset()
+	-- Called every tick while the advisor is off: nothing to clear unless it was used since the last reset.
+	if not used then return end
+	used = false
 	history, lastTime, lastTotal, identity = {}, nil, nil, nil
-	tipCache, tipStamp = {}, -100
+	tipCache = {}; generation = generation + 1
+	cache.at, cache.result = -100, nil
+end
+-- A spell, talent or action bar change entwerts the tooltip texts; they are read again a few at a time.
+function A.Invalidate()
+	generation = generation + 1
+	cache.at = -100
 end
 
 -- Pure observation of cumulative counters using active run seconds, never wall time.
@@ -87,7 +101,7 @@ function A.Observe(seconds, meter, runIdentity)
 			if (damage[key] or 0) < value - 0.01 then reset = true end
 		end
 	end
-	if reset then history, tipCache, tipStamp = {}, {}, -100 end
+	if reset then history, tipCache = {}, {}; generation = generation + 1 end
 	identity, lastTime, lastTotal = runIdentity, seconds, total
 	last = history[table.getn(history)]
 	if last and seconds == last.time then
@@ -189,7 +203,7 @@ local function RestartSlots()
 end
 local slotWatcher = CreateFrame("Frame")
 slotWatcher:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-slotWatcher:SetScript("OnEvent", RestartSlots)
+slotWatcher:SetScript("OnEvent", function() slotGeneration = slotGeneration + 1; RestartSlots() end)
 local function Icon(path) return (string.gsub(string.lower(path or ""), "/", "\\")) end
 -- Folded name -> ability key, or false when one name belongs to two abilities (Portuguese Shred / Slice and Dice).
 local owners
@@ -253,7 +267,11 @@ local function SpellText(row, maxAge)
 	local now = GetTime()
 	local entry = textCache[row.key]
 	if not row.book and entry and entry.rank ~= row.rank then RestartSlots() end
-	if row.book and entry and entry.rank == row.rank and entry.book == row.book and now - entry.at <= maxAge then
+	-- A cached text is only reused while nothing relevant happened (generation) and it is younger than maxAge; an
+	-- action slot text also needs a finished slot index, since a half built index may still hold the old text.
+	if entry and entry.gen == generation and entry.slotGen == slotGeneration and entry.rank == row.rank
+		and entry.book == row.book and now - entry.at <= maxAge
+		and (row.book or (entry.settled and slotIndex.pending == nil)) then
 		return entry.text, entry
 	end
 	local text, complete = false, true
@@ -273,22 +291,27 @@ local function SpellText(row, maxAge)
 	end
 	-- An unfinished slot index may still find it: look again next frame.
 	if not row.book and entry and entry.rank == row.rank and entry.book == row.book and entry.text == text then return text, entry end
-	entry = {rank = row.rank, book = row.book, text = text, at = complete and now or now - maxAge - 1}
+	entry = {rank = row.rank, book = row.book, text = text, gen = generation, slotGen = slotGeneration, settled = complete and slotIndex.pending == nil, at = complete and now or now - maxAge - 1}
 	textCache[row.key] = entry
 	return text, entry
 end
 
+local BONUS_AGE = 30
 local function NativeBonus(row)
 	if not row.book then return nil end
-	local now = GetTime()
-	if now - tipStamp > 5 then tipCache, tipStamp = {}, now end
 	local key = row.key..":"..tostring(row.rank)..":"..row.book
-	if tipCache[key] ~= nil then return tipCache[key] ~= false and tipCache[key] or nil end
+	local hit = tipCache[key]
+	local now = GetTime()
+	-- A value is reused while nothing relevant happened and it is younger than BONUS_AGE (a tooltip can change without an event).
+	if hit and hit.generation == generation and now >= hit.at and now - hit.at <= BONUS_AGE then return hit.value or nil end
+	-- Out of budget (expired values count too): keep the previous value (if any) and finish on a later evaluation.
+	if scanBudget <= 0 then scanPending = true; return hit and hit.value or nil end
+	scanBudget = scanBudget - 1
 	local text = SpellText(row, 5)
-	if not text then tipCache[key] = false; return nil end
-	local bonus = A.ParseBonus(text, row.rank)
-	tipCache[key] = bonus or false
-	return bonus
+	local bonus = text and A.ParseBonus(text, row.rank) or false
+	if hit then hit.generation, hit.value, hit.at = generation, bonus, now
+	else tipCache[key] = {generation = generation, value = bonus, at = now} end
+	return bonus or nil
 end
 
 -- Number of targets of a spell, read from its tooltip: "the nearest enemy" 1, "the 3 nearest enemies" 3,
@@ -461,21 +484,43 @@ function A.Evaluate(spells, run, stats, focus, window)
 	return result
 end
 
+local function ZoneField(zone, field) return zone and zone[field] end
 function A.Get(spells, run, stats, zone, focus)
+	used = true
+	local now = GetTime()
+	local meter = AZS_METER
+	local hasMeter = type(meter) == "table"
+	-- At most once per second, or at once when an input changed; tables are not rebuilt in between.
+	if cache.result and now >= cache.at and now - cache.at < 1 and not scanPending
+		and cache.spells == spells and cache.focus == focus and cache.stats == stats and cache.zone == zone
+		and cache.zoneName == ZoneField(zone, "zone") and cache.hero == ZoneField(zone, "hero")
+		and cache.class == ZoneField(zone, "class") and cache.hasMeter == hasMeter then
+		return cache.result
+	end
 	local seconds = type(AZS_GetRunTime) == "function" and AZS_GetRunTime() or run.t
 	local id = tostring(zone and zone.zone)..":"..tostring(zone and zone.hero)..":"..tostring(zone and zone.class)
-	local meter = AZS_METER
-	if type(meter) == "table" then A.Observe(seconds, meter, id) end
+	if hasMeter then A.Observe(seconds, meter, id) end
+	scanBudget, scanPending = SCANS_PER_EVALUATION, false
 	local models = {}
 	for index = 1, table.getn(spells) do
 		local row = Copy(spells[index])
 		row.damageBonus = NativeBonus(row)
 		table.insert(models, row)
 	end
-	local result = A.Evaluate(models, run, stats, focus, type(meter) == "table" and A.Window() or nil)
-	if type(meter) ~= "table" and not result.safety then
+	local result = A.Evaluate(models, run, stats, focus, hasMeter and A.Window() or nil)
+	if not hasMeter and not result.safety then
 		result.title, result.confidence = T("Keine Schadensdaten"), T("Daten fehlen")
 		result.reasons = {T("Der Client liefert noch keine Schadensliste.")}
 	end
+	cache.at, cache.result, cache.spells, cache.focus, cache.stats, cache.zone = now, result, spells, focus, stats, zone
+	cache.zoneName, cache.hero, cache.class = ZoneField(zone, "zone"), ZoneField(zone, "hero"), ZoneField(zone, "class")
+	cache.hasMeter = hasMeter
 	return result
 end
+
+local events = CreateFrame("Frame")
+events:RegisterEvent("SPELLS_CHANGED")
+events:RegisterEvent("LEARNED_SPELL_IN_TAB")
+events:RegisterEvent("CHARACTER_POINTS_CHANGED")
+events:RegisterEvent("PLAYER_ENTERING_WORLD")
+events:SetScript("OnEvent", function() A.Invalidate() end)

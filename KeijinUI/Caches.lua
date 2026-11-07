@@ -221,30 +221,66 @@ local function PlayerPos()
     end
     return x,y
 end
+-- The AZS tables arrive on change: the filtered lists are rebuilt when the table, its update stamp or its size changes.
+-- Every entry is compared field by field (id, position, map position) with a reused snapshot table (no garbage,
+-- no collisions like a sum has): an entry edited in place without a stamp is noticed. Returns true on any difference.
+local FIELDS=5
+local function Same(a,b) return a==b or (a~=a and b~=b) end   -- NaN is not a change
+local function Differs(source,snap)
+    local count=source and table.getn(source) or 0
+    local changed=snap.n~=count
+    snap.n=count
+    for i=1,count do
+        local e=source[i]
+        local base=(i-1)*FIELDS
+        local id,x,y,mx,my
+        if type(e)=="table" then id,x,y,mx,my=e.id,e.x,e.y,e.mx,e.my else id=false end
+        if not (Same(snap[base+1],id) and Same(snap[base+2],x) and Same(snap[base+3],y)
+            and Same(snap[base+4],mx) and Same(snap[base+5],my)) then changed=true end
+        snap[base+1],snap[base+2],snap[base+3],snap[base+4],snap[base+5]=id,x,y,mx,my
+    end
+    return changed
+end
+local lairList,lairSource,lairStamp,lairCount,lairSnap={},nil,nil,nil,{n=-1}
 local function Lairs()
+    local source=type(AZS_LAIRS)=="table" and AZS_LAIRS or nil
+    local count=source and table.getn(source) or 0
+    local differs=Differs(source,lairSnap)
+    if source==lairSource and AZS_LAIRS_UPDATED==lairStamp and count==lairCount and not differs then return lairList end
     local list={}
-    if type(AZS_LAIRS)=="table" then
-        for _,e in ipairs(AZS_LAIRS) do
+    if source then
+        for _,e in ipairs(source) do
             if type(e)=="table" and Finite(e.x) and Finite(e.y) and MapPos(e.mx,e.my) then table.insert(list,e) end
         end
     end
+    lairList,lairSource,lairStamp,lairCount=list,source,AZS_LAIRS_UPDATED,count
     return list
 end
 -- Open caches. all counts every entry, valid those that carry both positions.
+local noticeVersion
+local chestAll,chestValid,chestSource,chestStamp,chestCount,chestSnap=0,{},nil,nil,nil,{n=-1}
+local chestVersion=0   -- counts rebuilds, so the clusters and the notice know when the chests changed
 local function Chests()
+    local source=type(AZS_CHESTS)=="table" and AZS_CHESTS or nil
+    local count=source and table.getn(source) or 0
+    local differs=Differs(source,chestSnap)
+    if source==chestSource and AZS_CHESTS_UPDATED==chestStamp and count==chestCount and not differs then return chestAll,chestValid end
     local all,valid=0,{}
-    if type(AZS_CHESTS)=="table" then
-        for _,e in ipairs(AZS_CHESTS) do
+    if source then
+        for _,e in ipairs(source) do
             if type(e)=="table" then
                 all=all+1
                 if Finite(e.x) and Finite(e.y) then table.insert(valid,e) end
             end
         end
     end
+    chestAll,chestValid,chestSource,chestStamp,chestCount=all,valid,source,AZS_CHESTS_UPDATED,count
+    chestVersion=chestVersion+1
     return all,valid
 end
 local function Reset()
     known,baseline,lastRun={},false,nil
+    noticeVersion=nil
     meas={}
     lastX,lastY,moveHeading=nil,nil,nil
 end
@@ -329,13 +365,15 @@ local function Notice(total,nearest)
     if t and t<5 then absorb=true end
     if t and lastRun and t+5<lastRun then Reset(); absorb=true end
     if t then lastRun=t end
-    if type(AZS_CHESTS)=="table" then
+    -- New ids can only appear when the chest table changed (or after a reset), so only then are the chests walked.
+    if type(AZS_CHESTS)=="table" and (noticeVersion~=chestVersion or absorb) then
         for _,e in ipairs(AZS_CHESTS) do
             if type(e)=="table" and Finite(e.id) and not known[e.id] then
                 known[e.id]=true
                 if not absorb then fresh=fresh+1 end
             end
         end
+        noticeVersion=chestVersion
     end
     baseline=true
     if fresh>0 and C.MessageOn() then
@@ -349,28 +387,40 @@ local function Collect(key,valid)
     for _,e in ipairs(valid) do if MapPos(e.mx,e.my) then AddPoint(m,e.x,e.y,e.mx,e.my) end end
     for _,e in ipairs(Lairs()) do AddPoint(m,e.x,e.y,e.mx,e.my) end
 end
+-- The grouping of the chests only depends on the chests, not on the player: it is built when the chests change.
+-- Each tick only recomputes the offsets of the existing groups relative to the player and orders them.
+local groups,groupVersion,groupWorld
+local function ByDistance(a,b) return a.dist<b.dist end
 local function Clusters(valid,px,py,sx,sy,world)
-    local list={}
-    for _,e in ipairs(valid) do
-        local east,north
-        if world then east,north=py-e.y,e.x-px
-        elseif MapPos(e.mx,e.my) then east,north=(e.mx-px)*sx,-(e.my-py)*sy end
-        if east~=nil then
-        local into
-        for _,c in ipairs(list) do
-            if Hypot(c.wx-e.x,c.wy-e.y)<MERGE then into=c; break end
+    if groupVersion~=chestVersion or groupWorld~=world or not groups then
+        groups={}
+        for _,e in ipairs(valid) do
+            if world or MapPos(e.mx,e.my) then
+                local into
+                for _,c in ipairs(groups) do
+                    if Hypot(c.wx-e.x,c.wy-e.y)<MERGE then into=c; break end
+                end
+                if into then
+                    into.count=into.count+1
+                    into.members[into.count]=e
+                    into.ids[e.id or false]=true
+                else table.insert(groups,{wx=e.x,wy=e.y,east=0,north=0,dist=0,count=1,members={e},ids={[e.id or false]=true}}) end
+            end
         end
-        if into then
-            into.east=(into.east*into.count+east)/(into.count+1)
-            into.north=(into.north*into.count+north)/(into.count+1)
-            into.count=into.count+1
-            into.ids[e.id or false]=true
-        else table.insert(list,{wx=e.x,wy=e.y,east=east,north=north,count=1,ids={[e.id or false]=true}}) end
-        end
+        groupVersion,groupWorld=chestVersion,world
     end
-    for _,c in ipairs(list) do c.dist=Hypot(c.east,c.north) end
-    table.sort(list,function(a,b) return a.dist<b.dist end)
-    return list
+    for _,c in ipairs(groups) do
+        local east,north=0,0
+        for index=1,c.count do
+            local e=c.members[index]
+            if world then east=east+(py-e.y); north=north+(e.x-px)
+            else east=east+(e.mx-px)*sx; north=north-(e.my-py)*sy end
+        end
+        c.east,c.north=east/c.count,north/c.count
+        c.dist=Hypot(c.east,c.north)
+    end
+    if table.getn(groups)>1 then table.sort(groups,ByDistance) end
+    return groups
 end
 -- A symbol counts as inside while all of it stays on the map, at least EDGE_INSET from the border.
 local function Place(east,north,ppy,width,height,round,inset)

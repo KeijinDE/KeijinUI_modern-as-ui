@@ -4,11 +4,14 @@
 -- art and the bar are separate frames, so both are masked. Plates are pooled and never destroyed.
 local K=KeijinUI
 local plates,known={},{}
+local pending,anchors={},{} -- reused; only unseen native frames need a per-frame visibility probe
 K.nameplates=plates
 local BORDER="interface\\tooltips\\nameplate-border"
 local RAID_ATLAS="interface\\targetingframe\\ui-raidtargetingicons"
 local nativeShow,nativeHide=ShowNameplates,HideNameplates
 local scanned,scanErrors,lastError=0,0,nil
+local elapsed,fullDue,activeMode=0,true,nil
+local lastTargetName,targetDirty=nil,false
 local function Mode()
     local value=K.DB().nameplates
     if value~="off" and value~="bosses" and value~="all" then value="bosses"; K.DB().nameplates=value end
@@ -18,10 +21,12 @@ function K.SetNameplates(mode)
     if mode~="off" and mode~="bosses" and mode~="all" then return end
     K.DB().nameplates=mode
     if mode=="off" then
+        if activeMode~="off" and K.ReleaseNameplates then K.ReleaseNameplates(); activeMode="off" end
         if nativeHide then nativeHide() end
         if HideFriendNameplates then HideFriendNameplates() end
         NAMEPLATES_ON=nil
     else
+        fullDue=true
         K.DB().platesOn=mode
         if nativeShow then nativeShow() end; NAMEPLATES_ON=1
     end
@@ -112,11 +117,28 @@ local function Click(p,blocked)
     if blocked then p.plate:SetHitRectInsets(10000,10000,10000,10000)
     else p.plate:SetHitRectInsets(unpack(p.insets)) end
 end
+-- Own visibility flags avoid redundant native calls, including after a pooled plate returns.
+local function FrameShown(p,shown)
+    if p.frameShown==shown then return end
+    p.frameShown=shown
+    if shown then p.frame:Show() else p.frame:Hide() end
+end
+local function ClearDebuffs(p)
+    if p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
+    p.debuffCount=nil
+end
 function K.ReleaseNameplates()
+    fullDue=true; elapsed=0; lastTargetName=nil
+    for name in pairs(anchors) do anchors[name]=nil end
+    for i=table.getn(pending),1,-1 do pending[i]=nil end
+    for _,p in ipairs(plates) do
+        Mask(p,false); Click(p,false); FrameShown(p,false); ClearDebuffs(p)
+        p.visible=false; p.target=false
+        table.insert(pending,p)
+    end
     K.targetPlateShown=false
     if K.RefreshTargetDebuffs then K.RefreshTargetDebuffs() end
     K.targetPlateShown=false
-    for _,p in ipairs(plates) do Mask(p,false); Click(p,false); p.frame:Hide() end
 end
 local function Norm(path)
     if type(path)~="string" then return nil end
@@ -137,6 +159,19 @@ local function IsPlate(child)
         end
     end
     return false
+end
+-- Native OnShow also runs when our own child is hidden (friendly/bosses mode).
+-- Chain the client script; this identifies the plate without a per-plate closure.
+local function PlateShown()
+    local p=known[this]
+    if not p then return end
+    if p.nativeOnShow then p.nativeOnShow() end
+    if p.target then targetDirty=true end
+    p.seenName=nil
+    if p.visible then
+        p.visible=false
+        table.insert(pending,p)
+    end
 end
 local function Skin(plate,how)
     local health=plate:GetChildren()
@@ -167,7 +202,10 @@ local function Skin(plate,how)
             if r~=raidMarker then table.insert(p.maskRegions,{region=r,alpha=r:GetAlpha()}) end
         end
     end
-    known[plate]=p; table.insert(plates,p)
+    p.order=table.getn(plates)+1
+    known[plate]=p; table.insert(plates,p); table.insert(pending,p)
+    p.nativeOnShow=plate:GetScript("OnShow")
+    plate:SetScript("OnShow",PlateShown)
 end
 local function Discover()
     local count=WorldFrame.GetNumChildren and WorldFrame:GetNumChildren()
@@ -182,98 +220,172 @@ local function Discover()
     end
     scanned=count or 0
 end
-local function Run()
-    if not WorldFrame then return end
-    Discover()
-    local mode=Mode()
-    RefreshKinds()
-    local targetName=table.getn(plates)>0 and UnitExists("target") and UnitName("target")
-    local targetKind,targetRare
-    if targetName then targetKind,targetRare=TargetKind(targetName) end
-    local targetShown=false
-    for _,p in ipairs(plates) do
-        if p.plate:IsShown() then
-            local name=p.nativeName:GetText() or ""
-            local red,green,blue=p.health:GetStatusBarColor()
-            red,green,blue=red or 1,green or 0,blue or 0
-            local enemy=not (green>red+0.1 and green>blue+0.1) and not (blue>red+0.1 and blue>green+0.1)
-            local target=targetName==name and p.plate:GetAlpha()>=0.99
-            local kind=Kind(p,name,target,targetKind,targetRare)
-            Mask(p,enemy)
-            local show=enemy and mode~="off" and (mode=="all" or kind~="normal")
-            if show then
-                local low,high=p.health:GetMinMaxValues(); local value=p.health:GetValue()
-                local share=high>low and math.max(0,math.min(1,(value-low)/(high-low))) or 0
-                -- Values are remembered per plate; the client is only asked when one changed.
-                local width=kind=="boss" and 154 or ((kind=="elite" or kind=="rare") and 124 or 100)
-                local height=kind=="boss" and 14 or 10
-                if p.cWidth~=width then p.cWidth=width; p.bar:SetWidth(width) end
-                -- Native marker is anchored RIGHT to the plate's LEFT (nameplate.rs).
-                -- Grow wider bars to the right while marked, leaving that native area clear.
-                local offset=p.raidMarker and p.raidMarker:IsShown() and math.max(0,(width-p.plate:GetWidth())/2+4) or 0
-                if p.cOffset~=offset then
-                    p.cOffset=offset; p.bar:ClearAllPoints(); p.bar:SetPoint("CENTER",p.frame,"CENTER",offset,-4)
-                end
-                if p.cLabelWidth~=width then p.cLabelWidth=width; p.label:SetWidth(width) end
-                if p.cHeight~=height then p.cHeight=height; p.bar:SetHeight(height) end
-                if p.cShare~=share then
-                    p.cShare=share; p.bar:SetValue(share)
-                    p.value:SetText(string.format("%.0f%%",share*100))
-                end
-                K.combatDetails.Execute(p.frame,p.bar,share,false)
-                if p.cKind~=kind then
-                    p.cKind=kind
-                    if kind=="boss" then p.bar:SetStatusBarColor(0.65,0.3,0.72)
-                    elseif kind=="elite" then p.bar:SetStatusBarColor(0.85,0.45,0.13)
-                    elseif kind=="rare" then p.bar:SetStatusBarColor(0.62,0.72,0.86)
-                    else p.bar:SetStatusBarColor(0.7,0.15,0.13) end
-                end
-                if p.cName~=name then p.cName=name; p.label:SetText(name) end
-                local isTarget=target and true or false
-                if p.cTarget~=isTarget then
-                    p.cTarget=isTarget
-                    p.label:SetTextColor(target and 1 or 0.9,target and 0.82 or 0.88,target and 0.28 or 0.8)
-                end
-                if kind=="normal" and not target then p.label:Hide() else p.label:Show() end
-                p.frame:Show()
-                Click(p,false)
-                if target then
-                    targetShown=true
-                    if not p.debuffs then
-                        p.debuffs=K.DebuffRow(p.frame,14,true)
-                        p.debuffs:SetPoint("TOP",p.bar,"BOTTOM",0,-2)
-                    end
-                    K.UpdateDebuffRow(p.debuffs,"target")
-                elseif p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
-            else
-                p.frame:Hide()
-                Click(p,enemy)
-                if p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
+-- The shared debuff renderer writes every icon. Call it only when its visible data changed.
+local function RefreshDebuffs(p)
+    local count,changed=0,false
+    if UnitDebuff then
+        for i=1,table.getn(p.debuffs.icons) do
+            local texture,amount=UnitDebuff("target",i)
+            if not texture then break end
+            count=count+1
+            local icon=p.debuffs.icons[i]
+            if icon.plateTexture~=texture or icon.plateCount~=amount then
+                icon.plateTexture=texture; icon.plateCount=amount; changed=true
             end
-        else
-            p.frame:Hide()
-            if p.debuffs and p.debuffs.shown>0 then K.UpdateDebuffRow(p.debuffs,nil) end
         end
     end
-    if K.targetPlateShown~=targetShown then K.targetPlateShown=targetShown; if K.RefreshTargetDebuffs then K.RefreshTargetDebuffs() end end
+    if changed or p.debuffCount~=count then
+        p.debuffCount=count
+        K.UpdateDebuffRow(p.debuffs,"target")
+    end
+end
+local function RefreshPlate(p,name,mode,target,targetKind,targetRare)
+    local red,green,blue=p.health:GetStatusBarColor()
+    red,green,blue=red or 1,green or 0,blue or 0
+    local enemy=not (green>red+0.1 and green>blue+0.1) and not (blue>red+0.1 and blue>green+0.1)
+    local kind=Kind(p,name,target,targetKind,targetRare)
+    Mask(p,enemy)
+    local show=enemy and (mode=="all" or kind~="normal")
+    if show then
+        local low,high=p.health:GetMinMaxValues(); local value=p.health:GetValue()
+        local share=high>low and math.max(0,math.min(1,(value-low)/(high-low))) or 0
+        -- Values are remembered per plate; native setters run only when their input changed.
+        local width=kind=="boss" and 154 or ((kind=="elite" or kind=="rare") and 124 or 100)
+        local height=kind=="boss" and 14 or 10
+        if p.cWidth~=width then p.cWidth=width; p.bar:SetWidth(width) end
+        -- Native marker is anchored RIGHT to the plate's LEFT (nameplate.rs).
+        -- Grow wider bars to the right while marked, leaving that native area clear.
+        local offset=p.raidMarker and p.raidMarker:IsShown() and math.max(0,(width-p.plate:GetWidth())/2+4) or 0
+        if p.cOffset~=offset then
+            p.cOffset=offset; p.bar:ClearAllPoints(); p.bar:SetPoint("CENTER",p.frame,"CENTER",offset,-4)
+        end
+        if p.cLabelWidth~=width then p.cLabelWidth=width; p.label:SetWidth(width) end
+        if p.cHeight~=height then p.cHeight=height; p.bar:SetHeight(height) end
+        if p.cShare~=share then
+            p.cShare=share; p.bar:SetValue(share)
+            local percent=string.format("%.0f%%",share*100)
+            if p.cPercent~=percent then p.cPercent=percent; p.value:SetText(percent) end
+        end
+        local execute=K.DB().executeMarker==true
+        local executeLow=share<=.30
+        if p.executeLow~=executeLow or p.executeWidth~=width or p.executeHeight~=height or p.executeEnabled~=execute then
+            p.executeLow=executeLow; p.executeWidth=width; p.executeHeight=height; p.executeEnabled=execute
+            K.combatDetails.Execute(p.frame,p.bar,share,false)
+        end
+        if p.cKind~=kind then
+            p.cKind=kind
+            if kind=="boss" then p.bar:SetStatusBarColor(0.65,0.3,0.72)
+            elseif kind=="elite" then p.bar:SetStatusBarColor(0.85,0.45,0.13)
+            elseif kind=="rare" then p.bar:SetStatusBarColor(0.62,0.72,0.86)
+            else p.bar:SetStatusBarColor(0.7,0.15,0.13) end
+        end
+        if p.cName~=name then p.cName=name; p.label:SetText(name) end
+        local isTarget=target and true or false
+        if p.cTarget~=isTarget then
+            p.cTarget=isTarget
+            p.label:SetTextColor(target and 1 or 0.9,target and 0.82 or 0.88,target and 0.28 or 0.8)
+        end
+        local labelShown=kind~="normal" or target
+        if p.labelShown~=labelShown then
+            p.labelShown=labelShown
+            if labelShown then p.label:Show() else p.label:Hide() end
+        end
+        FrameShown(p,true)
+        Click(p,false)
+        if target then
+            if not p.debuffs then
+                p.debuffs=K.DebuffRow(p.frame,14,true)
+                p.debuffs:SetPoint("TOP",p.bar,"BOTTOM",0,-2)
+            end
+            RefreshDebuffs(p)
+        else ClearDebuffs(p) end
+    else
+        FrameShown(p,false)
+        Click(p,enemy)
+        ClearDebuffs(p)
+    end
+end
+local function Run()
+    local mode=Mode()
+    -- No discovery, target queries or plate calls while off, even if the native pool grows.
+    if mode=="off" then
+        if activeMode~="off" then K.ReleaseNameplates(); activeMode="off" end
+        return
+    end
+    if not WorldFrame then return end
+    local full=fullDue or activeMode~=mode or elapsed>=0.1
+    if full then elapsed=0; fullDue=false end
+    activeMode=mode
+    Discover()
+    local targetName=table.getn(plates)>0 and UnitExists("target") and UnitName("target")
+    local targetChanged=targetDirty or lastTargetName~=targetName
+    targetDirty=false; lastTargetName=targetName
+    local kindsReady=false
+    local targetKind,targetRare
+    if full or targetChanged then
+        RefreshKinds(); kindsReady=true
+        if targetName then targetKind,targetRare=TargetKind(targetName) end
+    end
+    local scanAll=full or targetChanged
+    local list=pending
+    local targetShown=K.targetPlateShown and true or false
+    if scanAll then
+        list=plates; targetShown=false
+        for name in pairs(anchors) do anchors[name]=nil end
+        for i=table.getn(pending),1,-1 do pending[i]=nil end
+    end
+    local i=1
+    while i<=table.getn(list) do
+        local p=list[i]
+        local advance=true
+        if p.plate:IsShown() then
+            local name=p.nativeName:GetText() or ""
+            -- Alpha disambiguates equal names, including a switch between two pooled twins.
+            p.anchorTarget=p.plate:GetAlpha()>=0.99
+            local target=(targetName==name and p.anchorTarget) and true or false
+            if full or not p.visible or p.seenName~=name or p.target~=target or (targetChanged and (target or p.target)) then
+                if not kindsReady then
+                    RefreshKinds(); kindsReady=true
+                    if targetName then targetKind,targetRare=TargetKind(targetName) end
+                end
+                RefreshPlate(p,name,mode,target,targetKind,targetRare)
+            end
+            p.visible=true; p.seenName=name; p.target=target
+            local best=anchors[name]
+            if p.plate.GetCenter and (not best or best.seenName~=name or not best.plate:IsShown() or (p.anchorTarget and not best.anchorTarget)
+                or (p.anchorTarget==best.anchorTarget and p.order<best.order)) then anchors[name]=p end
+            if not scanAll then
+                -- Swap removal: no table creation or shifting the rest of the pool.
+                local n=table.getn(pending)
+                pending[i]=pending[n]; pending[n]=nil; advance=false
+            end
+            if target and p.frameShown then targetShown=true end
+        else
+            if p.visible then
+                p.visible=false; p.target=false
+                FrameShown(p,false); ClearDebuffs(p)
+            end
+            if scanAll then table.insert(pending,p) end
+        end
+        if advance then i=i+1 end
+    end
+    if full or K.targetPlateShown~=targetShown or targetChanged then
+        K.targetPlateShown=targetShown
+        if K.RefreshTargetDebuffs then K.RefreshTargetDebuffs() end
+    end
 end
 -- Screen position (UIParent units) above the visible plate of a named enemy, for floating numbers.
 -- The target's plate (alpha 1) wins over same named plates; nil when no plate is shown.
 function K.PlateAnchor(name)
-    local best,bestTarget
-    for _,p in ipairs(plates) do
-        if p.plate:IsShown() and p.plate.GetCenter and p.nativeName:GetText()==name then
-            local isTarget=p.plate:GetAlpha()>=0.99
-            if not best or (isTarget and not bestTarget) then best,bestTarget=p,isTarget end
-        end
-    end
-    if not best then return nil end
+    local best=anchors[name]
+    if not best or best.seenName~=name or not best.plate:IsShown() then return nil end
     local x,y=best.plate:GetCenter()
     if not K.Number(x) or not K.Number(y) then return nil end
     local ratio=best.plate:GetEffectiveScale()/UIParent:GetEffectiveScale()
     return x*ratio,y*ratio+22
 end
 local function Update()
+    elapsed=elapsed+(tonumber(arg1) or 0)
     local ok,err=pcall(Run)
     if not ok then
         scanErrors=scanErrors+1
@@ -301,10 +413,11 @@ function K.PlateDebug()
             ..", Kind "..tostring(p.health:GetObjectType()))
     end
 end
--- Every frame, not on the shared 0.1 s tick: new or rebound plates are styled on their first
--- update, so the stock plate does not flash and reused plates do not show the old unit.
+-- Only unseen plates are probed every frame. OnShow queues pooled plates immediately;
+-- continuously visible plates use the 0.1 s pass. Target events also refresh immediately.
 local driver=CreateFrame("Frame","KeijinUIPlates")
 driver:SetScript("OnUpdate",Update)
+K.On("PLAYER_TARGET_CHANGED",function() targetDirty=true end,"nameplates")
 K.On("PLAYER_ENTERING_WORLD",function() K.SetNameplates(Mode()); Update() end,"nameplates")
 K.On("PLAYER_LEAVING_WORLD",function() K.ReleaseNameplates() end,"nameplates")
 K.On("PLAYER_LOGOUT",function() K.ReleaseNameplates() end,"nameplates")

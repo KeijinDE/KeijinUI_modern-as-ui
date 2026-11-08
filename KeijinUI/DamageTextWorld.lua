@@ -194,11 +194,10 @@ local function AddLabel(ev,text,style,r,g,b,iconPath,scroll,pop,mode,spell,schoo
     table.insert(labels,label)
 end
 
-local function Handle(ev,now)
+local function Handle(ev,now,mode,position,merge)
     if type(ev)~="table" then return end
     if ev.presentedAt and now-ev.presentedAt>W.MAX_AGE then return end
-    local mode=K.CombatTextMode()
-    local world=K.damageText.Position()=="plate" and ev.anchorStatus=="ready" and ev.anchorId
+    local world=position=="plate" and ev.anchorStatus=="ready" and ev.anchorId
     if ev.kind=="damage" then
         local amount=ev.amount
         if not K.Number(amount) or amount<=0 then return end
@@ -212,7 +211,6 @@ local function Handle(ev,now)
         -- "Flächentreffer bündeln" on: equal hits (same ability, school and kind) within a short burst are one number
         -- ("123 x2") over all targets, shown at the anchor of the first hit. Off: one bundle per target.
         -- Compared field by field: no key string is built per hit.
-        local merge=K.DB().combatTextMerge~=false
         local spell=ev.abilityName
         for i=table.getn(labels),1,-1 do
             local prior=labels[i]
@@ -248,6 +246,8 @@ end
 
 -- Read what the game gathered since the last frame.
 local function Read(now)
+    -- Read settings only when a batch has hits, then reuse them for this frame.
+    local mode,position,merge
     for _=1,W.MAX_READS do
         local ok,batch,err=pcall(AZS_GetCombatTextEvents,cursor)
         if not ok then Count("read"); return end
@@ -266,8 +266,12 @@ local function Read(now)
         cursor=batch.cursor
         if first then return end   -- subscribed at the tail; the game gives no history
         local events=batch.events
-        if type(events)=="table" then
-            for i=1,table.getn(events) do Handle(events[i],now) end
+        if type(events)=="table" and table.getn(events)>0 then
+            if not mode then
+                mode,position=K.CombatTextMode(),K.damageText.Position()
+                merge=K.DB().combatTextMerge~=false
+            end
+            for i=1,table.getn(events) do Handle(events[i],now,mode,position,merge) end
         end
         if not batch.hasMore then return end
     end
@@ -377,6 +381,7 @@ local function Step()
 end
 -- Called once per world frame after the camera moved (AZS_RegisterCombatTextFrameHandler). The body is guarded:
 -- an error is reported once per message, counted, and never leaves old numbers frozen on the screen.
+if K.PerfBind then K.PerfBind("DamageTextWorld.Frame",Step,function(fn) Step=fn end) end
 function W.Frame()
     local ok,err=pcall(Step)
     if ok then frameFailures=0; return end

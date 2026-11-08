@@ -1,5 +1,6 @@
 -- Shared settings controls, built only from the client's 1.12 frame API.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"SettingsWidgets") end
 local O={pages={},controls={},refreshers={},nav={},navSections={},width=516,searchEntries={}}
 K.settings=O
 local GOLD={1,0.82,0.28}
@@ -133,7 +134,7 @@ function O.SetUIScale(value)
     SetCVar("uiScale",string.format("%.2f",value)); O.Fit()
 end
 O.Fit()
-table.insert(K.updates,function()
+RegisterUpdate(function()
     if lastWidth~=K.UIWidth() or lastHeight~=K.UIHeight() or lastScale~=UIParent:GetEffectiveScale() or lastUIValue~=GetCVar("uiScale") then
         O.Fit(); O.Refresh()
     end
@@ -733,7 +734,7 @@ function O.RestoreAfterLayout(discard,defer)
     local restore=O.layoutRestore; O.layoutRestore=nil; O.layoutRestorePending=nil
     if restore and not discard then panel:Show() end
 end
-table.insert(K.updates,O.CheckSession)
+RegisterUpdate(O.CheckSession)
 K.On("PLAYER_ENTERING_WORLD",O.ResetSession)
 panel:SetScript("OnShow",function()
     O.CheckSession()

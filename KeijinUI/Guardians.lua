@@ -69,10 +69,10 @@ end
 local function Row(parent,i)
     if rows[i] then return rows[i] end
     local row=CreateFrame("Frame",nil,parent)
-    row:SetWidth(272); row:SetHeight(17); row.position=i
+    K.SetW(row,272); K.SetH(row,17); row.position=i
     row.name=K.Text(row,"",10,"LEFT",0,0,150)
     row.state=K.Text(row,"",10,"RIGHT",0,0)
-    row.state:SetWidth(120); row.state:SetHeight(15); row.state:SetJustifyH("RIGHT")
+    K.SetW(row.state,120); K.SetH(row.state,15); row.state:SetJustifyH("RIGHT")
     row:EnableMouse(true)
     row:SetScript("OnEnter",function()
         local lair=this.lair
@@ -112,10 +112,9 @@ local function Reflow(row)
     local mark=row.marker and row.marker:IsShown() and 17 or 0
     local arrow=row.direction and row.direction:IsShown() and 17 or 0
     local width=math.max(30,g.width-g.state-8-mark-arrow)
-    row.name:SetWidth(width)
+    K.SetW(row.name,width)
     if arrow>0 then
-        row.direction:ClearAllPoints()
-        row.direction:SetPoint("LEFT",row,"LEFT",mark+math.min(width,row.name:GetStringWidth())+3,0)
+        K.Anchor(row.direction,"LEFT",row,"LEFT",mark+math.min(width,row.name:GetStringWidth())+3,0)
     end
 end
 function G.Draw(parent,top,sizing)
@@ -134,27 +133,30 @@ function G.Draw(parent,top,sizing)
         viewport=CreateFrame("Frame",nil,parent)
         viewport:EnableMouse(true); viewport:EnableMouseWheel(true)
         viewport:SetScript("OnMouseWheel",function() G.Scroll(arg1) end)
-        head=K.LText(parent,"Wächter",9,"TOPLEFT",14,0,130); head:SetTextColor(0.65,0.63,0.58)
-        count=K.Text(parent,"",9,"TOPRIGHT",-14,0); count:SetTextColor(0.65,0.63,0.58)
+        head=K.LText(parent,"Wächter",9,"TOPLEFT",14,0,130); K.WriteTextColor(head,0.65,0.63,0.58)
+        count=K.Text(parent,"",9,"TOPRIGHT",-14,0); K.WriteTextColor(count,0.65,0.63,0.58); count:SetJustifyH("RIGHT")
         -- Faint line between the last boss and the guardians, the same as between the run statistics rows.
         line=parent:CreateTexture(nil,"ARTWORK")
-        line:SetTexture(K.flat); line:SetVertexColor(0.62,0.57,0.43,0.22); line:SetHeight(1)
+        line:SetTexture(K.flat); line:SetVertexColor(0.62,0.57,0.43,0.22); K.SetH(line,1)
     end
-    line:ClearAllPoints()
-    line:SetPoint("TOPLEFT",parent,"TOPLEFT",14,top+1); line:SetPoint("TOPRIGHT",parent,"TOPRIGHT",-14,top+1)
+    if line.layoutParent~=parent or line.layoutTop~=top then
+        line.layoutParent,line.layoutTop=parent,top
+        line:ClearAllPoints()
+        line:SetPoint("TOPLEFT",parent,"TOPLEFT",14,top+1); line:SetPoint("TOPRIGHT",parent,"TOPRIGHT",-14,top+1)
+    end
     top=top-5
-    head:ClearAllPoints(); head:SetPoint("TOPLEFT",parent,"TOPLEFT",14,top)
-    count:ClearAllPoints(); count:SetPoint("TOPRIGHT",parent,"TOPRIGHT",-14,top)
+    K.Anchor(head,"TOPLEFT",parent,"TOPLEFT",14,top)
+    K.Anchor(count,"TOPRIGHT",parent,"TOPRIGHT",-14,top)
     local step=sizing and sizing.step or 18
     local q=sizing and sizing.q or 1
     local width=sizing and sizing.width-28 or 272
     local heading=math.max(16,16*q)
-    head:SetWidth(width*.46); head:SetHeight(heading)
-    count:SetWidth(width*.5); count:SetHeight(heading); count:SetJustifyH("RIGHT")
-    viewport:SetParent(parent); viewport:ClearAllPoints()
-    viewport:SetPoint("TOPLEFT",parent,"TOPLEFT",14,top)
-    viewport:SetWidth(width); viewport:SetHeight(heading+visible*step)
-    if sizing then viewport:Show() else viewport:Hide() end
+    K.SetW(head,width*.46); K.SetH(head,heading)
+    K.SetW(count,width*.5); K.SetH(count,heading)
+    if viewport:GetParent()~=parent then viewport:SetParent(parent) end
+    K.Anchor(viewport,"TOPLEFT",parent,"TOPLEFT",14,top)
+    K.SetW(viewport,width); K.SetH(viewport,heading+visible*step)
+    K.Shown(viewport,sizing and true or false)
     local up=0
     for i=1,n do
         if list[i].state=="asleep" or list[i].state=="awake" then up=up+1 end
@@ -162,23 +164,27 @@ function G.Draw(parent,top,sizing)
     for i=1,visible do
         local lair=list[i+offset]
         local row=Row(parent,i)
-        row:ClearAllPoints(); row:SetPoint("TOPLEFT",parent,"TOPLEFT",14,top-heading-(i-1)*step)
-        row:SetWidth(width); row:SetHeight(step-1)
+        K.Anchor(row,"TOPLEFT",parent,"TOPLEFT",14,top-heading-(i-1)*step)
+        K.SetW(row,width); K.SetH(row,step-1)
         local stateWidth=sizing and math.max(width*.46,KeijinUI.panelSizing.Measure(row.state,K.T("zurück in %s","99:59"))) or 120
-        row.name:SetWidth(math.max(30,width-stateWidth-8)); row.name:SetHeight(step-2)
-        row.state:SetWidth(stateWidth); row.state:SetHeight(step-2)
-        row.panelSizingGeometry=sizing and {width=width,state=stateWidth} or nil
+        if not K.guardianNav then K.SetW(row.name,math.max(30,width-stateWidth-8)) end
+        K.SetH(row.name,step-2)
+        K.SetW(row.state,stateWidth); K.SetH(row.state,step-2)
+        if sizing then
+            if not row.panelSizingGeometry then row.panelSizingGeometry={} end
+            row.panelSizingGeometry.width,row.panelSizingGeometry.state=width,stateWidth
+        else row.panelSizingGeometry=nil end
         row.lair=lair; row.position=i+offset
-        row.name:SetText(lair.name or (K.T("Hort").." "..(i+offset)))
-        row.name:SetTextColor(0.85,0.82,0.75)
+        K.WriteText(row.name,lair.name or (K.T("Hort").." "..(i+offset)))
+        K.WriteTextColor(row.name,0.85,0.82,0.75)
         local text,r,g,b=G.Status(lair)
-        row.state:SetText(text); row.state:SetTextColor(r,g,b)
-        row:Show()
+        K.WriteText(row.state,text); K.WriteTextColor(row.state,r,g,b)
+        K.Shown(row,true)
         if K.guardianNav then K.guardianNav.Decorate(row) end
     end
-    for i=visible+1,table.getn(rows) do rows[i].lair=nil; rows[i]:Hide() end
-    count:SetText(K.T("%d von %d da",up,table.getn(list)))
-    head:Show(); count:Show(); line:Show()
+    for i=visible+1,table.getn(rows) do rows[i].lair=nil; K.Shown(rows[i],false) end
+    K.WriteText(count,K.T("%d von %d da",up,table.getn(list)))
+    K.Shown(head,true); K.Shown(count,true); K.Shown(line,true)
     return 9+heading+visible*step
 end
 function G.Debug()

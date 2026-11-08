@@ -29,10 +29,8 @@ local function ReleaseStock()
 end
 local function HideStock()
     if not ready then return end
-    for _,key in ipairs({"PlayerFrame","TargetFrame"}) do
-        local f=getglobal(key)
-        TakeStock(f)
-    end
+    TakeStock(PlayerFrame)
+    TakeStock(TargetFrame)
 end
 -- Debuff icons of one unit, only what UnitDebuff returns (texture, stack count): no durations are
 -- invented, the client gives none for other units. Rows are shared with the target nameplate.
@@ -63,8 +61,8 @@ function K.UpdateDebuffRow(row,unit)
             if not texture then break end
             n=n+1
             local icon=row.icons[n]
-            icon.tex:SetTexture(texture)
-            icon.count:SetText(K.Number(count) and count>1 and tostring(count) or "")
+            if icon.texture~=texture then icon.texture=texture; icon.tex:SetTexture(texture) end
+            K.WriteText(icon.count,K.Number(count) and count>1 and tostring(count) or "")
         end
     end
     local step=row.size+1
@@ -82,6 +80,12 @@ end
 -- One sculpted housing: portrait bezel, dark name shoulder, tapered health rail.
 -- All artwork is original and uses ordinary 1.12 textures, including the mirror.
 local BORDER={0.78,0.69,0.50}
+local ELITE_BORDER={1,0.82,0.28}
+local RARE_BORDER={0.78,0.84,0.95}
+local function Border(rim,color)
+    if rim.unitBorder==color then return end
+    rim.unitBorder=color; rim:SetVertexColor(color[1],color[2],color[3],1)
+end
 local FRAME_W,FRAME_H=206,58
 local BOX=54
 local HOLDER_W,HOLDER_H=FRAME_W-48,30
@@ -98,8 +102,10 @@ local function UpdateRaidMarker(f)
     local n=index-1
     local left=math.mod(n,4)/4
     local top=math.floor(n/4)/4
-    f.raidMarker:SetTexCoord(left,left+0.25,top,top+0.25)
-    f.raidMarker:Show()
+    if f.raidIndex~=index then
+        f.raidIndex=index; f.raidMarker:SetTexCoord(left,left+0.25,top,top+0.25)
+    end
+    K.Shown(f.raidMarker,true)
 end
 -- Distance from the frame's left and top edge to the corner of its health bar that stays put when the style changes:
 -- top right corner for the player (portrait on the left), top left corner for the target (portrait on the right).
@@ -283,14 +289,14 @@ local function Update()
                 and type(r)=="table" and K.Number(r.hp) and K.Number(r.hpm) and r.hpm>0
                 and (unit=="player" or r.name==UnitName(unit)) then hp,max=r.hp,r.hpm end
             local unitName=UnitName(unit)
-            f.label:SetText(unitName or "?")
+            K.WriteText(f.label,unitName or "?")
             local lvl=UnitLevel(unit)
             -- Elite and rare targets: marker behind the level and a border in the matching colour.
             local class=unit=="target" and UnitClassification and UnitClassification(unit) or "normal"
             local mark=(class=="elite" and "+") or (class=="rareelite" and "R+") or (class=="rare" and "R") or (class=="worldboss" and "+") or ""
-            f.level:SetText((lvl and lvl>0 and tostring(lvl) or "??")..mark)
-            local border=(class=="elite" or class=="worldboss") and {1,0.82,0.28} or ((class=="rare" or class=="rareelite") and {0.78,0.84,0.95}) or BORDER
-            f.rim:SetVertexColor(border[1],border[2],border[3],1)
+            K.WriteText(f.level,(lvl and lvl>0 and tostring(lvl) or "??")..mark)
+            local border=(class=="elite" or class=="worldboss") and ELITE_BORDER or ((class=="rare" or class=="rareelite") and RARE_BORDER) or BORDER
+            Border(f.rim,border)
             if K.Number(hp) and K.Number(max) and max>0 then
                 local pct=math.max(0,math.min(1,hp/max))
                 -- Absorb shield (AZS_RUN.sh, game 0.110): only the player; missing, zero or not a number shows nothing.
@@ -298,15 +304,17 @@ local function Update()
                 local shield=unit=="player" and type(AZS_RUN)=="table" and AZS_RUN.sh
                 if not K.Number(shield) or shield<=0 then shield=nil
                 elseif K.Number(AZS_RUN.hpm) and AZS_RUN.hpm>0 then shield=shield*max/AZS_RUN.hpm end
-                f.bar:SetValue(pct); f.health:SetText(K.Short(hp)..(shield and " +"..K.Short(shield) or ""))
+                f.bar:SetValue(pct); K.WriteText(f.health,K.Short(hp)..(shield and " +"..K.Short(shield) or ""))
                 if f.bar.SetShield then f.bar:SetShield(hp/max,shield and shield/max) end
-                f.percent:SetText(string.format("%.0f%%",math.floor(pct*100)))
+                K.WriteText(f.percent,string.format("%.0f%%",math.floor(pct*100)))
                 f.exact=string.format("%.0f / %.0f",hp,max)..(shield and string.format(" (+%.0f)",shield) or "")
                 if unit=="target" then K.combatDetails.Execute(f,f.bar,pct,true) end
             else
                 if f.bar.SetShield then f.bar:SetShield(0,nil) end
-                f.bar:SetValue(0); f.health:SetText("?"); f.percent:SetText("?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
-            f.bar:SetStatusBarColor(HealthColor(unit))
+                f.bar:SetValue(0); K.WriteText(f.health,"?"); K.WriteText(f.percent,"?%"); f.exact=nil; K.combatDetails.Execute(f,f.bar,nil,true) end
+            local red,green,blue=HealthColor(unit)
+            local oldRed,oldGreen,oldBlue=f.bar:GetStatusBarColor()
+            if red~=oldRed or green~=oldGreen or blue~=oldBlue then f.bar:SetStatusBarColor(red,green,blue) end
             -- The compact style has no portrait; the pointer is not touched there.
             if not f.clean and f.portrait then
                 if portraitDirty[unit] or f.portraitName~=(unitName or false) then
@@ -315,10 +323,10 @@ local function Update()
                 K.Shown(f.portrait,true)
             else f.portraitName=nil end
         else
-            f.label:SetText(unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
-            f.health:SetText("?"); f.percent:SetText("?%"); f.level:SetText(""); f.bar:SetValue(0); f.exact=nil
+            K.WriteText(f.label,unit=="target" and K.T("Kein Ziel") or K.T("Spieler"))
+            K.WriteText(f.health,"?"); K.WriteText(f.percent,"?%"); K.WriteText(f.level,""); f.bar:SetValue(0); f.exact=nil
             if f.bar.SetShield then f.bar:SetShield(0,nil) end
-            f.rim:SetVertexColor(BORDER[1],BORDER[2],BORDER[3],1)
+            Border(f.rim,BORDER)
             if not f.clean and f.portrait then f.portrait:SetTexture(nil); f.portrait:Hide() end
             f.portraitName=nil
         end
@@ -326,9 +334,17 @@ local function Update()
             -- No target: the whole frame is gone. Alt or layout editing keeps an invisible,
             -- movable frame so the position can still be set.
             if GameTooltip and GameTooltip.IsOwned and GameTooltip:IsOwned(f) then GameTooltip:Hide() end
-            if K.layout.Active() then f:SetAlpha(0); K.Shown(f,true)
-            else f:SetAlpha(1); K.Shown(f,false) end
-        else f:SetAlpha(1); K.Shown(f,true) end
+            if K.layout.Active() then
+                if f:GetAlpha()~=0 then f:SetAlpha(0) end
+                K.Shown(f,true)
+            else
+                if f:GetAlpha()~=1 then f:SetAlpha(1) end
+                K.Shown(f,false)
+            end
+        else
+            if f:GetAlpha()~=1 then f:SetAlpha(1) end
+            K.Shown(f,true)
+        end
         if unit=="target" and not UnitExists(unit) then K.combatDetails.Execute(f,f.bar,nil,true) end
         if f.debuffs then K.RefreshTargetDebuffs() end
     end

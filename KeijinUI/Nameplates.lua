@@ -130,7 +130,7 @@ end
 function K.ReleaseNameplates()
     fullDue=true; elapsed=0; lastTargetName=nil
     for name in pairs(anchors) do anchors[name]=nil end
-    for i=table.getn(pending),1,-1 do pending[i]=nil end
+    for i=table.getn(pending),1,-1 do table.remove(pending,i) end
     for _,p in ipairs(plates) do
         Mask(p,false); Click(p,false); FrameShown(p,false); ClearDebuffs(p)
         p.visible=false; p.target=false
@@ -332,7 +332,7 @@ local function Run()
     if scanAll then
         list=plates; targetShown=false
         for name in pairs(anchors) do anchors[name]=nil end
-        for i=table.getn(pending),1,-1 do pending[i]=nil end
+        for i=table.getn(pending),1,-1 do table.remove(pending,i) end
     end
     local i=1
     while i<=table.getn(list) do
@@ -356,8 +356,9 @@ local function Run()
                 or (p.anchorTarget==best.anchorTarget and p.order<best.order)) then anchors[name]=p end
             if not scanAll then
                 -- Swap removal: no table creation or shifting the rest of the pool.
+                -- Lua 5.0 remembers the length: a raw nil would leave getn stale.
                 local n=table.getn(pending)
-                pending[i]=pending[n]; pending[n]=nil; advance=false
+                pending[i]=pending[n]; table.remove(pending,n); advance=false
             end
             if target and p.frameShown then targetShown=true end
         else
@@ -384,6 +385,7 @@ function K.PlateAnchor(name)
     local ratio=best.plate:GetEffectiveScale()/UIParent:GetEffectiveScale()
     return x*ratio,y*ratio+22
 end
+if K.PerfBind then K.PerfBind("Nameplates.OnUpdate",Run,function(fn) Run=fn end) end
 local function Update()
     elapsed=elapsed+(tonumber(arg1) or 0)
     local ok,err=pcall(Run)

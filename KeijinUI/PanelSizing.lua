@@ -1,6 +1,7 @@
 -- Personal dimensions are separate from layout positions and survive moving/docking.
 -- Missing fields deliberately keep the pre-sizing appearance, without a migration.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"PanelSizing") end
 local P={entries={},frames={},offsets={},counts={}}
 K.panelSizing=P
 P.order={{"tracker","Runübersicht",8},{"statistics","Runstatistiken",7},{"meter","Schadensanzeige",8},{"crits","Kritische Treffer",8},{"attributes","Charakterwerte",29}}
@@ -127,7 +128,8 @@ function P.Rows(key,fallback)
 end
 function P.Range(key,total,visible)
     total=math.max(0,total); visible=math.max(1,visible)
-    P.counts[key]={total,visible}
+    local count=P.counts[key]
+    if count then count[1],count[2]=total,visible else P.counts[key]={total,visible} end
     local offset=Bound(P.offsets[key],0,math.max(0,total-visible),0)
     offset=math.floor(offset); P.offsets[key]=offset
     return offset
@@ -232,10 +234,14 @@ local refreshing
 function P.Refresh(key)
     if refreshing then return end
     refreshing=true
+    -- Apply all font changes first; several panels share a single renderer.
+    for name in pairs(P.entries) do
+        if (not key or name==key) and P.On(name) then P.Fonts(name) end
+    end
+    local called={}
     for name,e in pairs(P.entries) do
-        if (not key or name==key) and P.On(name) then
-            P.Fonts(name)
-            if e.refresh then e.refresh() end
+        if (not key or name==key) and P.On(name) and e.refresh and not called[e.refresh] then
+            called[e.refresh]=true; e.refresh()
         end
     end
     refreshing=nil
@@ -272,7 +278,7 @@ K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then P.Refresh() end en
 K.OnLang(function() P.Refresh() end)
 -- A changed effective UI scale changes font compensation even without a local SetScale.
 local scales={}
-table.insert(K.updates,function()
+RegisterUpdate(function()
     for key,e in pairs(P.entries) do
         local scale=e.frame:GetEffectiveScale()
         if P.On(key) and scale~=scales[key] then scales[key]=scale; if P.Custom(key) then P.Refresh(key) end end

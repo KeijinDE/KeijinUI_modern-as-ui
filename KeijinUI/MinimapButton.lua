@@ -4,6 +4,7 @@
 -- The angle (degrees, 0 = east, counterclockwise) is kept in KeijinUIDB.minimapButtonAngle. On the square
 -- KeijinUI minimap the angle is projected onto the square edge, on the original minimap onto a circle.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"MinimapButton") end
 -- 225 degrees: the lower left corner of the square map (on the round map the lower left of the ring).
 local SIZE,DEFAULT_ANGLE=32,225
 local EDGE,RING=2,9
@@ -128,6 +129,6 @@ function K.MinimapButtonCommand(arg)
     K.SetMinimapButton(on)
     K.Say(K.T("Minimapknopf")..": "..(on and K.T("An") or K.T("Aus")))
 end
-table.insert(K.updates,Update)
+RegisterUpdate(Update)
 K.MinimapButtonRefresh=Update
 Update()

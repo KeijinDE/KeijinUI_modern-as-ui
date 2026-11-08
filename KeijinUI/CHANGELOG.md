@@ -5,6 +5,15 @@ Every version that is uploaded to GitHub gets its entry here before the upload.
 
 ## English
 
+### 5.0.5 (2026-11-08, release v5.0.5)
+
+* Fixed-position and fallback combat text animations sleep when idle and reuse animation scratch records. Native hit processing reads shared settings once per frame with new hits. Statistics reuse sorting records and skip unchanged text; periodic redraws remain limited to once per 0.25 seconds.
+* Player and target frames skip unchanged text, colours and debuff icons while retaining fallback polling for native run data.
+* Shared update work: unchanged HUD text and colours are skipped, layout traversal and row records are reused, viewport reads are shared within each clamp pass, and panel renderers refresh once per settings change. The profiler separates HUD, statistics and the final layout check.
+* Cache and guardian markers reuse navigation records and skip unchanged positions, textures and text. Minimap movement smoothing is included in `/kui perf`.
+* Fixed a nameplate error on the Lua 5.0 client when plates appear, disappear or are reenabled.
+* Optional performance diagnostics: `/kui perf 10` samples calls and approximate memory growth per module for 10 seconds. `/kui perf log on` saves the last five runs with a snapshot after 30 seconds and minute averages for FPS, memory and combat density. Long runs are compacted while preserving their beginning; `/kui perf log show` displays a summary in three minute groups. Both tools are off by default.
+
 ### 5.0.4 (2026-11-07, release v5.0.4)
 
 * Performance with many enemies: nameplates and floating combat text do far less work per frame, the build bar, advisor, pace tracker and cache markers only recalculate when something changed, and combat log parsing creates far less garbage.
@@ -712,6 +721,15 @@ Shorter statistics. 0.3.1: Encounters without UnitAffectingCombat. 0.3.0: Own ch
 Action bar, build overview, class colored health bars, nameplates.
 
 ## Deutsch
+
+### 5.0.5 (2026-11-08, Release v5.0.5)
+
+* Animationen fester und klassischer Schadenszahlen pausieren im Leerlauf und verwenden Hilfsdaten erneut. Die native Trefferverarbeitung liest gemeinsame Einstellungen einmal je Frame mit neuen Treffern. Statistiken verwenden Sortierdatensätze erneut und überspringen unveränderte Texte; regelmäßige Aktualisierungen bleiben auf einmal je 0,25 Sekunden begrenzt.
+* Spieler und Zielanzeigen überspringen unveränderte Texte, Farben und Debuffsymbole. Die regelmäßige Prüfung der nativen Rundendaten bleibt erhalten.
+* Gemeinsame Aktualisierungen: unveränderte HUD Texte und Farben werden übersprungen, Hilfstabellen und Zeilendaten wiederverwendet, die Bildschirmgröße je Positionsprüfung nur einmal gelesen und gemeinsame Panelanzeigen bei Einstellungsänderungen nur einmal aktualisiert. Der Monitor trennt HUD, Statistik und die abschließende Layoutprüfung.
+* Cache und Wächtersymbole verwenden Navigationsdaten wieder und überspringen unveränderte Positionen, Texturen und Texte. Die Minimapglättung wird von `/kui perf` mitgemessen.
+* Plakettenfehler im Lua 5.0 Client beim Einblenden, Ausblenden oder erneuten Aktivieren behoben.
+* Optionale Leistungsdiagnose: `/kui perf 10` misst zehn Sekunden lang Aufrufe und den ungefähren Speicherzuwachs je Modul. `/kui perf log on` speichert die letzten fünf Runs mit einem Startwert nach 30 Sekunden und Minutenmitteln für FPS, Speicher und Kampfdichte. Lange Runs werden verdichtet, ihr Anfang bleibt erhalten. `/kui perf log show` zeigt eine Übersicht in Gruppen von drei Minuten. Beide Werkzeuge sind standardmäßig aus.
 
 ### 5.0.4 (2026-11-07, Release v5.0.4)
 

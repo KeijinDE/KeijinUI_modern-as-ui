@@ -1,6 +1,7 @@
 -- Fixed-origin pointer tracking instead of StartSizing: panel heights are row based.
 -- API evidence: FrameXML/FloatingChatFrame.lua:600,853; ChatFrame.xml:103-108.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"LayoutSizing") end
 local L,P=K.layout,K.panelSizing
 local S={}
 K.layoutSizing=S
@@ -619,7 +620,7 @@ function S.Update()
     end
     S.EditorPosition()
 end
-table.insert(K.updates,S.Update)
+RegisterUpdate(S.Update)
 K.On("PLAYER_LEAVING_WORLD",S.Close)
 K.OnLang(function()
     if not editor or not editor:IsShown() then return end

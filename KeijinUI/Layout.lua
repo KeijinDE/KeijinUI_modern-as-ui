@@ -1,11 +1,12 @@
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"Layout") end
 K.layout={entries={}}
 local L=K.layout
 local editing,active,lastWidth,lastHeight,directMove
 function L.Active() return editing end
 local function Scale(f) return f:GetEffectiveScale() end
 -- UIParent's scale is read once per update pass and handed to every entry (it cannot change inside a pass).
-local parentScale
+local parentScale,viewWidth,viewHeight
 local function ParentScale() return parentScale or UIParent:GetEffectiveScale() end
 local function Finite(n) return type(n)=="number" and n==n and math.abs(n)<1e15 end
 local function Valid(p) return type(p)=="table" and Finite(p.x) and Finite(p.y) and K.Number(p.scale) and p.scale>0 end
@@ -44,41 +45,53 @@ local function ValidDock(dock)
     return type(dock)=="table" and type(dock.target)=="string" and
         (dock.edge=="above" or dock.edge=="below") and Finite(dock.x)
 end
-local function CanDock(entry,target)
-    local frame=entry.frame
-    local visiting,checked={},{}
-    -- Default anchors are dependencies too: crits starts below meter even
-    -- without a saved dock. Looking only at dock metadata misses that cycle.
-    local function Safe(relative)
-        if not relative or relative==UIParent then return true end
-        if relative==frame or visiting[relative] then return false end
-        if checked[relative] then return true end
-        visiting[relative]=true
-        local defaults=defaultAnchors[relative]
-        if defaults and not Valid(K.DB().layout[defaults.key]) then
-            for _,anchor in ipairs(defaults.refs) do if not Safe(anchor) then return false end end
-        end
-        if relative.GetParent and not Safe(relative:GetParent()) then return false end
-        if relative.GetPoint then
-            local count=relative.GetNumPoints and relative:GetNumPoints() or 1
-            for index=1,count do
-                local _,anchor=relative:GetPoint(index)
-                if type(anchor)=="string" then anchor=getglobal(anchor) end
-                if not Safe(anchor) then return false end
-            end
-        end
-        visiting[relative]=nil; checked[relative]=true
-        return true
+local function SafeAnchor(relative,frame,visiting,checked)
+    if not relative or relative==UIParent then return true end
+    if relative==frame or visiting[relative] then return false end
+    if checked[relative] then return true end
+    visiting[relative]=true
+    local defaults=defaultAnchors[relative]
+    if defaults and not Valid(K.DB().layout[defaults.key]) then
+        for _,anchor in ipairs(defaults.refs) do if not SafeAnchor(anchor,frame,visiting,checked) then return false end end
     end
-    if not Safe(target.frame) then return false end
-    local seen={[entry.key]=true}
-    while target do
-        if seen[target.key] then return false end
-        seen[target.key]=true
-        target=target.dock and L.entries[target.dock.target] or nil
+    if relative.GetParent and not SafeAnchor(relative:GetParent(),frame,visiting,checked) then return false end
+    if relative.GetPoint then
+        local count=relative.GetNumPoints and relative:GetNumPoints() or 1
+        for index=1,count do
+            local _,anchor=relative:GetPoint(index)
+            if type(anchor)=="string" then anchor=getglobal(anchor) end
+            if not SafeAnchor(anchor,frame,visiting,checked) then return false end
+        end
     end
+    visiting[relative]=nil; checked[relative]=true
     return true
 end
+local function CanDock(entry,target)
+    -- Reuse traversal storage, but check the live graph every time. A nested
+    -- check gets independent storage, so callbacks cannot corrupt this walk.
+    local scratch=entry.dockCheck
+    if not scratch or scratch.busy then
+        scratch={visiting={},checked={},seen={}}
+        if not entry.dockCheck then entry.dockCheck=scratch end
+    end
+    scratch.busy=true
+    local visiting,checked,seen=scratch.visiting,scratch.checked,scratch.seen
+    for key in pairs(visiting) do visiting[key]=nil end
+    for key in pairs(checked) do checked[key]=nil end
+    for key in pairs(seen) do seen[key]=nil end
+    local safe=SafeAnchor(target.frame,entry.frame,visiting,checked)
+    if safe then
+        seen[entry.key]=true
+        while target do
+            if seen[target.key] then safe=false; break end
+            seen[target.key]=true
+            target=target.dock and L.entries[target.dock.target] or nil
+        end
+    end
+    scratch.busy=nil
+    return safe
+end
+
 local Apply
 local function Dock(entry)
     local d=entry.dock
@@ -111,7 +124,7 @@ end
 local function Clamp(entry)
     if Off(entry) then return end
     local f=entry.frame
-    local w,h=K.UIWidth(),K.UIHeight()
+    local w,h=viewWidth or K.UIWidth(),viewHeight or K.UIHeight()
     if not w or not h or w<40 or h<40 then return end
     local ratio=Scale(f)/ParentScale()
     if entry.options.follow and entry.options.follow() then return end
@@ -494,12 +507,15 @@ function L.Reset()
     for _,e in pairs(L.entries) do Apply(e) end
 end
 function L.ClampAll()
+    local previousScale,previousWidth,previousHeight=parentScale,viewWidth,viewHeight
     parentScale=UIParent:GetEffectiveScale()
+    viewWidth,viewHeight=K.UIWidth(),K.UIHeight()
     for _,e in pairs(L.entries) do
         if e~=active and not e.sizing and Clamp(e) and K.DB().layout[e.key] then Save(e) end
     end
-    parentScale=nil
+    parentScale,viewWidth,viewHeight=previousScale,previousWidth,previousHeight
 end
+if K.PerfBind then K.PerfBind("Layout.ClampAll",L.ClampAll,function(fn) L.ClampAll=fn end) end
 -- onDriver: the shared driver runs ClampAll right after all updates, so the per-entry clamp is left to it there.
 function L.Update(onDriver)
     parentScale=UIParent:GetEffectiveScale()
@@ -579,5 +595,5 @@ function L.MigrateStatistics()
     L.Place("meter"); L.Place("crits")
 end
 K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then L.MigrateStatistics() end end)
-table.insert(K.updates,function() L.Update(true) end)
+RegisterUpdate(function() L.Update(true) end)
 K.On("PLAYER_LEAVING_WORLD",function() if K.settings then K.settings.RestoreAfterLayout(true) end; editing=false; Stop(); hint:Hide(); grid:Hide(); for _,e in pairs(L.entries) do e.handle:Hide() end end)

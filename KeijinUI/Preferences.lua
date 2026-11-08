@@ -72,6 +72,27 @@ function K.Shown(f,on)
         f:Hide()
     end
 end
+-- Avoid redundant calls into the client's text and layout machinery.
+-- Read the actual value so external SetText calls and language changes remain visible.
+function K.WriteText(f,value)
+    local text=value==nil and "" or tostring(value)
+    if f:GetText()~=text then f:SetText(text) end
+end
+-- Track external colour writes as well; do not assume we are the sole writer.
+function K.WriteTextColor(f,r,g,b,a)
+    if not f.kuiColorTracked then
+        f.kuiColorTracked=true
+        local set=f.SetTextColor
+        f.SetTextColor=function(self,red,green,blue,alpha)
+            self.kuiTextR,self.kuiTextG,self.kuiTextB,self.kuiTextA=red,green,blue,alpha
+            if alpha==nil then return set(self,red,green,blue) end
+            return set(self,red,green,blue,alpha)
+        end
+    end
+    if f.kuiTextR~=r or f.kuiTextG~=g or f.kuiTextB~=b or f.kuiTextA~=a then
+        f:SetTextColor(r,g,b,a)
+    end
+end
 function K.HeaderPoint(child,panel,point,x,y,relative)
     K.Anchor(child,point,panel,relative or point,x,y+K.HeaderOffset(panel)*Sign(point))
     if panel.compactHeader then

@@ -1,5 +1,7 @@
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"Statistics") end
 local P=K.panelSizing
+local function DamageOrder(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end
 local Redraw
 local function Inactive() return not K.basisHud.On() end
 local stats=K.Panel("KeijinUIStatistics","Dieser Run",K.PANEL_WIDTH,185)
@@ -105,7 +107,7 @@ function K.PartyMeter()
         end
     end
     if table.getn(sorted)==0 then return nil end
-    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    table.sort(sorted,DamageOrder)
     return sorted,not filtered and K.Number(total) and total or sum,not filtered and K.Number(rate) and rate or sumRate
 end
 -- Class key of the game (paladin, ...) -> colour of KeijinUI; grey for unknown ones.
@@ -169,7 +171,7 @@ meter.headerExtra=function(mode)
     PaintTabs()
 end
 local function Summary(full,total,rate)
-    summary:SetText(K.headers.Mode(meter)=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
+    K.WriteText(summary,K.headers.Mode(meter)=="off" and (K.Short(total).." · "..K.Short(rate).."/s") or full)
 end
 local function ResetMeter()
     K.liveDPS.Reset()
@@ -206,7 +208,7 @@ local function ReadHealing(valid)
     if not K.Number(sum) or not K.Number(rate) then return nil,nil,nil,true end
     if not K.Number(total) then total=sum end
     if not K.Number(hps) then hps=rate end
-    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    table.sort(sorted,DamageOrder)
     return sorted,total,hps,true
 end
 local function ResetRun(waitForRun)
@@ -310,10 +312,10 @@ local function UpdateBoss()
     if table.getn(sorted)==0 then
         for _,row in ipairs(meterRows) do K.Shown(row,false) end
         -- Sized panels get their height from P.List below; writing the standard height first would flip it every update.
-        if not P.Custom("meter") then K.SetH(meter,100) end; if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end; summary:SetText(K.T("Noch kein Bosskampf")); K.Shown(meter,true)
+        if not P.Custom("meter") then K.SetH(meter,100) end; if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end; K.WriteText(summary,K.T("Noch kein Bosskampf")); K.Shown(meter,true)
         return
     end
-    table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+    table.sort(sorted,DamageOrder)
     if not K.Number(total) then total=sum end
     if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
     local visible
@@ -324,8 +326,8 @@ local function UpdateBoss()
         if v and i<=visible then
             local rate=K.Number(v.dps) and v.dps or 0
             UpdateSpellIcon(row,v.name)
-            row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
-            row.dps:SetText(K.Short(rate).." DPS")
+            K.WriteText(row.label,K.DisplayName(v.name)); K.WriteText(row.value,K.Short(v.dmg))
+            K.WriteText(row.dps,K.Short(rate).." DPS")
             row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
             local red,green,blue=K.SourceColor(v.name)
             row.bar:SetStatusBarColor(red,green,blue,0.85)
@@ -348,7 +350,7 @@ local function UpdateHealing(lines,total,hps,supported)
         for _,row in ipairs(meterRows) do K.Shown(row,false) end
         if not P.Custom("meter") then K.SetH(meter,100) end
         if P.Custom("meter") then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
-        summary:SetText(K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); K.Shown(meter,true); return
+        K.WriteText(summary,K.T(supported and "Noch keine Heilung" or "Heilungsdaten nicht verfügbar")); K.Shown(meter,true); return
     end
     if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
     local visible
@@ -358,8 +360,8 @@ local function UpdateHealing(lines,total,hps,supported)
         local value=sorted[i+offset]
         if value and i<=visible then
             UpdateSpellIcon(row,value.name)
-            row.label:SetText(K.DisplayName(value.name)); row.value:SetText(K.Short(value.dmg))
-            row.dps:SetText(K.Short(K.Number(value.dps) and value.dps or 0).." HPS")
+            K.WriteText(row.label,K.DisplayName(value.name)); K.WriteText(row.value,K.Short(value.dmg))
+            K.WriteText(row.dps,K.Short(K.Number(value.dps) and value.dps or 0).." HPS")
             row.bar:SetValue(sorted[1].dmg>0 and value.dmg/sorted[1].dmg or 0)
             local red,green,blue=K.SourceColor(value.name); row.bar:SetStatusBarColor(red,green,blue,.85)
             row.tip=K.DisplayName(value.name)
@@ -387,8 +389,8 @@ local function UpdateParty(sorted,total,rate)
             K.Anchor(row.label,"LEFT",row.label:GetParent(),"LEFT",5,0)
             if row.icon then row.labelInset=0; K.SetW(row.label,row.labelWidth); K.Shown(row.icon,false) end
             row.kuiPlain=nil
-            row.label:SetText(v.name); row.label:SetTextColor(red,green,blue)
-            row.value:SetText(K.Short(v.dmg)); row.dps:SetText(K.Short(dps).." DPS")
+            K.WriteText(row.label,v.name); row.label:SetTextColor(red,green,blue)
+            K.WriteText(row.value,K.Short(v.dmg)); K.WriteText(row.dps,K.Short(dps).." DPS")
             row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
             row.bar:SetStatusBarColor(red,green,blue,own and 0.95 or 0.65)
             for _,t in ipairs(row.rim) do if own then t:SetVertexColor(1,0.82,0.28,1) else t:SetVertexColor(0.62,0.57,0.43,0.95) end end
@@ -457,7 +459,7 @@ local function UpdateCrits(valid)
             local v=crits[i+critOffset]
             if v and i<=visible then
                 UpdateSpellIcon(row,v.name)
-                row.label:SetText(v.name); row.value:SetText(K.Short(v.best))
+                K.WriteText(row.label,v.name); K.WriteText(row.value,K.Short(v.best))
                 row.bar:SetValue(v.best/crits[1].best)
                 local red,green,blue=K.SourceColor(v.name); row.bar:SetStatusBarColor(red,green,blue,0.85)
                 row.tip=v.name
@@ -476,6 +478,7 @@ local function UpdateCrits(valid)
         end
     end
 end
+local runSorted,runRecords={},{}
 local function Update()
     if Inactive() then Release(); return end
     local phase=AZS_GetPhase and AZS_GetPhase()
@@ -495,17 +498,17 @@ local function Update()
             if def and i<=visible then
                 K.Shown(row,true)
                 local key=def[1]; local value=r[key]
-                row.tip=K.T(def[2]); row.label:SetText(K.T(def[2]))
+                row.tip=K.T(def[2]); K.WriteText(row.label,K.T(def[2]))
                 StatDetail(row,key,value,r.xpn)
                 if key=="xp" then
                     local need=r.xpn
                     if K.Number(value) and K.Number(need) and need>0 then
-                        row.value:SetText(K.Short(value).." / "..K.Short(need))
+                        K.WriteText(row.value,K.Short(value).." / "..K.Short(need))
                     else
-                        row.value:SetText(K.Short(nil))
+                        K.WriteText(row.value,K.Short(nil))
                     end
                 else
-                    row.value:SetText(K.Short(value))
+                    K.WriteText(row.value,K.Short(value))
                 end
             K.Shown(row.line,i~=visible)
             else K.Shown(row,false) end
@@ -520,12 +523,17 @@ local function Update()
     local healingView=K.MeterView()=="healing"
     local partyView=K.MeterView()=="party"
     if bossView or healingView or partyView then K.Shown(reset,false) else K.Shown(reset,true) end
-    local sorted,total={},0
+    local sorted,total,count=runSorted,0,0
+    for i=table.getn(sorted),1,-1 do table.remove(sorted,i) end
     if meterValid and not bossView and not healingView and not partyView then
         for _,v in ipairs(lines) do
             if type(v.name)~="string" or not K.Number(v.dmg) then meterValid=false; break end
             local value=math.max(0,v.dmg-(baseline[v.name] or 0))
-            table.insert(sorted,{name=v.name,dmg=value,proc=v.proc}); total=total+value
+            count=count+1
+            local record=runRecords[count]
+            if not record then record={}; runRecords[count]=record end
+            record.name,record.dmg,record.proc=v.name,value,v.proc
+            table.insert(sorted,record); total=total+value
         end
     end
     if healingView and not K.DB().hidden.meter then
@@ -535,7 +543,7 @@ local function Update()
     elseif partyView and not K.DB().hidden.meter then
         UpdateParty(party,partyTotal,partyRate); K.basisHud.Native("meter",true)
     elseif meterValid then
-        table.sort(sorted,function(a,b) if a.dmg==b.dmg then return a.name<b.name end return a.dmg>b.dmg end)
+        table.sort(sorted,DamageOrder)
         if not P.Custom("meter") then K.SetH(meter,K.MeterMaxHeight()) end
         local visible
         if P.Custom("meter") then visible,offset=P.List("meter",meterRows,table.getn(sorted),8,22,math.max(54,46*P.Factor("meter")))
@@ -551,8 +559,8 @@ local function Update()
                 local average=duration>0 and v.dmg/duration or 0
                 local dps=K.liveDPS.Rate(v.name)
                 UpdateSpellIcon(row,v.name)
-                row.label:SetText(K.DisplayName(v.name)); row.value:SetText(K.Short(v.dmg))
-                row.dps:SetText(dps and (K.Short(dps).." DPS") or "?")
+                K.WriteText(row.label,K.DisplayName(v.name)); K.WriteText(row.value,K.Short(v.dmg))
+                K.WriteText(row.dps,dps and (K.Short(dps).." DPS") or "?")
                 row.bar:SetValue(sorted[1].dmg>0 and v.dmg/sorted[1].dmg or 0)
                 local red,green,blue=K.SourceColor(v.name)
                 row.bar:SetStatusBarColor(red,green,blue,0.85)
@@ -570,7 +578,7 @@ local function Update()
         if K.DB().hidden.meter then K.Shown(meter,false)
         else
             for _,row in ipairs(meterRows) do K.Shown(row,false) end
-            if not P.Custom("meter") then K.SetH(meter,100) end; summary:SetText(K.T("Noch kein Schaden")); K.Shown(meter,true)
+            if not P.Custom("meter") then K.SetH(meter,100) end; K.WriteText(summary,K.T("Noch kein Schaden")); K.Shown(meter,true)
         end
     end
     if P.Custom("meter") and not meterValid and not bossView and not healingView and not partyView then P.List("meter",meterRows,0,8,22,math.max(54,46*P.Factor("meter"))) end
@@ -620,7 +628,7 @@ function K.HealDebug()
     for _,ev in ipairs(HEAL_EVENTS) do debugFrame:RegisterEvent(ev) end
     K.Say("Heilmitschnitt läuft 60 Sekunden (höchstens 20 Zeilen).")
 end
-table.insert(K.updates,function() if debugUntil and GetTime()>=debugUntil then DebugStop() end end)
+RegisterUpdate(function() if debugUntil and GetTime()>=debugUntil then DebugStop() end end)
 P.Register("statistics",stats,"Runstatistiken",Update)
 P.Register("meter",meter,"Schadensanzeige",Update)
 P.Register("crits",crit,"Kritische Treffer",Update)
@@ -646,5 +654,5 @@ local function Tick()
     nextUpdate=now+0.25
     Update()
 end
-K.Update("basisHud",Tick)
+K.Update("basisHud",Tick,"Statistics.Tick")
 Refresh()

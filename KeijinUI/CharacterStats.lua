@@ -1,6 +1,7 @@
 -- Current native character attributes, separate from the run counters.
 -- Selection and visibility are independent. Missing values are never guessed.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"CharacterStats") end
 local P=K.panelSizing
 local S={}
 K.characterStats=S
@@ -193,8 +194,8 @@ function S.Restore()
         end
     elseif type(pending)~="string" then stage="done"; pending=nil end
 end
-table.insert(K.updates,S.Restore)
-table.insert(K.updates,function() if unconfirmed and K.runStart~=runMark then Drop() end end)
+RegisterUpdate(S.Restore)
+RegisterUpdate(function() if unconfirmed and K.runStart~=runMark then Drop() end end)
 K.On("CHAT_MSG_ADDON",function(_,prefix,message)
     if prefix=="AZSZONE" then
         fresh=false; Drop()

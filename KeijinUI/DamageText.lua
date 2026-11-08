@@ -56,6 +56,7 @@ local MAX=60
 local host=CreateFrame("Frame","KeijinUIDamageText",UIParent)
 host:SetFrameStrata("BACKGROUND"); host:SetWidth(1); host:SetHeight(1)
 host:SetPoint("BOTTOMLEFT",UIParent,"BOTTOMLEFT",0,0); host:EnableMouse(false)
+host:Hide()
 local active,pool,iconPool={}, {}, {}
 K.damageText={active=active}
 local function Take()
@@ -67,6 +68,7 @@ end
 local function Give(item)
     item.fs:Hide(); table.insert(pool,item.fs)
     if item.icon then item.icon:Hide(); table.insert(iconPool,item.icon) end
+    if table.getn(active)==0 then host:Hide() end
 end
 -- Shared, side-effect-free presentation for live hits and the settings preview.
 -- The preview never spawns world hits or updates the running damage average.
@@ -141,17 +143,27 @@ end
 -- Numbers never cover the unit frames, the skill bar or the counter row: a start point inside such
 -- a frame (an enemy standing behind it) is moved up to just above its top edge, the numbers only rise.
 local tickRects
+local rectScratch,rectPool,rectFrames={},{},{}
+local anchors,anchorPool={},{}
 local function Rectangles()
-    local result={}
-    local frames={K.units and K.units.player,K.units and K.units.target,
-        getglobal("KeijinUISkills"),getglobal("KeijinUITally"),getglobal("KeijinUIResources"),getglobal("KeijinUIStoredLevels")}
+    local result=rectScratch
+    for i=table.getn(result),1,-1 do table.remove(result,i) end
+    rectFrames[1]=K.units and K.units.player; rectFrames[2]=K.units and K.units.target
+    rectFrames[3]=getglobal("KeijinUISkills"); rectFrames[4]=getglobal("KeijinUITally")
+    rectFrames[5]=getglobal("KeijinUIResources"); rectFrames[6]=getglobal("KeijinUIStoredLevels")
+    local count=0
+    local frames=rectFrames
     local ui=UIParent:GetEffectiveScale()
     for _,f in pairs(frames) do
         if f.IsShown and f:IsShown() and f.GetLeft and f:GetAlpha()>0 then
             local l,b,r,t=f:GetLeft(),f:GetBottom(),f:GetRight(),f:GetTop()
             local ratio=f:GetEffectiveScale()/ui
             if K.Number(l) and K.Number(b) and K.Number(r) and K.Number(t) then
-                table.insert(result,{l*ratio,b*ratio,r*ratio,t*ratio})
+                count=count+1
+                local rect=rectPool[count]
+                if not rect then rect={}; rectPool[count]=rect end
+                rect[1],rect[2],rect[3],rect[4]=l*ratio,b*ratio,r*ratio,t*ratio
+                table.insert(result,rect)
             end
         end
     end
@@ -284,6 +296,7 @@ local function Add(text,style,r,g,b,targetName,scroll,pop,icon)
         if px then item.name=targetName; item.ax=px; item.ay=py; item.ox=x-px; item.oy=y-py end
     end
     table.insert(active,item)
+    host:Show()
     fs:ClearAllPoints(); Place(item,x,y)
     return item
 end
@@ -353,7 +366,8 @@ host:SetScript("OnUpdate",function()
     if table.getn(active)==0 then return end
     local dt=tonumber(arg1) or 0
     tickRects=Rectangles()
-    local anchors={}   -- plate anchor per name, asked once per tick
+    for name in pairs(anchors) do anchors[name]=nil end
+    local anchorCount=0   -- per-frame entries use bounded reusable records
     local i=1
     while i<=table.getn(active) do
         local item=active[i]
@@ -369,7 +383,12 @@ host:SetScript("OnUpdate",function()
                     local a=anchors[item.name]
                     if a==nil then
                         local ax,ay=K.PlateAnchor(item.name)
-                        a=ax and {ax,ay} or false; anchors[item.name]=a
+                        if ax then
+                            anchorCount=anchorCount+1; a=anchorPool[anchorCount]
+                            if not a then a={}; anchorPool[anchorCount]=a end
+                            a[1],a[2]=ax,ay
+                        else a=false end
+                        anchors[item.name]=a
                     end
                     if a then
                         local dx,dy=a[1]-item.ax,a[2]-item.ay

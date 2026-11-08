@@ -1,4 +1,4 @@
-KeijinUI = { version = "5.0.4", title = "KeijinUI", tools = {}, updates = {}, events = {} }
+KeijinUI = { version = "5.0.5", title = "KeijinUI", tools = {}, updates = {}, events = {} }
 local K = KeijinUI
 K.moduleRefresh = {}
 -- Shared unscaled width of the movable HUD housings. Layout scales stay personal.
@@ -609,8 +609,11 @@ end
 K.callbackOwners={}
 function K.ModuleKey(key) return key and (K.moduleAlias[key] or key) end
 function K.ModuleOn(key)
+    if key==nil then return true end
     key=K.ModuleKey(key)
-    local modules=K.DB().modules
+    local db=KeijinUIDB
+    if type(db)~="table" or db.moduleSchema~=MODULE_SCHEMA or db.moduleSplitSchema~=440 then db=K.DB() end
+    local modules=db.modules
     -- Banner replacement is opt-in: the CVar cannot prove that Bevy stopped drawing.
     -- Hidden (the default) also hides the settings page and the module row, which depend on this answer.
     if key=="gameMessages" then
@@ -620,16 +623,31 @@ function K.ModuleOn(key)
     end
     return not (key and type(modules)=="table" and modules[key]==false)
 end
-function K.Update(owner,fn) table.insert(K.updates,fn); K.callbackOwners[fn]=owner end
+K.updateLabels={}
+-- Same callback and owner as before; label only groups opt-in performance samples.
+function K.Update(owner,fn,label)
+    table.insert(K.updates,fn); K.callbackOwners[fn]=owner
+    K.updateLabels[fn]=label or owner or "shared"
+    if K.perfActive then K.Perf.RegisterUpdate(fn) end
+end
 function K.On(eventName, fn, owner)
     if not K.events[eventName] then K.events[eventName] = {}; K.driver:RegisterEvent(eventName) end
     table.insert(K.events[eventName],fn)
     K.callbackOwners[fn]=owner
+    if K.perfActive then K.Perf.RegisterEvent(eventName,fn) end
 end
 K.driver = CreateFrame("Frame", "KeijinUIEvents")
 K.driver:SetScript("OnEvent", function()
     if event=="CHAT_MSG_ADDON" then ObserveClassMessage(arg1) end
-    for _,fn in ipairs(K.events[event] or {}) do if K.ModuleOn(K.callbackOwners[fn]) then fn(event,arg1,arg2) end end
+    local handlers=K.events[event]
+    if not handlers then return end
+    if K.perfActive then
+        for _,fn in ipairs(handlers) do
+            if K.ModuleOn(K.callbackOwners[fn]) then K.Perf.Event(event,fn,arg1,arg2) end
+        end
+    else
+        for _,fn in ipairs(handlers) do if K.ModuleOn(K.callbackOwners[fn]) then fn(event,arg1,arg2) end end
+    end
 end)
 -- Shared cache stays current even when the combat text module is disabled.
 K.On("SPELLS_CHANGED",function() book=nil end)
@@ -639,7 +657,13 @@ K.driver:SetScript("OnUpdate", function()
     elapsed = elapsed + (tonumber(arg1) or 0)
     if elapsed < 0.1 then return end
     elapsed = 0
-    for _,fn in ipairs(K.updates) do if K.ModuleOn(K.callbackOwners[fn]) then fn() end end
+    if K.perfActive then
+        for _,fn in ipairs(K.updates) do
+            if K.ModuleOn(K.callbackOwners[fn]) then K.Perf.Update(fn) end
+        end
+    else
+        for _,fn in ipairs(K.updates) do if K.ModuleOn(K.callbackOwners[fn]) then fn() end end
+    end
     if K.layout then K.layout.ClampAll() end
 end)
 K.On("PLAYER_LOGOUT", function()
@@ -654,3 +678,21 @@ end)
 K.On("PLAYER_ENTERING_WORLD",function()
     K.ApplyCombatText()
 end)
+
+-- Options.lua installs the menu command later in the TOC. Extend it after loading,
+-- keeping its normal command handling and the optional run logger independent.
+local perfSlash
+local function InstallPerfSlash()
+    local original=SlashCmdList and SlashCmdList.KEIJINUI
+    if not original or original==perfSlash then return end
+    perfSlash=function(message)
+        local command=string.lower(string.gsub(message or "","^%s*(.-)%s*$","%1"))
+        if command=="perf" or string.find(command,"^perf%s") then
+            local _,_,rest=string.find(command,"^perf%s+(.-)$")
+            if K.Perf then K.Perf.Command(rest or "") else K.Say("Perf: unavailable.") end
+        else return original(message) end
+    end
+    SlashCmdList.KEIJINUI=perfSlash
+end
+K.On("ADDON_LOADED",function(_,name) if name=="KeijinUI" then InstallPerfSlash() end end)
+K.On("PLAYER_ENTERING_WORLD",InstallPerfSlash)

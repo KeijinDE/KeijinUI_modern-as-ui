@@ -9,6 +9,7 @@
 -- MinimapZoomIn and MinimapZoomOut buttons), MinimapToggleButton, MinimapZoneTextButton and
 -- GameTimeFrame. The tracking, mail, battleground and meeting stone icons stay as they are.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"Minimap") end
 -- Same base width as the run overview; personal layout scales remain independent.
 local PANEL_W,PANEL_H=K.PANEL_WIDTH,K.PANEL_WIDTH+18
 local MASK="Interface\\AddOns\\KeijinUI\\media\\MinimapMask.tga"
@@ -32,7 +33,7 @@ local function Wanted() return K.ModuleOn("minimap") and K.DB().minimapStyle~=fa
 -- The game's own place and scale of MinimapCluster, read once before the layout moves it.
 local native
 local function Register()
-    if MinimapCluster then
+    if MinimapCluster and not K.layout.entries.minimap then
         if not native and not K.layout.entries.minimap then
             native={scale=MinimapCluster:GetScale(),point={MinimapCluster:GetPoint()}}
         end
@@ -190,7 +191,7 @@ local function Update()
     end
     if now~=lastClock then lastClock=now; clock:SetText(now) end
 end
-table.insert(K.updates,Update)
+RegisterUpdate(Update)
 -- Module switch: restyle or restore at once instead of waiting for the next tick.
 function K.MinimapRefresh()
     Update()

@@ -1,6 +1,7 @@
 -- The schedule supplies spawn times and states, but no historical death times.
 -- Capture live state transitions using the game's pause-aware run clock.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"BossTimes") end
 local times,lastTime,lastReported={},nil,nil
 K.BossTimes={}
 local function Key(boss)
@@ -70,7 +71,7 @@ local function WatchStart()
     lastPhase=phase
     if K.Number(now) then lastClock=now end
 end
-table.insert(K.updates,WatchStart)
+RegisterUpdate(WatchStart)
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then Reset(); K.DB().bossSnapshot=nil; MarkStart()
     elseif prefix=="AZSBOSSES" then Observe() end
@@ -85,5 +86,5 @@ K.On("PLAYER_LOGOUT",function()
     end
     K.DB().bossSnapshot={list=copy,runTime=now,length=RunLength(),times=times}
 end)
-table.insert(K.updates,Observe)
+RegisterUpdate(Observe)
 Observe()

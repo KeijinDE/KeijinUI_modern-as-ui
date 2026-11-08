@@ -506,6 +506,7 @@ local function Step()
 end
 -- Called once per world frame after the camera moved. Guarded: an error is reported once per message, counted, and
 -- never leaves old markers frozen on the screen.
+if K.PerfBind then K.PerfBind("WorldMarkers.Frame",Step,function(fn) Step=fn end) end
 function M.Frame()
     if not M.Wanted() then return end
     local ok,err=pcall(Step)

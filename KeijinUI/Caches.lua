@@ -197,7 +197,10 @@ local function Cell(texture,angle)
     step=math.mod(step,32)
     if step<0 then step=step+32 end
     local col,row=math.mod(step,8),math.floor(step/8)
-    texture:SetTexCoord(col/8,(col+1)/8,row/4,(row+1)/4)
+    if texture.directionStep~=step then
+        texture.directionStep=step
+        texture:SetTexCoord(col/8,(col+1)/8,row/4,(row+1)/4)
+    end
     return step
 end
 
@@ -449,7 +452,7 @@ end
 local function Move(f,x,y)
     if f.glideX and math.abs(f.glideX-x)<0.01 and math.abs(f.glideY-y)<0.01 then return end
     f.glideX,f.glideY=x,y
-    f:ClearAllPoints(); f:SetPoint("CENTER",Minimap,"CENTER",x,y)
+    K.Anchor(f,"CENTER",Minimap,"CENTER",x,y)
     -- Symbols under the player arrow fade so the arrow stays visible; the edge arrow sits at the border anyway.
     if not f.isEdge then
         local alpha=K.navigation.CenterFade(x,y,f:GetWidth()/2)
@@ -533,18 +536,20 @@ function C.Update()
         local facing,from=C.Facing()
         C.facing,C.facingSource=facing,from
         C.step=K.navigation.HexDirection(arrow,nearest.east,nearest.north,facing,from)
-        arrow.distance:SetText(K.T("%d Yards",math.floor(nearest.dist+0.5)))
+        local distance=K.T("%d Yards",math.floor(nearest.dist+0.5))
+        if arrow.distance:GetText()~=distance then arrow.distance:SetText(distance) end
         local price=type(AZS_RUN)=="table" and AZS_RUN.chest
-        arrow.price:SetText(Finite(price) and K.T("%d Gold",math.floor(price+0.5)) or "")
-        arrow:Show()
-    else arrow:Hide() end
+        local text=Finite(price) and K.T("%d Gold",math.floor(price+0.5)) or ""
+        if arrow.price:GetText()~=text then arrow.price:SetText(text) end
+        K.Shown(arrow,true)
+    else K.Shown(arrow,false) end
     -- Minimap symbols and edge arrow.
     local built=Build()
     local diameter=C.Diameter()
     local wantIcons,wantEdge=C.IconsOn(),C.EdgeOn()
     if not built or not diameter or not nearest or not Minimap or not (wantIcons or wantEdge) then
-        if icons then for _,b in ipairs(icons) do b:Hide() end end
-        if edge then edge:Hide() end
+        if icons then for _,b in ipairs(icons) do K.Shown(b,false) end end
+        if edge then K.Shown(edge,false) end
         if built and nearest and not diameter then C.reason="no minimap zoom" end
         return
     end
@@ -556,27 +561,27 @@ function C.Update()
     for i,c in ipairs(clusters) do
         local ox,oy,inside=Place(c.east,c.north,ppy,width,height,round,inset)
         if i==1 then
-            if inside or not wantEdge then edge:Hide()
+            if inside or not wantEdge then K.Shown(edge,false)
             else
                 local ex,ey=EdgePoint(ox,oy,width,height,round)
-                edge:ClearAllPoints(); edge:SetPoint("CENTER",Minimap,"CENTER",ex,ey)
-                edge.glideX=nil
+                if not world then Move(edge,ex,ey) end
                 edge.info=c
                 Cell(edge.tex,math.atan2(ox,oy))
-                edge:Show()
+                K.Shown(edge,true)
             end
         end
         if inside and wantIcons and shown<MAX_ICONS then
             shown=shown+1
             local b=icons[shown]
-            b.glideX=nil
-            Move(b,ox,oy); b.glideX=nil
+            if not world then Move(b,ox,oy) end
             b.info=c
-            b.count:SetText(c.count>1 and tostring(c.count) or "")
-            b:Show()
+            if b.displayCount~=c.count then
+                b.displayCount=c.count; b.count:SetText(c.count>1 and tostring(c.count) or "")
+            end
+            K.Shown(b,true)
         end
     end
-    for i=shown+1,MAX_ICONS do icons[i]:Hide() end
+    for i=shown+1,MAX_ICONS do K.Shown(icons[i],false) end
     C.shown=shown
     -- Raw position of this tick: the offsets in the clusters are relative to it, the per frame glide shifts them.
     if world then

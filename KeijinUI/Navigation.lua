@@ -45,7 +45,10 @@ function N.Arrow(texture,clockwise)
     local step=math.mod(math.floor(clockwise/(2*math.pi)*32+0.5),32)
     if step<0 then step=step+32 end
     local column,row=math.mod(step,8),math.floor(step/8)
-    texture:SetTexCoord(column/8,(column+1)/8,row/4,(row+1)/4)
+    if texture.directionStep~=step then
+        texture.directionStep=step
+        texture:SetTexCoord(column/8,(column+1)/8,row/4,(row+1)/4)
+    end
     return step
 end
 -- Screen compasses share geometry and the same 32 clockwise atlas cells. No rotation API.
@@ -80,7 +83,7 @@ end
 function N.HexDirection(frame,east,north,facing,source)
     local step=N.Arrow(frame.tex,facing-math.atan2(-east,north))
     -- At the destination there is no meaningful direction, nor without a real heading.
-    if source=="north" or east*east+north*north<=.25 then frame.tex:Hide() else frame.tex:Show() end
+    K.Shown(frame.tex,source~="north" and east*east+north*north>.25)
     return step
 end
 -- Minimap is north up. Project an offset in yards to an inset position, clamping outside destinations to its edge.
@@ -254,13 +257,15 @@ function N.SmoothText()
 end
 -- Own light frame: moves the visible lair pins and cache symbols every frame, the 0.1 s tick only decides.
 local glide=CreateFrame("Frame","KeijinUIMinimapGlide")
-glide:SetScript("OnUpdate",function()
+local function GlideFrame()
     local x,y=N.SmoothPosition()
     if x==nil then return end
     local lairs,caches=K.guardianNav,K.caches
     if lairs and lairs.Glide then lairs.Glide(x,y) end
     if caches and caches.Glide then caches.Glide(x,y) end
-end)
+end
+if K.PerfBind then K.PerfBind("Minimap.Glide",GlideFrame,function(fn) GlideFrame=fn end) end
+glide:SetScript("OnUpdate",function() GlideFrame() end)
 K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then needsRun=true; N.ResetSmoothing()
     elseif prefix=="AZSRUN" then needsRun=false end

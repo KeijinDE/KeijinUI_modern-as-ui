@@ -1,6 +1,7 @@
 -- Rolling ten-second damage, measured from cumulative native meter reports.
 -- Keep sampling while another meter tab is shown; pauses use no run seconds.
 local K=KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"LiveDPS") end
 local D={window=10}
 K.liveDPS=D
 local samples,last,origin={},nil,nil
@@ -49,7 +50,7 @@ K.On("CHAT_MSG_ADDON",function(_,prefix)
     if prefix=="AZSZONE" then D.Reset(); awaiting=true
     elseif prefix=="AZSRUN" then awaiting=false end
 end)
-table.insert(K.updates,function()
+RegisterUpdate(function()
     local phase=AZS_GetPhase and AZS_GetPhase()
     if phase=="playing" and K.Number(AZS_RUN_UPDATED) and GetTime()-AZS_RUN_UPDATED>5 then D.Reset(); return end
     if awaiting or type(AZS_RUN)~="table" then return end

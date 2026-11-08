@@ -1,4 +1,5 @@
 local K = KeijinUI
+local function RegisterUpdate(fn) K.Update(nil,fn,"Hud") end
 local P=K.panelSizing
 local H={ready=false,refresh={}}
 K.basisHud=H
@@ -16,7 +17,7 @@ K.layout.Register("tracker",tracker,"Runübersicht",function(f)
 end,{inactive=Inactive})
 tracker:Hide()
 local zone=K.Text(tracker,"",12,"TOPLEFT",14,-35,270)
-zone:SetTextColor(1,0.82,0.28)
+K.WriteTextColor(zone,1,0.82,0.28)
 local time=K.Text(tracker,"",22,"TOPLEFT",14,-55)
 local progress=CreateFrame("StatusBar",nil,tracker)
 progress:SetPoint("TOPLEFT",tracker,"TOPLEFT",14,-85); progress:SetWidth(272); progress:SetHeight(12)
@@ -106,11 +107,11 @@ local function TrackerPoint(child,point,x,y)
     if tracker.headerPoints[child] then tracker.headerPoints[child][3]=y end
     K.HeaderPoint(child,tracker,point,x,y)
 end
-local headBoss=K.LText(tracker,"Boss",9,"TOPLEFT",14,-105,130); headBoss:SetTextColor(0.65,0.63,0.58)
+local headBoss=K.LText(tracker,"Boss",9,"TOPLEFT",14,-105,130); K.WriteTextColor(headBoss,0.65,0.63,0.58)
 K.HeaderPoint(headBoss,tracker,"TOPLEFT",14,-105)
-local head84=K.LText(tracker,"Bosszeit",9,"TOPRIGHT",-84,-105); head84:SetTextColor(0.65,0.63,0.58)
+local head84=K.LText(tracker,"Bosszeit",9,"TOPRIGHT",-84,-105); K.WriteTextColor(head84,0.65,0.63,0.58)
 K.HeaderPoint(head84,tracker,"TOPRIGHT",-84,-105)
-local head14=K.LText(tracker,"Runzeit",9,"TOPRIGHT",-14,-105); head14:SetTextColor(0.65,0.63,0.58)
+local head14=K.LText(tracker,"Runzeit",9,"TOPRIGHT",-14,-105); K.WriteTextColor(head14,0.65,0.63,0.58)
 K.HeaderPoint(head14,tracker,"TOPRIGHT",-14,-105)
 local bosses=K.Panel("KeijinUIBosses","Begegnungen",K.PANEL_WIDTH,40)
 bosses.title:Hide(); bosses.strip:Hide()
@@ -214,12 +215,12 @@ function T.UpdateExtras()
     for _,cell in ipairs(T.cells) do
         local value=enabled and AZS_RUN[cell.key]
         if K.Number(value) then
-            cell.value:SetText(string.format("%.0f",value))
+            K.WriteText(cell.value,string.format("%.0f",value))
             cell.detail=K.T(cell.key=="lives" and "Verbleibende Zusatzleben in diesem Run." or "Verbleibende freie Rerolls in diesem Run.")
             if cell.key=="rr" then
                 local price=AZS_RUN.rrc
                 if value==0 then
-                    cell.value:SetText(K.Number(price) and (K.Short(price).." G") or "?")
+                    K.WriteText(cell.value,K.Number(price) and (K.Short(price).." G") or "?")
                     cell.detail=K.T("Keine freien Rerolls mehr.")
                 end
                 if K.Number(price) then
@@ -230,7 +231,7 @@ function T.UpdateExtras()
             K.Shown(cell,true); count=count+1
         else
             if GameTooltip.GetOwner and GameTooltip:GetOwner()==cell then GameTooltip:Hide() end
-            cell.value:SetText(""); cell.detail=nil; K.Shown(cell,false)
+            K.WriteText(cell.value,""); cell.detail=nil; K.Shown(cell,false)
         end
     end
     local height=count>0 and 58 or 34
@@ -285,6 +286,8 @@ end
 -- or the schedule marks its boss as "up". AZS_UNITS lists final/boss/guardian/elite only; a rare is
 -- known solely through UnitClassification of the target. Elites and rares are not in AZS_SCHEDULE.
 local engaged={}
+local upBosses,listedUnits,engagedRows={},{},{}
+local targetInfo={}
 local engagedRunStart
 local KIND_ORDER={final=1,boss=2,guardian=3,elite=4,rare=5}
 local function Flag(v) return v and v~=0 end
@@ -310,15 +313,24 @@ local function TargetEntry()
     -- Other units report health as percent (maximum 100): prefer the exact values of AZS_TARGET.
     if (not K.Number(hpm) or hpm<=100) and same and K.Number(t.hp) and K.Number(t.hpm) and t.hpm>0 then hp,hpm=t.hp,t.hpm end
     local id=same and K.Number(t.id) and t.id or nil
-    return key,{id=id,name=name or "?",kind=kind,hp=hp,hpm=hpm,class=class},"Ziel"
+    targetInfo.id,targetInfo.name,targetInfo.kind,targetInfo.hp,targetInfo.hpm,targetInfo.class=id,name or "?",kind,hp,hpm,class
+    return key,targetInfo,"Ziel"
 end
 -- diag (optional) collects one line per unit for /kui bosses debug.
+local function CompareEngaged(a,b)
+    local ra,rb=KIND_ORDER[a.kind] or 9,KIND_ORDER[b.kind] or 9
+    if ra~=rb then return ra<rb end
+    if a.name~=b.name then return a.name<b.name end
+    return a.key<b.key
+end
 local function EngagedList(diag)
     if engagedRunStart~=K.runStart then engaged={}; bossOffset=0; engagedRunStart=K.runStart end
     local now=GetTime()
-    local up={}
+    local up=upBosses
+    for key in pairs(up) do up[key]=nil end
     for _,s in ipairs(K.Schedule()) do if s.state=="up" and s.name then up[s.name]=true end end
-    local listed={}
+    local listed=listedUnits
+    for key in pairs(listed) do listed[key]=nil end
     for _,u in ipairs(K.Fresh(AZS_UNITS_UPDATED) and AZS_UNITS or {}) do
         local kind=u.kind
         local active=kind=="final" or kind=="boss" or kind=="elite" or (kind=="guardian" and u.state==1)
@@ -361,17 +373,19 @@ local function EngagedList(diag)
         table.insert(diag,"Ziel: "..tostring(UnitExists and UnitExists("target") and UnitName("target") or nil).." -> "
             ..(key and ("ANZEIGE als "..entry.kind.." (Klasse "..tostring(entry.class)..", hp "..tostring(entry.hp).."/"..tostring(entry.hpm)..")") or tostring(tnote)))
     end
-    local list={}
+    local list=engagedRows
+    local count=0
     for k,e in pairs(engaged) do
         if (e.listed and not listed[k]) or (e.listed and now-e.seen>3) or (not e.listed and now-e.seen>5) then engaged[k]=nil
-        elseif K.Number(e.hp) and K.Number(e.hpm) and e.hpm>0 then table.insert(list,{id=e.id,key=k,name=e.name,kind=e.kind,hp=e.hp,hpm=e.hpm}) end
+        elseif K.Number(e.hp) and K.Number(e.hpm) and e.hpm>0 then
+            count=count+1
+            local row=list[count]
+            if not row then row={}; table.insert(list,row) end
+            row.id,row.key,row.name,row.kind,row.hp,row.hpm=e.id,k,e.name,e.kind,e.hp,e.hpm
+        end
     end
-    table.sort(list,function(a,b)
-        local ra,rb=KIND_ORDER[a.kind] or 9,KIND_ORDER[b.kind] or 9
-        if ra~=rb then return ra<rb end
-        if a.name~=b.name then return a.name<b.name end
-        return a.key<b.key
-    end)
+    while table.getn(list)>count do table.remove(list) end
+    table.sort(list,CompareEngaged)
     return list
 end
 -- /kui bosses debug: what the game hands out and why each unit is or is not shown.
@@ -430,7 +444,7 @@ local function DrawBosses(phase)
         K.SetH(row,height)
         K.Anchor(row,"TOPLEFT",bosses,"TOPLEFT",10,-top)
         row.spawnId=v.id
-        row.label:SetText(v.name); row.value:SetText(string.format("%.0f%%",100*v.hp/v.hpm))
+        K.WriteText(row.label,v.name); K.WriteText(row.value,string.format("%.0f%%",100*v.hp/v.hpm))
         row.bar:SetValue(math.min(1,v.hp/v.hpm)); row.bar:SetStatusBarColor(0.62,0.08,0.08,0.85)
         row.tip=v.name; row.detail=K.Short(v.hp).." / "..K.Short(v.hpm)
         K.encounterDebuffs.Draw(row,v)
@@ -487,14 +501,14 @@ local function Support()
         paceRow:ClearAllPoints(); paceRow:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
         if K.pace.On() then
             local d=K.pace.Details()
-            paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
-            paceRow.text:SetTextColor(K.pace.Color(d.status)); paceRow:Show(); height=height+18
+            K.WriteText(paceRow.text,K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            K.WriteTextColor(paceRow.text,K.pace.Color(d.status)); paceRow:Show(); height=height+18
         else paceRow:Hide() end
         accountRow:ClearAllPoints(); accountRow:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
         if K.pace.AccountOn() then
             local d=K.pace.Details(true)
-            accountRow.text:SetText(K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
-            accountRow.text:SetTextColor(K.pace.Color(d.status)); accountRow:Show(); height=height+18
+            K.WriteText(accountRow.text,K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            K.WriteTextColor(accountRow.text,K.pace.Color(d.status)); accountRow:Show(); height=height+18
         else accountRow:Hide() end
         rateHost:SetWidth(272); rateHost:SetHeight(18); rateHost:SetPoint("TOPLEFT",analysisPanel,"TOPLEFT",14,-height)
         if K.DB().xpRate==true and not K.DB().hidden.xp then height=height+18 end
@@ -623,17 +637,16 @@ local function Update()
     if good and not K.DB().hidden.tracker then
         if K.pace.On() then
             local d=K.pace.Details()
-            paceRow.text:SetText(K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%"..(d.mode=="kills" and (" · "..K.T("nur Gegner")) or "")) or ""))
-            paceRow.text:SetTextColor(K.pace.Color(d.status)); K.Shown(paceRow,true)
+            K.WriteText(paceRow.text,K.T("Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%"..(d.mode=="kills" and (" · "..K.T("nur Gegner")) or "")) or ""))
+            K.WriteTextColor(paceRow.text,K.pace.Color(d.status)); K.Shown(paceRow,true)
         else K.Shown(paceRow,false) end
         if K.pace.AccountOn() then
             local d=K.pace.Details(true)
-            accountRow.text:SetText(K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
-            accountRow.text:SetTextColor(K.pace.Color(d.status)); K.Shown(accountRow,true)
+            K.WriteText(accountRow.text,K.T("Account Pace: %s",K.T(d.status))..(d.ratio and (" · "..math.floor(d.ratio*100+.5).."%") or ""))
+            K.WriteTextColor(accountRow.text,K.pace.Color(d.status)); K.Shown(accountRow,true)
         else K.Shown(accountRow,false) end
-        zone:SetText((AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
-        time:SetText(K.Clock(seconds).." / "..K.Clock(duration))
-        if r.endl==1 then time:SetText(K.Clock(seconds).." · "..K.T("Endlos")) end
+        K.WriteText(zone,(AZS_ZONE and AZS_ZONE.zname) or (GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
+        K.WriteText(time,r.endl==1 and (K.Clock(seconds).." · "..K.T("Endlos")) or (K.Clock(seconds).." / "..K.Clock(duration)))
         progress:SetValue(math.min(1,seconds/duration))
         if scheduleRun~=K.runStart then P.offsets.tracker=0; scheduleRun=K.runStart end
         local schedule=K.Schedule()
@@ -672,30 +685,30 @@ local function Update()
             K.SetW(row.run,timeWidth); K.SetH(row.run,custom and step-2 or 15)
             K.Anchor(row.boss,"RIGHT",row,"RIGHT",-timeWidth-6,0)
             local tint=false
-            row.name:SetText(v.name or "?")
+            K.WriteText(row.name,v.name or "?")
             row.bossName=v.name
             local timing=K.BossTimes.Get(v)
             if v.state=="dead" then
-                row.boss:SetText(K.Clock(timing and timing.duration))
-                row.run:SetText(K.Clock(timing and timing.killedAt))
-                row.name:SetTextColor(0.5,1,0.55)
+                K.WriteText(row.boss,K.Clock(timing and timing.duration))
+                K.WriteText(row.run,K.Clock(timing and timing.killedAt))
+                K.WriteTextColor(row.name,0.5,1,0.55)
                 local grade=K.pace.BossGrade(timing and timing.duration,v.final==1)
                 local cr,cg,cb=K.pace.Color(grade)
-                row.boss:SetTextColor(cr,cg,cb); row.run:SetTextColor(cr,cg,cb)
+                K.WriteTextColor(row.boss,cr,cg,cb); K.WriteTextColor(row.run,cr,cg,cb)
                 if grade then row.tint:SetVertexColor(cr,cg,cb,.16); tint=true end
                 if timing and K.Number(timing.duration) then
                     row.detail=K.T("Runzeit beim Sieg: %s\nBosszeit: %s\nErschienen bei: %s\nAktive Runzeit ohne Pausen. Erfasst beim Zustandswechsel des Spiels.",K.Clock(timing.killedAt),K.Clock(timing.duration),K.Clock(v.at))
                 else row.detail=K.T("Bereits besiegt. Der Todeszeitpunkt wurde nicht erfasst.\nDie Spielschnittstelle liefert keine vergangenen Todeszeitpunkte.") end
             elseif v.state=="up" then
                 local elapsed=K.Number(v.at) and math.max(0,seconds-v.at) or nil
-                row.boss:SetText(K.Clock(elapsed)); row.run:SetText(K.Clock(seconds)); row.name:SetTextColor(1,0.5,0.25)
-                row.boss:SetTextColor(1,0.75,0.4); row.run:SetTextColor(1,0.75,0.4)
+                K.WriteText(row.boss,K.Clock(elapsed)); K.WriteText(row.run,K.Clock(seconds)); K.WriteTextColor(row.name,1,0.5,0.25)
+                K.WriteTextColor(row.boss,1,0.75,0.4); K.WriteTextColor(row.run,1,0.75,0.4)
                 row.detail=K.T("Seit Erscheinen: %s\nErschienen bei: %s\nPausen und Kartenwahl zählen nicht mit.",K.Clock(elapsed),K.Clock(v.at))
             else
-                row.boss:SetText(K.Number(v.at) and (K.T("in").." "..K.Clock(math.max(0,v.at-seconds))) or "?")
-                row.run:SetText(K.Clock(v.at))
-                row.name:SetTextColor(0.85,0.82,0.75)
-                row.boss:SetTextColor(0.85,0.82,0.75); row.run:SetTextColor(0.85,0.82,0.75)
+                K.WriteText(row.boss,K.Number(v.at) and (K.T("in").." "..K.Clock(math.max(0,v.at-seconds))) or "?")
+                K.WriteText(row.run,K.Clock(v.at))
+                K.WriteTextColor(row.name,0.85,0.82,0.75)
+                K.WriteTextColor(row.boss,0.85,0.82,0.75); K.WriteTextColor(row.run,0.85,0.82,0.75)
                 row.detail=K.T("Erscheint bei: %s Runzeit.",K.Clock(v.at))
             end
             K.Shown(row.tint,tint)
@@ -706,17 +719,17 @@ local function Update()
         -- Level and experience live in the run statistics; the tracker keeps time, zone and bosses.
         local guardians=K.guardians.Draw(guardianContent,-scheduleTop-4-count*step+K.HeaderOffset(tracker),guardianSizing)
         K.SetH(tracker,trackerFixed+count*step+guardians)
-        level:SetText("")
+        K.WriteText(level,"")
         K.Shown(tracker,true); H.Native("clock",true)
     else
         K.Shown(paceRow,false); K.Shown(accountRow,false)
         H.NativeFollow("clock",not K.DB().hidden.tracker)
         if K.DB().hidden.tracker then K.Shown(tracker,false)
         else
-            zone:SetText((GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
-            time:SetText(K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
+            K.WriteText(zone,(GetRealZoneText and GetRealZoneText()) or "Azeroth Survivors")
+            K.WriteText(time,K.Clock(seconds).." / "..K.Clock(duration)); progress:SetValue(0)
             K.SetW(level,width-28); K.SetH(level,math.max(16,14*q))
-            level:SetText(K.T("Warte auf Spieldaten"))
+            K.WriteText(level,K.T("Warte auf Spieldaten"))
             if custom then
                 local count=math.max(1,math.min(P.Rows("tracker",1),math.floor((P.AvailableHeight("tracker")-154-extra)/step)))
                 P.Range("tracker",0,count); K.SetH(tracker,154+extra+count*step)
@@ -732,16 +745,16 @@ local function Update()
     T.UpdateExtras()
     local tallyGood=Active(phase) and type(r)=="table" and K.Number(r.kills) and K.Number(r.gold) and K.Number(r.chest)
     if tallyGood and not K.DB().hidden.tally then
-        tallyValues[1]:SetText(K.Short(r.kills)); tallyValues[2]:SetText(K.Short(r.gold)); tallyValues[3]:SetText(K.Short(r.chest))
+        K.WriteText(tallyValues[1],K.Short(r.kills)); K.WriteText(tallyValues[2],K.Short(r.gold)); K.WriteText(tallyValues[3],K.Short(r.chest))
         -- Missing gold for the next cache: green when affordable, yellow when at most a quarter of the price is
         -- missing, red above.
         local missing=math.max(0,r.chest-r.gold)
         local wait=missing<=0 and K.T("Bereit") or K.T("fehlt %s",K.Short(missing))
-        tallyValues[4]:SetText(K.Number(r.ck) and K.T("geöffnet %s",K.Short(r.ck)) or K.T("geöffnet ?"))
-        tallyValues[5]:SetText(wait)
-        if missing<=0 then tallyValues[5]:SetTextColor(0.3,0.9,0.3)
-        elseif missing<=r.chest*CACHE_NEAR then tallyValues[5]:SetTextColor(1,0.85,0.2)
-        else tallyValues[5]:SetTextColor(1,0.3,0.25) end
+        K.WriteText(tallyValues[4],K.Number(r.ck) and K.T("geöffnet %s",K.Short(r.ck)) or K.T("geöffnet ?"))
+        K.WriteText(tallyValues[5],wait)
+        if missing<=0 then K.WriteTextColor(tallyValues[5],0.3,0.9,0.3)
+        elseif missing<=r.chest*CACHE_NEAR then K.WriteTextColor(tallyValues[5],1,0.85,0.2)
+        else K.WriteTextColor(tallyValues[5],1,0.3,0.25) end
         for i,key in ipairs({"kills","gold","chest"}) do tallyCells[i].tip=string.format("%.0f",r[key]) end
         tallyCells[1].detail=K.T("Besiegte Gegner in diesem Run")
         tallyCells[2].detail=K.T("Aktueller Goldbestand")
@@ -753,15 +766,15 @@ local function Update()
         K.Shown(tally,true); H.Native("tally",true)
     else
         H.NativeFollow("tally",not K.DB().hidden.tally)
-        if K.DB().hidden.tally then K.Shown(tally,false) else for _,value in ipairs(tallyValues) do value:SetText("?") end; K.Shown(tally,true) end
+        if K.DB().hidden.tally then K.Shown(tally,false) else for _,value in ipairs(tallyValues) do K.WriteText(value,"?") end; K.Shown(tally,true) end
     end
     if Active(phase) and type(r)=="table" and K.Number(r.xp) and K.Number(r.xpn) and r.xpn>0 and not K.DB().hidden.xp then
         xpBar:SetValue(math.min(1,r.xp/r.xpn)); K.Shown(xp,true)
     else xpBar:SetValue(0); if K.DB().hidden.xp then K.Shown(xp,false) else K.Shown(xp,true) end end
 end
 P.Register("tracker",tracker,"Runübersicht",Update)
-K.Update("basisHud",Update)
-table.insert(K.updates,Support)
+K.Update("basisHud",Update,"Hud.Update")
+K.Update(nil,Support,"Hud.Support")
 local function MoveStock()
     -- The minimap (layout key "minimap") is registered in Minimap.lua.
     -- Automatic spells are represented by the single build bar. The chat window lives in Chat.lua.
@@ -786,12 +799,12 @@ local function MoveStock()
         H.xpOriginal=nil
         if saved.shown then f:Show() else f:Hide() end
     end
-    if KeijinBuildBarFrame then
+    if KeijinBuildBarFrame and not K.layout.entries.build then
         K.layout.Register("build",KeijinBuildBarFrame,"Zauber, Schmuck und Buildtipps",function(f)
             f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,42)
         end,{keepBottom=true,legacyHeight=82})
     end
-    if KeijinAchievementsFrame then
+    if KeijinAchievementsFrame and not K.layout.entries.achievements then
         K.layout.Register("achievements",KeijinAchievementsFrame,"Erfolgsmeldung",function(f)
             f:ClearAllPoints(); f:SetPoint("BOTTOM",UIParent,"BOTTOM",0,200)
         end,{hidden=true})
@@ -803,7 +816,7 @@ K.On("PLAYER_ENTERING_WORLD",function()
     for key in pairs(K.layout.entries) do K.layout.Place(key) end
     Update()
 end)
-table.insert(K.updates,MoveStock)
+K.Update(nil,MoveStock,"Hud.Stock")
 K.moduleRefresh=K.moduleRefresh or {}
 K.moduleRefresh.basisHud=function()
     H.ready=true

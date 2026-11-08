@@ -333,6 +333,9 @@ K.tools.CombatEvents = READERS
 -- two identical lines in a row are two events and are counted twice. The player and pet names decide who owns
 -- a line, so the cached answer is only used while both are the same as when it was stored.
 local lastEvent, lastLine, lastResult, lastPlayer, lastPet
+-- Lines that were really parsed (a repeated call for the same line is answered from the cache above and not counted).
+local parsed = 0
+function K.tools.ParsedLines() return parsed end
 
 -- Returns a damage or miss record for a line of the given chat event, otherwise nil.
 function K.tools.ParseCombatLine(eventName, line)
@@ -342,6 +345,7 @@ function K.tools.ParseCombatLine(eventName, line)
     if eventName == lastEvent and line == lastLine and player == lastPlayer and pet == lastPet then
         return lastResult
     end
+    parsed = parsed + 1
     local reader = READERS[eventName]
     local result
     if reader then result = reader(line) end

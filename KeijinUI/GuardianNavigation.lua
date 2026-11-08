@@ -67,6 +67,11 @@ function G.ApplyMarker(icon,digit,slot,state)
     local style=G.MarkerStyle()
     local empty=state=="empty"
     if not CELLS[slot] then slot=1 end
+    if icon.markerStyle==style and icon.markerSlot==slot and icon.markerState==state and icon.markerDigit==digit then
+        if digit then K.Shown(digit,style=="skulls") end
+        return style
+    end
+    icon.markerStyle,icon.markerSlot,icon.markerState,icon.markerDigit=style,slot,state,digit
     if digit then digit:Hide() end
     if style=="classic" then
         icon:SetTexture(SKULL); icon:SetTexCoord(0,1,0,1)
@@ -121,19 +126,45 @@ end
 -- receive a grey skull there. Clients with the flag API show all three states from the start.
 local seenAlive,runStamp={},nil
 local function Identity(lair) return tostring(lair.index)..":"..tostring(lair.id or 0) end
+-- Borrowed lists and records, rebuilt in place. Readers must not retain a snapshot.
+local activeList,allList={},{}
+local function Trim(list,n)
+    while table.getn(list)>n do table.remove(list) end
+end
 function G.List(includeEmpty)
-    local out={}
-    if not N.Active() or awaitLairs or type(AZS_LAIRS)~="table" or not K.Fresh(AZS_LAIRS_UPDATED) then return out end
-    if runStamp~=AZS_ZONE_UPDATED then runStamp=AZS_ZONE_UPDATED; seenAlive={}; selected=nil; autoKey=nil end
-    for i,lair in ipairs(AZS_LAIRS) do
-        if type(lair)=="table" and (lair.state=="asleep" or lair.state=="awake") then seenAlive[lair.index or i]=true end
-        if type(lair)=="table" and (lair.state=="asleep" or lair.state=="awake" or (includeEmpty and lair.state=="empty")) and N.Finite(lair.x) and N.Finite(lair.y) then
-            local dist,east,north,source=N.Distance(lair)
-            table.insert(out,{key=Identity(lair),lair=lair,index=i,defeated=lair.state=="empty" and seenAlive[lair.index or i]==true,dist=dist,east=east,north=north,source=source})
+    local count,active=0,0
+    if N.Active() and not awaitLairs and type(AZS_LAIRS)=="table" and K.Fresh(AZS_LAIRS_UPDATED) then
+        if runStamp~=AZS_ZONE_UPDATED then
+            runStamp=AZS_ZONE_UPDATED
+            for key in pairs(seenAlive) do seenAlive[key]=nil end
+            selected=nil; autoKey=nil
+        end
+        for i,lair in ipairs(AZS_LAIRS) do
+            if type(lair)=="table" then
+                local alive=lair.state=="asleep" or lair.state=="awake"
+                if alive then seenAlive[lair.index or i]=true end
+                if (alive or lair.state=="empty") and N.Finite(lair.x) and N.Finite(lair.y) then
+                    count=count+1
+                    local v=allList[count]
+                    if not v then v={}; table.insert(allList,v) end
+                    if not v.key or v.keyIndex~=lair.index or v.keyId~=lair.id then
+                        v.key=Identity(lair); v.keyIndex=lair.index; v.keyId=lair.id
+                    end
+                    v.lair,v.index=lair,i
+                    v.defeated=lair.state=="empty" and seenAlive[lair.index or i]==true
+                    v.dist,v.east,v.north,v.source=N.Distance(lair)
+                    if alive then
+                        active=active+1
+                        if active>table.getn(activeList) then table.insert(activeList,v) else activeList[active]=v end
+                    end
+                end
+            end
         end
     end
-    return out
+    Trim(allList,count); Trim(activeList,active)
+    return includeEmpty and allList or activeList
 end
+
 local function Nearest(list)
     local best
     for _,v in ipairs(list) do if not best or (v.dist and (not best.dist or v.dist<best.dist)) then best=v end end
@@ -206,22 +237,32 @@ function G.Click(index)
 end
 function G.Nearest() selected=nil; autoKey=nil; G.Update() end
 -- Each row gets its own direction. The overview keeps its size and status column.
+local function CurrentLair(row)
+    local source=AZS_LAIRS
+    if type(source)~="table" then return false end
+    if row.position and source[row.position]==row.lair then return true end
+    for _,lair in ipairs(source) do if lair==row.lair then return true end end
+    return false
+end
 function G.Decorate(row)
     rows[row]=true
-    local destination
-    if row:IsShown() and G.On() and row.lair then
-        for _,v in ipairs(G.List()) do if v.lair==row.lair then destination=v; break end end
+    local dist,east,north
+    local lair=row.lair
+    if row:IsShown() and G.On() and lair and not awaitLairs and N.Active() and K.Fresh(AZS_LAIRS_UPDATED)
+        and CurrentLair(row) and (lair.state=="asleep" or lair.state=="awake") and N.Finite(lair.x) and N.Finite(lair.y) then
+        dist,east,north=N.Distance(lair)
     end
-    local visible=destination and destination.dist and destination.dist>.5
+    local visible=dist and dist>.5
     if visible then
         if not row.direction then
             row.direction=row:CreateTexture(nil,"ARTWORK")
             row.direction:SetTexture(PATH); row.direction:SetWidth(14); row.direction:SetHeight(14)
+            row.direction:SetVertexColor(1,.82,.28,1)
         end
         local facing=N.Facing()
-        row.directionStep=N.Arrow(row.direction,facing-math.atan2(-destination.east,destination.north))
-        row.direction:SetVertexColor(1,.82,.28,1); row.direction:Show()
-    elseif row.direction then row.direction:Hide(); row.directionStep=nil end
+        row.directionStep=N.Arrow(row.direction,facing-math.atan2(-east,north))
+        K.Shown(row.direction,true)
+    elseif row.direction then K.Shown(row.direction,false); row.directionStep=nil end
     -- The lair symbol (14 px plus 3 px gap) pushes name and arrow right; the status column stays where it is.
     local marked=row:IsShown() and row.lair and G.PinsOn()
     local offset=marked and 17 or 0
@@ -233,13 +274,16 @@ function G.Decorate(row)
             row.markerDigit:SetPoint("LEFT",row,"LEFT",0,0)
         end
         G.ApplyMarker(row.marker,row.markerDigit,G.Slot(row.lair,row.position),row.lair.state)
-        row.marker:Show()
-    elseif row.marker then row.marker:Hide(); row.markerDigit:Hide() end
-    row.name:ClearAllPoints(); row.name:SetPoint("LEFT",row,"LEFT",offset,0)
-    row.name:SetWidth((visible and 133 or 150)-offset)
+        K.Shown(row.marker,true)
+    elseif row.marker then K.Shown(row.marker,false); K.Shown(row.markerDigit,false) end
+    K.Anchor(row.name,"LEFT",row,"LEFT",offset,0)
+    local nameWidth=(visible and 133 or 150)-offset
+    local geometry=row.panelSizingGeometry
+    if geometry then nameWidth=math.max(30,geometry.width-geometry.state-8-offset-(visible and 17 or 0)) end
+    K.SetW(row.name,nameWidth)
     if visible then
-        local width=math.min(133-offset,row.name:GetStringWidth())
-        row.direction:ClearAllPoints(); row.direction:SetPoint("LEFT",row,"LEFT",offset+width+3,0)
+        local width=math.min(nameWidth,row.name:GetStringWidth())
+        K.Anchor(row.direction,"LEFT",row,"LEFT",offset+width+3,0)
     end
 end
 function G.AddTooltip(lair)
@@ -322,7 +366,9 @@ local function Pin(i)
 end
 -- The symbol of the lair (see G.ApplyMarker), "!" in combat, darker with "x" once empty.
 local function Paint(pin,state,slot)
-    pin.state=state
+    local style=G.MarkerStyle()
+    if pin.state==state and pin.paintSlot==slot and pin.paintStyle==style and pin.boxed~=nil then return end
+    pin.state=state; pin.paintSlot=slot; pin.paintStyle=style
     -- Raid markers stand on their own; every other style keeps its dark plate with rim.
     local boxed=G.ApplyMarker(pin.icon,pin.digit,slot,state)~="raid"
     if pin.boxed~=boxed then
@@ -355,7 +401,7 @@ function G.Glide(sx,sy)
             local x,y,edge=N.Project(v.east+dy,v.north-dx,PinInset(),width,height,diameter,square)
             if not pin.glideX or math.abs(pin.glideX-x)>=0.01 or math.abs(pin.glideY-y)>=0.01 then
                 pin.glideX,pin.glideY=x,y
-                pin:ClearAllPoints(); pin:SetPoint("CENTER",Minimap,"CENTER",x,y)
+                K.Anchor(pin,"CENTER",Minimap,"CENTER",x,y)
             end
             pin.atEdge=edge; Fade(pin,x,y,edge)
         end
@@ -394,15 +440,22 @@ local function ScreenArrow(chosen)
     end
     local slot=G.Slot(chosen.lair,chosen.index)
     local tint=SKULLTINT[slot]
-    arrow.icon:SetVertexColor(tint[1],tint[2],tint[3],1)
-    arrow.digit:SetTexture(MEDIA.."GuardianDigits.tga")
-    local cell=CELLS[slot]; arrow.digit:SetTexCoord(cell[1],cell[2],cell[3],cell[4])
+    if arrow.markerSlot~=slot then
+        arrow.markerSlot=slot
+        arrow.icon:SetVertexColor(tint[1],tint[2],tint[3],1)
+        arrow.digit:SetTexture(MEDIA.."GuardianDigits.tga")
+        local cell=CELLS[slot]; arrow.digit:SetTexCoord(cell[1],cell[2],cell[3],cell[4])
+    end
     local facing,source=N.Facing()
     arrow.step=N.HexDirection(arrow,chosen.east,chosen.north,facing,source)
-    arrow.distance:SetText(K.T("%d Yards",math.floor(chosen.dist+.5)))
+    local distance=K.T("%d Yards",math.floor(chosen.dist+.5))
+    if arrow.distance:GetText()~=distance then arrow.distance:SetText(distance) end
     local text,r,g,b=K.guardians.Status(chosen.lair)
-    arrow.price:SetText(text); arrow.price:SetTextColor(r,g,b)
-    arrow.destination=chosen; arrow:Show()
+    if arrow.price:GetText()~=text then arrow.price:SetText(text) end
+    if arrow.priceR~=r or arrow.priceG~=g or arrow.priceB~=b then
+        arrow.priceR,arrow.priceG,arrow.priceB=r,g,b; arrow.price:SetTextColor(r,g,b)
+    end
+    arrow.destination=chosen; K.Shown(arrow,true)
 end
 function G.Update()
     local moduleOn=K.ModuleOn("guardians")
@@ -412,7 +465,7 @@ function G.Update()
     for row in pairs(rows) do G.Decorate(row) end
     if not inWorld or (not G.On() and not G.PinsOn() and not G.ArrowOn()) then
         G.current=nil; G.shownPins=0
-        for _,pin in ipairs(G.pins) do pin.destination=nil; pin:Hide() end
+        for _,pin in ipairs(G.pins) do pin.destination=nil; K.Shown(pin,false) end
         NativeFlag(false)
         ScreenArrow(nil)
         return
@@ -422,7 +475,7 @@ function G.Update()
     local replace=G.PinsOn() and G.FlagSupported()
     NativeFlag(replace)
     local tickX,tickY=N.WorldPosition()
-    local list=G.List(); local chosen
+    local all=G.List(true); local list=activeList; local chosen
     for _,v in ipairs(list) do if selected==v.key then chosen=v; break end end
     if not chosen then selected=nil; chosen=Automatic(list) end
     G.current=chosen
@@ -431,7 +484,7 @@ function G.Update()
     -- With the 0.102 flag switch our skulls stand for every lair and replace the native flag.
     -- Older clients keep their native flag, so only defeated lairs get a skull there.
     if G.PinsOn() then
-        for _,v in ipairs(G.List(true)) do
+        for _,v in ipairs(all) do
             -- Replacing the native flag: every lair gets a skull, empty ones grey with x from the run start.
             -- Older clients keep their flag, so there only lairs defeated in this run get one.
             local wanted=v.defeated or replace
@@ -442,17 +495,20 @@ function G.Update()
                     local pin=Pin(count+1)
                     if pin then
                         count=count+1; pin.destination=v; pin.atEdge=edge
-                        pin:ClearAllPoints(); pin:SetPoint("CENTER",Minimap,"CENTER",x,y)
-                        pin.glideX=nil
+                        if tickX==nil then
+                            pin.glideX,pin.glideY=x,y; K.Anchor(pin,"CENTER",Minimap,"CENTER",x,y)
+                        end
                         Paint(pin,v.lair.state,G.Slot(v.lair,v.index))
-                        pin.timer:SetText(G.TimersOn() and K.guardians.Countdown(v.lair) or "")
-                        Fade(pin,x,y,edge); pin:Show()
+                        local timer=G.TimersOn() and K.guardians.Countdown(v.lair) or ""
+                        if pin.timer:GetText()~=timer then pin.timer:SetText(timer) end
+                        if tickX==nil then Fade(pin,x,y,edge) end
+                        K.Shown(pin,true)
                     end
                 end
             end
         end
     end
-    for i=count+1,table.getn(G.pins) do G.pins[i].destination=nil; G.pins[i]:Hide() end
+    for i=count+1,table.getn(G.pins) do G.pins[i].destination=nil; K.Shown(G.pins[i],false) end
     G.shownPins=count
     -- The offsets of the pins are relative to the raw position of this tick; the glide shifts them every frame.
     if count>0 and tickX~=nil then
